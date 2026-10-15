@@ -19,8 +19,6 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Messages say "stored login" instead of "Keychain login", and the help says
   the early start is run by the scheduled job, so they read right on Linux.
-### Changed
-
 - A morning early start that runs more than 3 hours after its set time (a
   machine that woke or started late) starts nothing and says so in
   `cc-shift log`.
