@@ -2,12 +2,14 @@
 
 use std::ffi::OsString;
 
-/// The usage text printed by `cs help` and after an unknown command.
+/// The usage text printed by `cs help` and after a command line `cs` does
+/// not understand.
 pub const USAGE: &str = "\
 Usage: cs <command>
 
 Commands:
-  help    Print this help
+  add <name>    Create a profile and start Claude Code in it to run /login
+  help          Print this help
 ";
 
 /// A parsed `cs` command line.
@@ -15,8 +17,10 @@ Commands:
 pub enum Command {
     /// Print the usage text.
     Help,
-    /// A first word that names no command.
-    Unknown(OsString),
+    /// Create a profile and start Claude Code in it.
+    Add(OsString),
+    /// A command line `cs` does not understand, with the reason.
+    Misuse(String),
 }
 
 /// Parses the arguments that follow the program name.
@@ -27,11 +31,24 @@ pub fn parse<I>(args: I) -> Command
 where
     I: IntoIterator<Item = OsString>,
 {
-    match args.into_iter().next() {
-        None => Command::Help,
-        Some(word) if word == "help" || word == "-h" || word == "--help" => Command::Help,
-        Some(word) => Command::Unknown(word),
+    let mut args = args.into_iter();
+    let Some(first) = args.next() else {
+        return Command::Help;
+    };
+    if first == "help" || first == "-h" || first == "--help" {
+        return Command::Help;
     }
+    if first == "add" {
+        return match (args.next(), args.next()) {
+            (Some(name), None) => Command::Add(name),
+            (None, _) => Command::Misuse("add needs a profile name".to_owned()),
+            (Some(_), Some(extra)) => Command::Misuse(format!(
+                "add takes one profile name, not '{}'",
+                extra.to_string_lossy()
+            )),
+        };
+    }
+    Command::Misuse(format!("unknown command '{}'", first.to_string_lossy()))
 }
 
 #[cfg(test)]
@@ -56,10 +73,28 @@ mod tests {
     }
 
     #[test]
-    fn other_word_is_unknown() {
+    fn add_takes_one_name() {
         assert_eq!(
-            parse(args(&["frobnicate"])),
-            Command::Unknown(OsString::from("frobnicate"))
+            parse(args(&["add", "member1"])),
+            Command::Add(OsString::from("member1"))
         );
+    }
+
+    #[test]
+    fn add_without_name_is_misuse() {
+        assert!(matches!(parse(args(&["add"])), Command::Misuse(_)));
+    }
+
+    #[test]
+    fn add_with_two_names_is_misuse() {
+        assert!(matches!(
+            parse(args(&["add", "a", "b"])),
+            Command::Misuse(_)
+        ));
+    }
+
+    #[test]
+    fn other_word_is_misuse() {
+        assert!(matches!(parse(args(&["frobnicate"])), Command::Misuse(_)));
     }
 }

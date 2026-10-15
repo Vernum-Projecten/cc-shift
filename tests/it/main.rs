@@ -2,4 +2,6 @@
 
 #![allow(clippy::panic_in_result_fn, reason = "test assertions")]
 
+mod add;
 mod cli;
+mod sandbox;
