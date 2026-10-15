@@ -21,9 +21,19 @@ pub enum Choice<'a> {
 ///
 /// An account is available when it is logged in and both windows are below
 /// [`SWITCH_THRESHOLD`]; a window whose reset time has passed counts as 0%.
-/// Among available accounts with known usage, the one with the most usage
-/// left in its fuller window wins, and on a tie the one whose fuller window
-/// resets first, then the name, so the choice is the same every run.
+///
+/// The rule spends what expires first. Usage left in a window when it resets
+/// is lost, and the 5-hour window only starts with an account's first
+/// message, so an untouched account loses nothing by waiting. Among
+/// available accounts with known usage:
+///
+/// 1. an account whose 5-hour window is running goes first, the one that
+///    resets soonest first;
+/// 2. then an account with no running 5-hour window, the one whose 7-day
+///    window resets soonest first, then the one with the most 7-day usage
+///    left;
+/// 3. then the name, so the choice is the same every run.
+///
 /// Accounts with unknown usage are chosen, by name, only when no account
 /// with known usage is available.
 #[must_use]
@@ -56,14 +66,47 @@ pub fn next<'a>(accounts: &'a [Account], leaving: Option<&str>, now: i64) -> Cho
     )
 }
 
-/// Orders two available accounts: the better one first.
+/// Orders two available accounts: the one whose usage expires first first.
 fn rank(a: &Account, b: &Account, now: i64) -> Ordering {
-    let used = |x: &Account| x.usage.used_at(now).unwrap_or(f64::MAX);
-    let reset = |x: &Account| x.usage.fuller_window(now).map_or(i64::MAX, |w| w.resets_at);
-    used(a)
-        .total_cmp(&used(b))
-        .then_with(|| reset(a).cmp(&reset(b)))
-        .then_with(|| a.name.cmp(&b.name))
+    let running = |x: &Account| running_five_hour(x, now);
+    match (running(a), running(b)) {
+        (Some(at_a), Some(at_b)) => at_a.cmp(&at_b),
+        (Some(_), None) => Ordering::Less,
+        (None, Some(_)) => Ordering::Greater,
+        (None, None) => {
+            let week = |x: &Account| seven_day(x, now);
+            let (reset_a, used_a) = week(a);
+            let (reset_b, used_b) = week(b);
+            reset_a
+                .cmp(&reset_b)
+                .then_with(|| used_a.total_cmp(&used_b))
+        }
+    }
+    .then_with(|| a.name.cmp(&b.name))
+}
+
+/// Returns when the account's running 5-hour window resets, or `None` when
+/// no 5-hour window is running.
+fn running_five_hour(account: &Account, now: i64) -> Option<i64> {
+    match &account.usage {
+        Usage::Known {
+            five_hour: Some(window),
+            ..
+        } if window.resets_at > now => Some(window.resets_at),
+        _ => None,
+    }
+}
+
+/// Returns when the account's 7-day window resets (the far future when none
+/// is running) and how much of it is used.
+fn seven_day(account: &Account, now: i64) -> (i64, f64) {
+    match &account.usage {
+        Usage::Known {
+            seven_day: Some(window),
+            ..
+        } if window.resets_at > now => (window.resets_at, window.used_percent),
+        _ => (i64::MAX, 0.0),
+    }
 }
 
 /// Returns when a full account with known usage becomes available again.
@@ -85,7 +128,7 @@ fn available_from(account: &Account, now: i64) -> Option<i64> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Choice, SWITCH_THRESHOLD, next};
+    use super::{Choice, SWITCH_THRESHOLD, next, running_five_hour};
     use crate::usage::{Account, Usage, Window};
     use proptest::prelude::{Strategy, any, prop, prop_assert, prop_assert_eq, proptest};
 
@@ -129,30 +172,48 @@ mod tests {
     }
 
     #[test]
-    fn most_usage_left_wins() {
+    fn a_running_window_goes_before_a_fresh_account() {
         let accounts = [
-            account("a", window(60.0, 100), window(10.0, 1000)),
-            account("b", window(20.0, 100), window(30.0, 1000)),
+            account("a", None, window(10.0, 400_000)),
+            account("b", window(60.0, 3600), window(40.0, 500_000)),
         ];
         assert_eq!(chosen(&next(&accounts, None, NOW)), Some("b"));
     }
 
     #[test]
-    fn the_fuller_window_decides() {
+    fn the_running_window_that_resets_soonest_goes_first() {
         let accounts = [
-            account("a", window(10.0, 100), window(80.0, 1000)),
-            account("b", window(50.0, 100), window(50.0, 1000)),
+            account("a", window(10.0, 7200), None),
+            account("b", window(80.0, 600), None),
         ];
         assert_eq!(chosen(&next(&accounts, None, NOW)), Some("b"));
     }
 
     #[test]
-    fn a_tie_goes_to_the_earliest_reset() {
+    fn a_fresh_account_whose_week_resets_soonest_goes_first() {
         let accounts = [
-            account("a", window(40.0, 500), None),
-            account("b", window(40.0, 100), None),
+            account("a", None, window(10.0, 500_000)),
+            account("b", None, window(70.0, 100_000)),
         ];
         assert_eq!(chosen(&next(&accounts, None, NOW)), Some("b"));
+    }
+
+    #[test]
+    fn between_equal_weeks_the_most_left_goes_first() {
+        let accounts = [
+            account("a", None, window(50.0, 100_000)),
+            account("b", None, window(20.0, 100_000)),
+        ];
+        assert_eq!(chosen(&next(&accounts, None, NOW)), Some("b"));
+    }
+
+    #[test]
+    fn a_window_that_has_reset_makes_a_full_account_fresh() {
+        let accounts = [
+            account("a", window(100.0, 0), None),
+            account("b", window(99.0, 100), None),
+        ];
+        assert_eq!(chosen(&next(&accounts, None, NOW)), Some("a"));
     }
 
     #[test]
@@ -162,15 +223,6 @@ mod tests {
             account("b", window(90.0, 100), None),
         ];
         assert_eq!(chosen(&next(&accounts, None, NOW)), Some("b"));
-    }
-
-    #[test]
-    fn a_window_that_has_reset_counts_as_unused() {
-        let accounts = [
-            account("a", window(100.0, 0), None),
-            account("b", window(50.0, 100), None),
-        ];
-        assert_eq!(chosen(&next(&accounts, None, NOW)), Some("a"));
     }
 
     #[test]
@@ -248,16 +300,21 @@ mod tests {
 
     proptest! {
         #[test]
-        fn the_choice_is_available_and_has_the_most_usage_left(accounts in any_accounts()) {
+        fn the_choice_is_available_and_expires_first(accounts in any_accounts()) {
             if let Choice::Account(pick) = next(&accounts, None, NOW) {
                 let used = pick.usage.used_at(NOW).unwrap_or(f64::MAX);
                 prop_assert!(pick.logged_in, "chose a logged-out account");
                 prop_assert!(used < SWITCH_THRESHOLD, "chose a full account");
+                let pick_running = running_five_hour(pick, NOW);
                 for other in accounts.iter().filter(|a| a.logged_in) {
-                    if let Some(other_used) = other.usage.used_at(NOW) {
+                    let available = other
+                        .usage
+                        .used_at(NOW)
+                        .is_some_and(|u| u < SWITCH_THRESHOLD);
+                    if let (true, Some(other_reset)) = (available, running_five_hour(other, NOW)) {
                         prop_assert!(
-                            other_used >= SWITCH_THRESHOLD || used <= other_used,
-                            "{} has more left than {}", other.name, pick.name
+                            pick_running.is_some_and(|at| at <= other_reset),
+                            "{} expires before {}", other.name, pick.name
                         );
                     }
                 }
