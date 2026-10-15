@@ -9,16 +9,19 @@ pub mod error;
 pub mod launch;
 pub mod profile;
 pub mod select;
+pub mod state;
+pub mod statusline;
 pub mod usage;
 
 use std::convert::Infallible;
 use std::ffi::{OsStr, OsString};
-use std::io::Write;
+use std::io::{Read, Write};
 use std::process::ExitCode;
 
 use cli::Command;
 use error::Error;
 use profile::{ProfileName, ProfilesRoot};
+use state::StateFile;
 
 /// The exit code for a command that failed.
 const FAILURE: u8 = 1;
@@ -55,6 +58,10 @@ where
             }
         },
         Command::Add(name) => fail(add(&name)),
+        Command::Statusline => {
+            statusline_command();
+            ExitCode::SUCCESS
+        }
     }
 }
 
@@ -66,6 +73,27 @@ fn fail(result: Result<Infallible, Error>) -> ExitCode {
             report(&error.to_string());
             ExitCode::from(FAILURE)
         }
+    }
+}
+
+/// Records usage from the status line input on stdin and prints the user's
+/// own status line. It never fails: a `cs` problem must not break the
+/// status line of a Claude Code window.
+fn statusline_command() {
+    let mut input = Vec::new();
+    if std::io::stdin().read_to_end(&mut input).is_err() {
+        return;
+    }
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| i64::try_from(d.as_secs()).unwrap_or(i64::MAX));
+    let chained = ProfilesRoot::from_env()
+        .ok()
+        .and_then(|root| statusline::record(&input, &StateFile::in_root(&root), now).ok())
+        .flatten();
+    if let Some(command) = chained {
+        let line = statusline::chained(&command, &input);
+        let _ignored: std::io::Result<()> = std::io::stdout().write_all(&line);
     }
 }
 
