@@ -30,16 +30,21 @@ A refresh token works once: after a refresh the old one is dead, and presenting 
 |---|---|
 | `cc-shift add <name>` | Creates the profile and opens Claude Code in it to run `/login` once. |
 | `cc-shift setup` | Installs the status line and the hook in `~/.claude/settings.json` and makes the best account active. Run once. |
-| `cc-shift status` | Shows every account with its usage and reset times, and marks the active one. |
+| `cc-shift status` | Shows every account in the order of use, with both windows as bars, their reset times and each account's state. |
+| `cc-shift status --json` | The same overview as JSON, for scripts. |
 | `cc-shift use <name>` | Makes an account active now. Never needed; for steering by hand. |
 | `cc-shift list` | Prints the profile names. |
 | `cc-shift refresh` | Refreshes parked logins and reads parked accounts' usage now. `cc-shift status` and the status line run it on their own. |
+| `cc-shift doctor` | Checks the setup and prints the command that fixes each problem. |
+| `cc-shift remove <name>` | Deletes a profile and its Keychain login, after confirmation; never the active account. |
+| `cc-shift uninstall [--all]` | Undoes `cc-shift setup`; with `--all` also deletes every profile and its login. |
+| `cc-shift completion zsh` | Prints the zsh completion script. |
 | `cc-shift statusline` | Called by Claude Code after every reply. Not run by hand. |
 | `cc-shift hook rate-limit` | Called by Claude Code when a turn hits a usage limit. Not run by hand. |
 
-After `cc-shift add` for each account and one `cc-shift setup`, `cc-shift` tracks every account on its own. From then on it switches on its own.
+After `cc-shift add` for each account and one `cc-shift setup`, `cc-shift` tracks every account and switches on its own.
 
-A profile name uses ASCII letters, digits, `-` and `_`, starts with a letter or digit, and is not a command word (`add`, `setup`, `status`, `use`, `list`, `statusline`, `hook`, `help`, `remove`, `refresh`).
+A profile name uses ASCII letters, digits, `-` and `_`, starts with a letter or digit, and is not a command word (`add`, `setup`, `status`, `use`, `list`, `statusline`, `hook`, `help`, `remove`, `refresh`, `doctor`, `uninstall`, `completion`).
 
 ## 4. Automatic switching
 
