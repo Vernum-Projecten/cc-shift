@@ -176,7 +176,7 @@ mod tests {
 
         fn call(&self, slot: &Slot) -> Result<(), Error> {
             match self.calls_left.get() {
-                Some(0) => Err(Error::Keychain {
+                Some(0) => Err(Error::LoginStore {
                     slot: slot.to_string(),
                     reason: "stopped by the test".to_owned(),
                 }),

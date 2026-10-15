@@ -37,12 +37,12 @@ impl SystemKeychain {
     ///
     /// # Errors
     ///
-    /// Returns [`Error::Keychain`] when `$USER` is unset or empty.
+    /// Returns [`Error::LoginStore`] when `$USER` is unset or empty.
     pub fn for_user(root: &ProfilesRoot) -> Result<Self, Error> {
         let account = std::env::var("USER")
             .ok()
             .filter(|user| !user.is_empty())
-            .ok_or_else(|| Error::Keychain {
+            .ok_or_else(|| Error::LoginStore {
                 slot: "the login keychain".to_owned(),
                 reason: "USER is not set".to_owned(),
             })?;
@@ -62,7 +62,7 @@ impl SystemKeychain {
     }
 
     fn fail(slot: &Slot, reason: impl Into<String>) -> Error {
-        Error::Keychain {
+        Error::LoginStore {
             slot: slot.to_string(),
             reason: reason.into(),
         }

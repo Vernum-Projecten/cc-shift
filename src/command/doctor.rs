@@ -29,6 +29,15 @@ pub enum Level {
     Fail,
 }
 
+/// The fix for a login cc-shift cannot read.
+#[cfg(target_os = "macos")]
+const UNREADABLE_LOGIN_FIX: &str =
+    "allow cc-shift to use the Keychain item, or run cc-shift add again";
+/// The fix for a login cc-shift cannot read.
+#[cfg(target_os = "linux")]
+const UNREADABLE_LOGIN_FIX: &str =
+    "check that you can read the profile's .credentials.json, or run cc-shift add again";
+
 /// One check and, when it did not pass, the command that fixes it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Check {
@@ -83,6 +92,8 @@ pub struct Setup<'a, L: Logins> {
     pub binary: &'a str,
     /// The version `claude --version` printed, or `None` when it did not run.
     pub claude: Option<String>,
+    /// The `curl` cc-shift would run, or `None` when there is none.
+    pub curl: Option<std::path::PathBuf>,
 }
 
 /// Runs every check, in the order they are shown.
@@ -95,6 +106,13 @@ pub fn checks<L: Logins>(setup: &Setup<'_, L>) -> Vec<Check> {
             "install Claude Code: https://code.claude.com/docs",
         ),
     }];
+    out.push(match &setup.curl {
+        Some(curl) => Check::ok(format!("curl is installed ({})", curl.display())),
+        None => Check::fail(
+            "curl is not installed",
+            "install curl with the system's package manager",
+        ),
+    });
     out.push(settings_check(setup));
     let state = match setup.file.read() {
         Ok(state) => {
@@ -206,7 +224,7 @@ fn account_checks<L: Logins>(
                 }
             }
             (Ok(None), _) => out.push(Check::fail(
-                format!("{name}: no login in the Keychain"),
+                format!("{name}: no stored login"),
                 format!("cc-shift add {name}, then /login"),
             )),
             (_, Ok(None) | Err(_)) => out.push(Check::fail(
@@ -215,7 +233,7 @@ fn account_checks<L: Logins>(
             )),
             (Err(error), _) => out.push(Check::fail(
                 format!("{name}: {error}"),
-                "allow cc-shift to use the Keychain item, or run cc-shift add again",
+                UNREADABLE_LOGIN_FIX,
             )),
         }
     }
@@ -296,6 +314,10 @@ pub fn run() -> Result<(), Error> {
         home: &home,
         binary: &binary,
         claude,
+        curl: crate::anthropic::http::find_curl(
+            Path::new(crate::anthropic::http::SYSTEM_CURL),
+            std::env::var_os("PATH").as_deref(),
+        ),
     };
     let results = checks(&setup);
     let paint = Paint::unless_no_color(std::io::stdout().is_terminal());
@@ -386,6 +408,7 @@ mod tests {
             home: home.path(),
             binary: BINARY,
             claude: Some("2.1.300 (Claude Code)".to_owned()),
+            curl: Some(std::path::PathBuf::from("/usr/bin/curl")),
         };
         Ok(checks(&setup)
             .into_iter()
@@ -424,7 +447,7 @@ mod tests {
         memory.clear(&Slot::Parked("spare".to_owned()))?;
         let results = run(&home, &memory)?;
         assert!(
-            results.contains(&(Level::Fail, "spare: no login in the Keychain".to_owned())),
+            results.contains(&(Level::Fail, "spare: no stored login".to_owned())),
             "{results:?}"
         );
         Ok(())

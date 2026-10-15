@@ -69,7 +69,7 @@ pub fn run(all: bool) -> Result<(), Error> {
         return Ok(());
     }
     report(&format!(
-        "this deletes {} profile(s) and their Keychain logins: {}. Type yes to go on:",
+        "this deletes {} profile(s) and their stored logins: {}. Type yes to go on:",
         profiles.len(),
         profiles.join(", ")
     ));

@@ -73,21 +73,21 @@ pub trait Logins {
     ///
     /// # Errors
     ///
-    /// Returns [`Error::Keychain`] when the slot cannot be read.
+    /// Returns [`Error::LoginStore`] when the slot cannot be read.
     fn read(&self, slot: &Slot) -> Result<Option<Login>, Error>;
 
     /// Puts `login` in `slot`, replacing what was there.
     ///
     /// # Errors
     ///
-    /// Returns [`Error::Keychain`] when the slot cannot be written.
+    /// Returns [`Error::LoginStore`] when the slot cannot be written.
     fn write(&self, slot: &Slot, login: &Login) -> Result<(), Error>;
 
     /// Empties `slot`; an empty slot stays empty.
     ///
     /// # Errors
     ///
-    /// Returns [`Error::Keychain`] when the slot cannot be cleared.
+    /// Returns [`Error::LoginStore`] when the slot cannot be cleared.
     fn clear(&self, slot: &Slot) -> Result<(), Error>;
 }
 

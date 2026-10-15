@@ -65,7 +65,7 @@ impl CredentialFiles {
     }
 
     fn fail(slot: &Slot, path: &Path, reason: impl std::fmt::Display) -> Error {
-        Error::Keychain {
+        Error::LoginStore {
             slot: slot.to_string(),
             reason: format!("{}: {reason}", path.display()),
         }
