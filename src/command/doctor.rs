@@ -9,10 +9,11 @@ use std::process::Command;
 
 use crate::claude_code::settings;
 use crate::command::home;
-use crate::early::{EarlyStart, launchd};
+use crate::early::EarlyStart;
+use crate::early::macos::launchd;
 use crate::error::Error;
 use crate::login::account::AccountFiles;
-use crate::login::keychain::SystemKeychain;
+use crate::login::macos::keychain::SystemKeychain;
 use crate::login::{Logins, Slot};
 use crate::render::Paint;
 use crate::store::profile::ProfilesRoot;
@@ -463,7 +464,8 @@ mod tests {
     #[test]
     fn the_early_start_agent_must_match_the_setting() -> Result<(), Box<dyn std::error::Error>> {
         use super::early_check;
-        use crate::early::{EarlyStart, launchd};
+        use crate::early::EarlyStart;
+        use crate::early::macos::launchd;
         let home = TempDir::new()?;
         let on = EarlyStart::default();
         assert_eq!(

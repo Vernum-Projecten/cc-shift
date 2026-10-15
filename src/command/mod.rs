@@ -29,7 +29,7 @@ use std::process::ExitCode;
 
 use crate::error::Error;
 use crate::login::account::AccountFiles;
-use crate::login::keychain::SystemKeychain;
+use crate::login::macos::keychain::SystemKeychain;
 use crate::store::profile::ProfilesRoot;
 use crate::store::state::StateFile;
 use crate::switching::auto::{self, Trigger};

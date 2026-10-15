@@ -4,7 +4,7 @@ use crate::anthropic::http::Curl;
 use crate::anthropic::parked::{self, Report};
 use crate::command::{report, unix_now};
 use crate::error::Error;
-use crate::login::keychain::SystemKeychain;
+use crate::login::macos::keychain::SystemKeychain;
 use crate::store::profile::ProfilesRoot;
 use crate::store::state::StateFile;
 

@@ -6,7 +6,7 @@ use std::io::BufRead;
 
 use crate::command::report;
 use crate::error::Error;
-use crate::login::keychain::SystemKeychain;
+use crate::login::macos::keychain::SystemKeychain;
 use crate::login::{Logins, Slot};
 use crate::store::profile::{ProfileName, ProfilesRoot};
 use crate::store::state::StateFile;

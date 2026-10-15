@@ -7,7 +7,8 @@
 //! short message on a few accounts, picked in the order the selection rule
 //! uses them. It is off until `cc-shift early on`.
 
-pub mod launchd;
+#[cfg(target_os = "macos")]
+pub mod macos;
 pub mod start;
 
 use jiff::Timestamp;
