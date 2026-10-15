@@ -1,8 +1,8 @@
-//! `cs` launches Claude Code with one of several isolated account profiles.
+//! `cs` switches Claude Code between several accounts automatically.
 //!
-//! Each profile is a folder under `~/.claude-profiles/`, and `cs` points
-//! Claude Code at it through `CLAUDE_CONFIG_DIR`. The binary in `main.rs`
-//! only calls [`run`], so the whole run path is testable from `tests/`.
+//! Each account has a profile folder under `~/.claude-profiles/` that holds
+//! its parked login. The binary in `main.rs` only calls [`run`], so the
+//! whole run path is testable from `tests/`.
 
 pub mod cli;
 pub mod error;
@@ -10,6 +10,7 @@ pub mod launch;
 pub mod profile;
 pub mod select;
 pub mod state;
+pub mod status;
 pub mod statusline;
 pub mod usage;
 
@@ -32,8 +33,8 @@ const USAGE_ERROR: u8 = 2;
 /// Runs `cs` with the given arguments, without the program name.
 ///
 /// Returns the process exit code: success after printing help, `1` for a
-/// failed command and `2` for a command line `cs` does not understand. A
-/// command that starts Claude Code replaces this process and does not return.
+/// failed command and `2` for a command line `cs` does not understand.
+/// `cs add` replaces this process with Claude Code and does not return.
 #[must_use]
 pub fn run<I>(args: I) -> ExitCode
 where
@@ -58,6 +59,13 @@ where
             }
         },
         Command::Add(name) => fail(add(&name)),
+        Command::Status => match status() {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(error) => {
+                report(&error.to_string());
+                ExitCode::from(FAILURE)
+            }
+        },
         Command::Statusline => {
             statusline_command();
             ExitCode::SUCCESS
@@ -76,6 +84,28 @@ fn fail(result: Result<Infallible, Error>) -> ExitCode {
     }
 }
 
+/// Prints every account with its usage and which account comes next.
+fn status() -> Result<(), Error> {
+    let root = ProfilesRoot::from_env()?;
+    let profiles = root.list()?;
+    if profiles.is_empty() {
+        report("no profiles yet; create one with 'cs add <name>'");
+        return Ok(());
+    }
+    let state = StateFile::in_root(&root).read()?;
+    let accounts = status::accounts(&profiles, &state);
+    let text = status::render(&accounts, state.active.as_deref(), unix_now());
+    let _ignored: std::io::Result<()> = std::io::stdout().write_all(text.as_bytes());
+    Ok(())
+}
+
+/// Returns the current time in Unix seconds.
+fn unix_now() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| i64::try_from(d.as_secs()).unwrap_or(i64::MAX))
+}
+
 /// Records usage from the status line input on stdin and prints the user's
 /// own status line. It never fails: a `cs` problem must not break the
 /// status line of a Claude Code window.
@@ -84,9 +114,7 @@ fn statusline_command() {
     if std::io::stdin().read_to_end(&mut input).is_err() {
         return;
     }
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |d| i64::try_from(d.as_secs()).unwrap_or(i64::MAX));
+    let now = unix_now();
     let chained = ProfilesRoot::from_env()
         .ok()
         .and_then(|root| statusline::record(&input, &StateFile::in_root(&root), now).ok())
