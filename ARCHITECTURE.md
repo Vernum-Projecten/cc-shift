@@ -44,11 +44,11 @@ On Unix systems the launcher uses `exec`, which replaces the `cs` process with t
 
 ## 4. Components
 
-The project has two files.
+The code is a small library with a thin binary on top.
 
-`Cargo.toml` describes the crate. It has no dependencies; everything is done with the Rust standard library. The release profile strips symbols and optimises for size, so the final binary stays small.
+`Cargo.toml` describes the crate. Its only runtime dependency is `thiserror`, for the error type; everything else uses the Rust standard library. The release profile strips symbols and optimises for size, so the final binary stays small.
 
-`src/main.rs` contains all the logic, roughly 100 lines. It parses the command, validates the profile name, creates or reads the profiles folder, and finally sets `CLAUDE_CONFIG_DIR` and execs `claude`.
+`src/main.rs` only calls `cs::run` in `src/lib.rs`, so the whole run path can be tested from `tests/`. The library has one module per concern: `cli` parses the command line, `profile` validates names and finds or creates the profiles folder, `launch` sets `CLAUDE_CONFIG_DIR` and execs `claude`, and `error` holds the messages the user sees.
 
 After `cargo install --path .` the binary is placed at `~/.cargo/bin/cs`.
 
@@ -107,7 +107,7 @@ Signing in with the wrong account in a profile is the most likely mistake here. 
 
 ### Creating a profile: `cs add claude1`
 
-1. `cs` checks that the name only contains letters, digits, `-` or `_` and is not a reserved word (`add`, `list`, `auto`, `status`, `help`).
+1. `cs` checks that the name only contains ASCII letters, digits, `-` or `_`, starts with a letter or digit, and is not a command word (`add`, `list`, `auto`, `status`, `help`, `remove`, `current`, `link`).
 2. It creates `~/.claude-profiles/claude1/` if it does not exist.
 3. It prints a reminder to log in, then launches Claude Code with `CLAUDE_CONFIG_DIR` pointing to that folder.
 4. The user runs `/login` inside Claude Code and completes the browser sign-in (for example with Google).

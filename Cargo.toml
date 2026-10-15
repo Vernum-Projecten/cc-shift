@@ -9,6 +9,7 @@ repository = "https://github.com/Vernum-Projecten/cs"
 publish = false
 
 [dependencies]
+thiserror = "2.0.21"
 
 [profile.release]
 opt-level = "z"
@@ -109,3 +110,6 @@ mem_forget = "deny"
 pointer_format = "deny"
 empty_drop = "warn"
 deref_by_slicing = "warn"
+
+[dev-dependencies]
+tempfile = "3.27.0"

@@ -30,6 +30,9 @@ include-dev = true
 allow = [
   "MIT",
   "Apache-2.0",
+  # unicode-ident (through thiserror's derive): a permissive licence with
+  # notice terms like MIT, OSI approved.
+  "Unicode-3.0",
 ]
 confidence-threshold = 0.9
 exceptions = []
