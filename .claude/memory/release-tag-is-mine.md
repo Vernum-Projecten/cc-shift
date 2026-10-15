@@ -20,7 +20,7 @@ step of a milestone; a hand-back is unfinished work.
    from the session, then reading the release run, if one exists, and fixing
    what fails.
 3. A new milestone for stragglers if needed, and the emptied milestone closed
-   (`gh api -X PATCH repos/Vernum-Projecten/cs/milestones/<n> -f
+   (`gh api -X PATCH repos/Vernum-Projecten/cc-shift/milestones/<n> -f
    state=closed`).
 
 Docs and PR bodies never say "the owner runs" for a tag. See

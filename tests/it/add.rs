@@ -1,4 +1,4 @@
-//! `cs add <name>`: creates the profile folder and starts Claude Code in it.
+//! `cc-shift add <name>`: creates the profile folder and starts Claude Code in it.
 
 use std::fs;
 use std::io;
@@ -67,7 +67,11 @@ fn refuses_a_command_word() -> io::Result<()> {
     let sandbox = Sandbox::new()?;
     let out = sandbox.run(&["add", "list"])?;
     assert_eq!(out.status.code(), Some(1), "exit code");
-    assert!(stderr(&out).contains("cs command"), "{}", stderr(&out));
+    assert!(
+        stderr(&out).contains("cc-shift command"),
+        "{}",
+        stderr(&out)
+    );
     assert_eq!(sandbox.claude_call(), None, "claude not started");
     Ok(())
 }
@@ -77,7 +81,7 @@ fn needs_a_name() -> io::Result<()> {
     let sandbox = Sandbox::new()?;
     let out = sandbox.run(&["add"])?;
     assert_eq!(out.status.code(), Some(2), "exit code");
-    assert!(stderr(&out).contains("Usage: cs"), "{}", stderr(&out));
+    assert!(stderr(&out).contains("Usage: cc-shift"), "{}", stderr(&out));
     Ok(())
 }
 
@@ -85,7 +89,7 @@ fn needs_a_name() -> io::Result<()> {
 fn fails_without_home() -> io::Result<()> {
     let sandbox = Sandbox::new()?;
     let out = sandbox
-        .cs()
+        .cc_shift()
         .env_remove("HOME")
         .args(["add", "member1"])
         .output()?;

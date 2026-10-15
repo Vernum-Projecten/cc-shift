@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a defect in cs.
+description: Report a defect in cc-shift.
 type: Bug
 body:
   - type: markdown
@@ -10,7 +10,7 @@ body:
 
         Do not use this form for a security vulnerability. Report those
         privately through the Security tab. See
-        [SECURITY.md](https://github.com/Vernum-Projecten/cs/blob/main/SECURITY.md).
+        [SECURITY.md](https://github.com/Vernum-Projecten/cc-shift/blob/main/SECURITY.md).
 
         Never paste a token, a Keychain item, an account email or the content
         of a profile folder into this form.
@@ -27,8 +27,8 @@ body:
       label: Steps to reproduce
       description: The exact commands that trigger the bug.
       placeholder: |
-        1. Run `cs add member1`
-        2. Run `cs auto`
+        1. Run `cc-shift add member1`
+        2. Run `cc-shift auto`
         3. See the output
     validations:
       required: true
@@ -50,7 +50,7 @@ body:
     id: version
     attributes:
       label: Version or commit
-      description: The output of `cs --version`, or the commit SHA you built.
+      description: The output of `cc-shift --version`, or the commit SHA you built.
       placeholder: v0.1.0, or a commit SHA
     validations:
       required: true

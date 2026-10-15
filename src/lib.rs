@@ -1,14 +1,14 @@
-//! `cs` switches Claude Code between several accounts automatically.
+//! `cc-shift` switches Claude Code between several accounts automatically.
 //!
 //! Each account has a profile folder under `~/.claude-profiles/` that holds
 //! its parked login. The binary in `main.rs` only calls [`run`], so the
 //! whole run path is testable from `tests/`.
 //!
 //! The modules follow the domain: `command` is the command line, `store`
-//! the files `cs` owns, `usage` what is known about each account, `login`
+//! the files `cc-shift` owns, `usage` what is known about each account, `login`
 //! the Keychain and the account details, `switching` moving between
 //! accounts, `anthropic` the calls to Anthropic, and `claude_code` the
-//! places where `cs` plugs into Claude Code.
+//! places where `cc-shift` plugs into Claude Code.
 
 pub mod anthropic;
 pub mod claude_code;
@@ -22,11 +22,11 @@ pub mod usage;
 use std::ffi::OsString;
 use std::process::ExitCode;
 
-/// Runs `cs` with the given arguments, without the program name.
+/// Runs `cc-shift` with the given arguments, without the program name.
 ///
 /// Returns the process exit code: success after printing help, `1` for a
-/// failed command and `2` for a command line `cs` does not understand.
-/// `cs add` replaces this process with Claude Code and does not return.
+/// failed command and `2` for a command line `cc-shift` does not understand.
+/// `cc-shift add` replaces this process with Claude Code and does not return.
 #[must_use]
 pub fn run<I>(args: I) -> ExitCode
 where

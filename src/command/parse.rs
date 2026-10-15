@@ -1,15 +1,15 @@
-//! Parsing of the `cs` command line.
+//! Parsing of the `cc-shift` command line.
 
 use std::ffi::OsString;
 
-/// The usage text printed by `cs help` and after a command line `cs` does
+/// The usage text printed by `cc-shift help` and after a command line `cc-shift` does
 /// not understand.
 pub const USAGE: &str = "\
-Usage: cs <command>
+Usage: cc-shift <command>
 
 Commands:
   add <name>    Create a profile and start Claude Code in it to run /login
-  setup         Install cs in Claude Code once, so switching is automatic
+  setup         Install cc-shift in Claude Code once, so switching is automatic
   status        Show every account with its usage and reset times
   use <name>    Make an account active in every Claude Code window now
   refresh       Refresh parked logins and read their usage now
@@ -20,7 +20,7 @@ Commands:
   help          Print this help
 ";
 
-/// A parsed `cs` command line.
+/// A parsed `cc-shift` command line.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Command {
     /// Print the usage text.
@@ -42,7 +42,7 @@ pub enum Command {
     HookRateLimit,
     /// Record usage from the status line input; run by Claude Code.
     Statusline,
-    /// A command line `cs` does not understand, with the reason.
+    /// A command line `cc-shift` does not understand, with the reason.
     Misuse(String),
 }
 

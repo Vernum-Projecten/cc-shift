@@ -1,6 +1,6 @@
 # Reliability and safety hard rules
 
-`cs` starts Claude Code signed in to an account and decides which account to
+`cc-shift` starts Claude Code signed in to an account and decides which account to
 use. A wrong decision is quiet: the wrong profile starts, a profile with no
 usage left is picked, or a stale reset time keeps a usable account out of the
 rotation. Silent wrong answers are worse than loud failures. The principles
@@ -86,11 +86,11 @@ Rust Book's error-handling and overflow chapters, and the Clippy book.
 - **Determinism is lint-backed** (deny tier: `iter_over_hash_type`): HashMap
   and HashSet iteration order is undefined; anything that feeds output or a
   ranking iterates ordered structures (`BTreeMap`, sorted vectors), so
-  `cs list` and a tie in `cs auto` resolve the same way every run.
+  `cc-shift list` and a tie in `cc-shift auto` resolve the same way every run.
 - **Output goes through one place.** `print_stdout` and `print_stderr` are
   denied outside the module that owns terminal output, which relaxes them with
   a scoped `#[expect]` and a reason; `dbg_macro` is denied everywhere. Nothing
-  `cs` prints or logs carries a token, a Keychain secret, or an account's
+  `cc-shift` prints or logs carries a token, a Keychain secret, or an account's
   email address (review-enforced).
 - **Banned APIs are compile-time bans** (`clippy.toml` `disallowed-methods`
   and `disallowed-types`). A legitimate exception site carries a scoped

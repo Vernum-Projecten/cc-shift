@@ -1,10 +1,10 @@
-//! `cs statusline`: the status line command Claude Code runs after every
+//! `cc-shift statusline`: the status line command Claude Code runs after every
 //! reply.
 //!
 //! Claude Code passes a JSON object on stdin whose `rate_limits` holds the
 //! active account's `five_hour` and `seven_day` windows, each with
 //! `used_percentage` and `resets_at`
-//! (<https://code.claude.com/docs/en/statusline>). `cs` records them and then
+//! (<https://code.claude.com/docs/en/statusline>). `cc-shift` records them and then
 //! prints the status line the user had before, if any.
 
 use std::io::Write;
@@ -16,7 +16,7 @@ use crate::error::Error;
 use crate::store::state::{Recorded, State, StateFile};
 use crate::usage::Window;
 
-/// The part of the status line input `cs` reads; every other field is
+/// The part of the status line input `cc-shift` reads; every other field is
 /// ignored.
 #[derive(Debug, Default, Deserialize)]
 #[serde(default)]
@@ -53,7 +53,7 @@ impl From<Reported> for Window {
 ///
 /// Input that does not parse, or carries no `rate_limits`, records nothing.
 /// A window missing from the input keeps its last known value. Nothing is
-/// recorded before `cs` knows which account is active.
+/// recorded before `cc-shift` knows which account is active.
 ///
 /// # Errors
 ///
@@ -77,13 +77,13 @@ pub fn record(input: &[u8], state_file: &StateFile, now: i64) -> Result<Option<S
     })
 }
 
-/// Returns the `cs` part of the status line: the active account and both
+/// Returns the `cc-shift` part of the status line: the active account and both
 /// windows with the time to reset, for example
 /// `member5 · 5h 31% (4h0m) · 7d 26% (5d8h)`.
 #[must_use]
 pub fn summary(state: &State, now: i64) -> String {
     let Some(active) = &state.active else {
-        return "cs: run cs setup".to_owned();
+        return "cc-shift: run cc-shift setup".to_owned();
     };
     let recorded = state.usage.get(active);
     let window = |label: &str, window: Option<Window>| match window {
@@ -241,7 +241,10 @@ mod tests {
 
     #[test]
     fn the_summary_before_setup_says_so() {
-        assert_eq!(summary(&State::default(), 0), "cs: run cs setup");
+        assert_eq!(
+            summary(&State::default(), 0),
+            "cc-shift: run cc-shift setup"
+        );
     }
 
     #[test]

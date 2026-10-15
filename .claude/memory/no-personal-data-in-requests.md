@@ -10,7 +10,7 @@ crates.io API request whose User-Agent carried the owner's email address,
 following crates.io's guidance to include contact details.
 
 **Why:** the address is personal data, and a request header to a public API
-is stored in that service's logs outside the owner's control. For `cs` the
+is stored in that service's logs outside the owner's control. For `cc-shift` the
 same goes for the email address of any of the accounts it manages.
 
 **How to apply:** every external call (crates.io, GitHub raw content, a

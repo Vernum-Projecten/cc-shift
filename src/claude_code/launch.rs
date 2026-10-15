@@ -8,7 +8,7 @@ use std::process::Command;
 
 use crate::error::Error;
 
-/// Replaces the `cs` process with `claude`, using `config_dir` as its
+/// Replaces the `cc-shift` process with `claude`, using `config_dir` as its
 /// `CLAUDE_CONFIG_DIR`.
 ///
 /// `claude` is looked up on `PATH`. Claude Code reads `CLAUDE_CONFIG_DIR` as the folder for its

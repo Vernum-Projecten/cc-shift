@@ -24,14 +24,14 @@ pub enum Outcome {
     AlreadyActive,
     /// The account is now active.
     Switched {
-        /// The account that was active before, if `cs` knew one.
+        /// The account that was active before, if `cc-shift` knew one.
         from: Option<String>,
     },
 }
 
 /// Makes `to` the active account.
 ///
-/// A switch left unfinished by an earlier run is finished first. When `cs`
+/// A switch left unfinished by an earlier run is finished first. When `cc-shift`
 /// knows no active account yet, the login now in `~/.claude` belongs to no
 /// profile and is replaced.
 ///

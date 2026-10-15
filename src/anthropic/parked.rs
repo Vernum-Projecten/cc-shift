@@ -1,7 +1,7 @@
 //! Keeping parked accounts ready: refreshing their logins and reading their
 //! usage.
 //!
-//! A parked login has no Claude Code process to refresh it, so `cs` does,
+//! A parked login has no Claude Code process to refresh it, so `cc-shift` does,
 //! under the lock for the whole request: a refresh token works once, and a
 //! switch must never move a login whose refresh is under way. A usage read
 //! only needs the access token, so it holds the lock just to read the token

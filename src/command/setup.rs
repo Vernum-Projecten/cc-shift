@@ -1,4 +1,4 @@
-//! `cs setup`: installs `cs` in Claude Code once, so switching is
+//! `cc-shift setup`: installs `cc-shift` in Claude Code once, so switching is
 //! automatic.
 
 use crate::claude_code::settings;
@@ -20,7 +20,7 @@ pub fn run() -> Result<(), Error> {
     let home = home()?;
     let root = ProfilesRoot::from_home(Some(home.clone().into_os_string()))?;
     let cs_path = std::env::current_exe()
-        .map_err(|e| Error::Settings(format!("cannot find the cs binary: {e}")))?;
+        .map_err(|e| Error::Settings(format!("cannot find the cc-shift binary: {e}")))?;
     let path = settings::settings_path(&home);
     let installed = settings::install(settings::read_settings(&path)?, &cs_path.to_string_lossy())?;
     let file = StateFile::in_root(&root);
@@ -37,7 +37,9 @@ pub fn run() -> Result<(), Error> {
         report("already set up");
     }
     if root.list()?.is_empty() {
-        report("no profiles yet; add them with 'cs add <name>', then run 'cs setup' again");
+        report(
+            "no profiles yet; add them with 'cc-shift add <name>', then run 'cc-shift setup' again",
+        );
         return Ok(());
     }
     if file.read()?.active.is_none() {

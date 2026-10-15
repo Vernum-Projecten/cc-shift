@@ -13,13 +13,13 @@
 # else. Policy: no specification governs it: our own design.
 #
 # The board is not created by this script. It exists as the GitHub Project (v2)
-# "cs Roadmap" under the `Vernum-Projecten` organization, with a
+# "cc-shift Roadmap" under the `Vernum-Projecten` organization, with a
 # single-select "Status" field carrying Todo / In Progress / Done and a Date
 # field named "Target date" for the roadmap view. The clone needs the
 # `project` token scope (`gh auth refresh -s project`). The project is found by
 # title, never by number, so a recreated board needs no edit here; with no
 # project of that title every command fails loud with "no project titled
-# 'cs Roadmap'".
+# 'cc-shift Roadmap'".
 #
 # Official docs (durable references, the ONLY citations allowed for this):
 #   gh project commands .. https://cli.github.com/manual/gh_project
@@ -45,12 +45,12 @@
 #                                                                 # milestone's due date (the Roadmap view places
 #                                                                 # items by this field; milestones only draw markers)
 #
-# The project is found by title (CS_PROJECT_TITLE overrides; default
-# "cs Roadmap") under the repository owner.
+# The project is found by title (CC_SHIFT_PROJECT_TITLE overrides; default
+# "cc-shift Roadmap") under the repository owner.
 
 set -euo pipefail
 
-TITLE="${CS_PROJECT_TITLE:-cs Roadmap}"
+TITLE="${CC_SHIFT_PROJECT_TITLE:-cc-shift Roadmap}"
 
 die() {
   echo "gh-project: $*" >&2

@@ -1,4 +1,4 @@
-//! The calls `cs` makes to Anthropic: HTTP through the system `curl`, the
+//! The calls `cc-shift` makes to Anthropic: HTTP through the system `curl`, the
 //! OAuth refresh and usage calls, and keeping parked accounts ready with
 //! them.
 
