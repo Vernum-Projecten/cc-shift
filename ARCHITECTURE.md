@@ -5,7 +5,7 @@
 
 ## 1. Purpose
 
-`cc-shift` lets one person use several Claude accounts with Claude Code without ever thinking about usage limits. Every Claude Code window (RustRover, a terminal) keeps running as normal. When the account in use gets close to its limit, `cc-shift` moves the windows to the next account, the same way `/login` does: no restart, no lost conversation.
+`cc-shift` lets one person use several Claude accounts with Claude Code without ever thinking about usage limits. It runs on macOS and Linux; native Windows support is planned for v0.1.1. Every Claude Code window (RustRover, a terminal) keeps running as normal. When the account in use gets close to its limit, `cc-shift` moves the windows to the next account, the same way `/login` does: no restart, no lost conversation.
 
 The accounts are several work accounts, each with a profile of its own. The examples below use invented profile names.
 
@@ -206,9 +206,10 @@ These need real accounts, so they are done once by the owner and recorded on the
 - After `cc-shift add` for two accounts, Keychain Access shows one "Claude Code" item per profile (#6).
 - With two windows open on `~/.claude`, `cc-shift use` to the other account, then `/status` in both windows shows the new account.
 - The status line of the work accounts receives `rate_limits`.
+- On Linux (#92): `cc-shift add` and `/login` write the profile's `.credentials.json` with mode 0600; two open windows follow `cc-shift use` and an automatic switch with their next message; a window refreshing during a switch loses no login; the early start timer runs, catches up after a power-off and is gone after `cc-shift early off`.
 
 ## 10. Security
 
-`cc-shift` touches tokens for three reasons only: to move a login on a switch, to refresh a parked login, and to read a parked access token for its usage. Tokens stay where Claude Code keeps them: in the Keychain, encrypted at rest, on macOS, and in its login files with mode 0600 on Linux. `cc-shift` holds them in memory only while it uses them, and never writes them to a file, a log, the terminal or the state. It never refreshes the active login and never keeps two live copies of one login. The owner asked for this on #12.
+`cc-shift` touches tokens for three reasons only: to move a login on a switch, to refresh a parked login, and to read a parked access token for its usage. Tokens stay where Claude Code keeps them: in the Keychain, encrypted at rest, on macOS, and in its login files with mode 0600 on Linux. `cc-shift` holds them in memory only while it uses them, and never writes them to a log, the terminal, the state or a file of its own; on Linux it writes a login only into the login file Claude Code reads. It never refreshes the active login and never keeps two live copies of one login. The owner asked for this on #12.
 
 Removing an account means deleting its profile folder and, on macOS, its "Claude Code" Keychain item; deleting only the folder leaves the login in the Keychain. On Linux the login file is inside the folder. `cc-shift remove <name>` does both.

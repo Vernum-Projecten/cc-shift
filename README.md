@@ -6,7 +6,7 @@
 [![crates.io](https://img.shields.io/crates/v/cc-shift?logo=rust)](https://crates.io/crates/cc-shift)
 [![Downloads](https://img.shields.io/crates/d/cc-shift)](https://crates.io/crates/cc-shift)
 [![CI](https://github.com/Vernum-Projecten/cc-shift/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Vernum-Projecten/cc-shift/actions/workflows/ci.yml)
-[![Platform: macOS](https://img.shields.io/badge/platform-macOS-lightgrey?logo=apple)](#requirements)
+[![Platform: macOS | Linux](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey)](#requirements)
 [![Rust 1.98+](https://img.shields.io/badge/rust-1.98%2B-orange?logo=rust)](https://github.com/Vernum-Projecten/cc-shift/blob/main/rust-toolchain.toml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/Vernum-Projecten/cc-shift/blob/main/LICENSE)
 
@@ -15,7 +15,7 @@
 `cc-shift` watches the usage of the account Claude Code is signed in to. When it gets close to its 5-hour or 7-day limit, `cc-shift` moves every open Claude Code window to your next account, the same way `/login` does. There is no restart: the conversation, its history and the working directory stay as they are.
 
 > [!IMPORTANT]
-> `cc-shift` works on **macOS only**. It keeps logins in the macOS login Keychain, the same way Claude Code does on a Mac.
+> `cc-shift` works on **macOS and Linux**. It keeps logins where Claude Code keeps them: in the login Keychain on macOS, and in a `.credentials.json` file per config folder on Linux. Native Windows support is planned for v0.1.1; in WSL 2, use the Linux build.
 
 > [!WARNING]
 > Spreading your work over several subscriptions so that one person gets past each account's own usage limit may be against [Anthropic's terms](https://www.anthropic.com/legal/consumer-terms), and Anthropic can suspend accounts that break them. Check the terms that apply to your accounts before you use `cc-shift`. You use it at your own risk.
@@ -59,7 +59,7 @@ work ▕██████░░░░▏ 60% · 3h33m │ 7d 31% │ next spare
 
 | What | Version |
 |---|---|
-| macOS | Apple Silicon or Intel |
+| System | macOS (Apple Silicon or Intel), or Linux (x86_64 or arm64, any distribution, WSL 2 included) |
 | [Claude Code](https://code.claude.com/docs) | 2.1.300 or later |
 | Claude accounts | Pro, Max or Team, two or more |
 | Rust | 1.98 or later, only to build `cc-shift` yourself ([install Rust](https://rustup.rs)) |
@@ -80,16 +80,25 @@ cc-shift --version
 
 ### Prebuilt binary
 
-Every [release](https://github.com/Vernum-Projecten/cc-shift/releases) has a binary for Apple Silicon (`aarch64-apple-darwin`) and Intel (`x86_64-apple-darwin`) Macs, with a SHA-256 file and a build attestation. Download it with `curl`, so macOS does not quarantine it as it does a browser download:
+Every [release](https://github.com/Vernum-Projecten/cc-shift/releases) has a binary for each system, with a SHA-256 file and a build attestation:
+
+| System | `target` |
+|---|---|
+| macOS, Apple Silicon | `aarch64-apple-darwin` |
+| macOS, Intel | `x86_64-apple-darwin` |
+| Linux, x86_64 | `x86_64-unknown-linux-musl` |
+| Linux, arm64 | `aarch64-unknown-linux-musl` |
+
+The Linux binaries are static, so they run on any distribution. Download with `curl`; on a Mac, a browser download is quarantined by macOS:
 
 ```sh
 version=0.0.9
-target=aarch64-apple-darwin    # x86_64-apple-darwin on an Intel Mac
+target=aarch64-apple-darwin    # your target from the table above
 archive=cc-shift-v$version-$target.tar.gz
 
 curl -LO https://github.com/Vernum-Projecten/cc-shift/releases/download/v$version/$archive
 curl -LO https://github.com/Vernum-Projecten/cc-shift/releases/download/v$version/$archive.sha256
-shasum -a 256 -c $archive.sha256
+shasum -a 256 -c $archive.sha256    # or: sha256sum -c $archive.sha256
 tar xzf $archive
 mkdir -p ~/.local/bin && mv cc-shift-v$version-$target/cc-shift ~/.local/bin/
 ```
@@ -164,7 +173,7 @@ From here on you never need to run `cc-shift` while you work. If something looks
 ~/.claude                    the active account, used by every window
 ```
 
-- Each account is logged in once, in its own profile folder, and its login stays parked there in the Keychain.
+- Each account is logged in once, in its own profile folder, and its login stays parked there: in the Keychain on macOS, in the profile's `.credentials.json` on Linux.
 - Every Claude Code window uses the default `~/.claude`, which holds the active account.
 - After every reply, the status line records the active account's usage. When the 5-hour window reaches 95% or the 7-day window 99% (both [configurable](#switch-thresholds)), `cc-shift` moves the next account's login into `~/.claude` and copies its account details into `~/.claude.json`. Open windows pick both up, as they do after `/login`.
 - If a turn hits a limit anyway, the rate-limit hook switches at once.
@@ -206,13 +215,13 @@ A value outside 50 to 100 is ignored and the default is used.
 | `cc-shift log` | Shows the history: switches with their reason, refreshes, logged-out accounts and when all were full ([history](#history)). |
 | `cc-shift stats` | Shows the tokens of all accounts together per project and model ([token statistics](#token-statistics)). |
 | `cc-shift early on` | Starts some accounts' 5-hour windows before the workday, Monday to Friday ([early start](#early-start)). `cc-shift early off` stops it; `cc-shift early` shows it. |
-| `cc-shift remove <name>` | Deletes a profile and its Keychain login, after you type `yes`. The active account cannot be removed. |
-| `cc-shift uninstall [--all]` | Undoes `cc-shift setup`; with `--all`, also deletes every profile and its Keychain login. |
+| `cc-shift remove <name>` | Deletes a profile and its stored login, after you type `yes`. The active account cannot be removed. |
+| `cc-shift uninstall [--all]` | Undoes `cc-shift setup`; with `--all`, also deletes every profile and its stored login. |
 | `cc-shift completion zsh` | Prints the zsh completion script ([how to load it](#shell-completion)). |
 | `cc-shift --version` | Prints the version (also `-V` and `cc-shift version`). |
 | `cc-shift help` | Prints the commands. |
 
-Claude Code itself runs `cc-shift statusline` after every reply and `cc-shift hook rate-limit` when a turn hits a limit, and `launchd` runs `cc-shift early run` while the early start is on; you never run those.
+Claude Code itself runs `cc-shift statusline` after every reply and `cc-shift hook rate-limit` when a turn hits a limit, and the scheduled job runs `cc-shift early run` while the early start is on; you never run those.
 
 ### JSON for scripts
 
@@ -322,16 +331,16 @@ Early start is off.
 ```
 
 - **Which accounts:** each morning, the first ones in the [order of use](#which-account-is-next) whose 5-hour window is not running. Full, out-of-week and logged-out accounts are skipped. Start only as many as your workday needs: every extra window spends the week sooner, and the accounts left alone stay fresh for the evening.
-- **How:** a `launchd` agent runs `cc-shift early run` Monday to Friday at the set time. If your Mac is asleep then, it runs when the Mac wakes; if the Mac is off, that day is skipped.
+- **How:** a scheduled job runs `cc-shift early run` Monday to Friday at the set time: a `launchd` agent on macOS, a systemd user timer on Linux. A Mac that is asleep runs it when it wakes, and a Mac that is off skips the day; a Linux machine that was off runs it at the next boot or login. A run more than 3 hours late starts nothing, because the window would reset in the evening. On Linux it needs a systemd user session.
 - **The message:** Claude Code sends it itself, in the account's own profile, on Haiku, with no tools, hooks or MCP servers and no saved session. `cc-shift` touches no token for it.
 - **Where to see it:** `cc-shift log` shows each start and each account that could not be started. `cc-shift status` shows `early start 06:00 · 2 accounts` under the table while it is on.
 
 ## Security
 
-- Logins stay in the macOS login Keychain. `cc-shift` holds a token in memory only while it uses it, and never writes one to a file, a log or the terminal.
+- Logins stay where Claude Code keeps them: in the login Keychain on macOS, and in `.credentials.json` files with mode 0600 on Linux. `cc-shift` holds a token in memory only while it uses it, and never writes one to a log, the terminal or a file of its own.
 - A login is moved, never copied: a refresh token works once, so each login has exactly one live copy at any time.
-- A token is never a command-line argument. Keychain writes and HTTP requests get it on stdin, so `ps` cannot show it.
-- `cc-shift` refreshes only the parked logins. Claude Code refreshes the active one.
+- A token is never a command-line argument. Keychain writes and HTTP requests get it on stdin, so `ps` cannot show it. On Linux a login is written to a new 0600 file that replaces the old one in one step.
+- `cc-shift` refreshes only the parked logins. Claude Code refreshes the active one, and a switch holds Claude Code's own refresh lock so the two never overlap.
 - The refresh and usage requests are the ones Claude Code itself makes. Anthropic does not document them, so a Claude Code update can change them; `cc-shift` then shows that account's usage as unknown instead of failing.
 
 Report a vulnerability as described in [SECURITY.md](https://github.com/Vernum-Projecten/cc-shift/blob/main/SECURITY.md).
@@ -355,6 +364,8 @@ cargo uninstall cc-shift   # or delete the binary from ~/.local/bin
 
 **Does it work with Team accounts?** Yes. Team, Pro and Max accounts all report their usage to the status line.
 
+**Does it work on Linux or Windows?** On Linux, yes: the same commands, with logins in `.credentials.json` files and the early start on a systemd timer. Open windows follow a switch with their next message. Native Windows support is planned for v0.1.1; inside WSL 2, Claude Code is the Linux build, so use the Linux binary there.
+
 **An account shows `logged out`.** Its login was revoked or expired. Run `cc-shift add <name>` and `/login` again.
 
 **An account shows `unknown`.** Its usage has not been read yet, or the usage request failed. `cc-shift refresh` reads it now.
@@ -374,7 +385,7 @@ cargo nextest run --locked
 cargo deny check
 ```
 
-The tests never touch your real Keychain, profiles or accounts: they run against a temporary `HOME`, a stub `claude`, an in-memory Keychain and a fake HTTP client.
+The tests never touch your real Keychain, profiles or accounts: they run against a temporary `HOME`, a stub `claude`, an in-memory login store and a fake HTTP client.
 
 ## License
 
