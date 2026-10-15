@@ -23,10 +23,11 @@ const HOME_VARS: &[&str] = if cfg!(windows) {
 };
 
 /// The variables a Windows process needs from the real environment after
-/// `env_clear`: `SystemRoot` for the system libraries, and `PATHEXT` for
-/// the lookup of a command by its bare name.
+/// `env_clear`: `SystemRoot` for the system libraries, `PATHEXT` for the
+/// lookup of a command by its bare name, and the program files folders, where
+/// Git Bash is found as on a real Windows session.
 const KEPT_VARS: &[&str] = if cfg!(windows) {
-    &["SystemRoot", "PATHEXT"]
+    &["SystemRoot", "PATHEXT", "ProgramFiles", "ProgramFiles(x86)"]
 } else {
     &[]
 };

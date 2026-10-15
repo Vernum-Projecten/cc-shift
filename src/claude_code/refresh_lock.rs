@@ -95,6 +95,31 @@ fn is_stale(path: &Path) -> bool {
         .is_some_and(|age| age > STALE)
 }
 
+/// Sets the modification time of the folder at `path` to `age` ago, for
+/// tests of a stale lock.
+///
+/// Windows opens a folder only with `FILE_FLAG_BACKUP_SEMANTICS`
+/// (<https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew>).
+#[cfg(test)]
+pub(crate) fn backdate(path: &Path, age: Duration) -> io::Result<()> {
+    let mut options = fs::OpenOptions::new();
+    #[cfg(unix)]
+    options.read(true);
+    #[cfg(windows)]
+    {
+        /// `FILE_FLAG_BACKUP_SEMANTICS`, which opens a folder as a handle.
+        const FILE_FLAG_BACKUP_SEMANTICS: u32 = 0x0200_0000;
+        std::os::windows::fs::OpenOptionsExt::custom_flags(
+            &mut options,
+            FILE_FLAG_BACKUP_SEMANTICS,
+        );
+        options.write(true);
+    }
+    options
+        .open(path)?
+        .set_times(fs::FileTimes::new().set_modified(SystemTime::now() - age))
+}
+
 #[cfg(test)]
 #[expect(clippy::panic_in_result_fn, reason = "test assertions")]
 #[expect(
@@ -102,10 +127,10 @@ fn is_stale(path: &Path) -> bool {
     reason = "the tests make the lock folder as Claude Code does"
 )]
 mod tests {
-    use super::{NAME, STALE, hold};
+    use super::{NAME, STALE, backdate, hold};
     use crate::error::Error;
-    use std::fs::{self, File, FileTimes};
-    use std::time::{Duration, SystemTime};
+    use std::fs;
+    use std::time::Duration;
     use tempfile::TempDir;
 
     type TestResult = Result<(), Box<dyn std::error::Error>>;
@@ -135,8 +160,7 @@ mod tests {
         let dir = TempDir::new()?;
         let path = dir.path().join(NAME);
         fs::create_dir(&path)?;
-        let old = SystemTime::now() - STALE - Duration::from_secs(5);
-        File::open(&path)?.set_times(FileTimes::new().set_modified(old))?;
+        backdate(&path, STALE + Duration::from_secs(5))?;
         let lock = hold(dir.path(), Duration::ZERO)?;
         assert!(path.is_dir());
         drop(lock);

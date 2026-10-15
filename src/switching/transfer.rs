@@ -390,14 +390,12 @@ mod tests {
 
     #[test]
     fn a_stale_refresh_lock_does_not_block_a_switch() -> Result<(), Box<dyn std::error::Error>> {
-        use crate::claude_code::refresh_lock::{NAME, STALE};
-        use std::fs::{File, FileTimes};
-        use std::time::{Duration, SystemTime};
+        use crate::claude_code::refresh_lock::{NAME, STALE, backdate};
+        use std::time::Duration;
         let home = TempDir::new()?;
         let lock = home.path().join(".claude").join(NAME);
         fs::create_dir_all(&lock)?;
-        let old = SystemTime::now() - STALE - Duration::from_secs(5);
-        File::open(&lock)?.set_times(FileTimes::new().set_modified(old))?;
+        backdate(&lock, STALE + Duration::from_secs(5))?;
         let (memory, file) = a_active(&home)?;
         switch_to(&memory, &accounts(&home)?, &file, "b")?;
         assert_eq!(memory.content(&Slot::Active).as_deref(), Some("login-b"));
