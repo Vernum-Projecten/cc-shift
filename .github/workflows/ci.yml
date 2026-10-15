@@ -11,7 +11,7 @@
 #      workspace is empty before checkout, so a real detection job is the
 #      correct primitive. cc-shift runs on macOS and Linux, so the lanes that
 #      compile (clippy, test, rustdoc) run as a matrix over macos-latest and
-#      ubuntu-26.04; fmt and cargo-deny compile nothing and run once on Linux.
+#      ubuntu-latest; fmt and cargo-deny compile nothing and run once on Linux.
 #      A failed leg of a matrix fails its job, so `conclusion` sees it.
 #
 # The `conclusion` job is the single required status check on main; it is what
@@ -210,7 +210,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-26.04]
+        os: [macos-latest, ubuntu-latest]
     permissions:
       contents: read
     steps:
@@ -231,7 +231,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-26.04]
+        os: [macos-latest, ubuntu-latest]
     permissions:
       contents: read
     steps:
@@ -255,7 +255,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-26.04]
+        os: [macos-latest, ubuntu-latest]
     permissions:
       contents: read
     env:

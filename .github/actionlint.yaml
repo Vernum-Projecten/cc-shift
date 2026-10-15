@@ -5,14 +5,10 @@
 # exclusion the workflows need is passed at invoke time through SHELLCHECK_OPTS
 # (see .github/workflows/ci.yml), which this file has no key for.
 
-# No self-hosted runners: every job runs on a GitHub-hosted runner. actionlint
-# 1.7.12 does not yet list the GitHub-hosted Ubuntu 26.04 runners, which
-# https://github.com/actions/runner-images documents under these two labels,
-# so they are declared here and every other label is still checked.
+# No self-hosted runners: every job runs on a GitHub-hosted runner, so no
+# custom runner label is declared.
 self-hosted-runner:
-  labels:
-    - ubuntu-26.04
-    - ubuntu-26.04-arm
+  labels: []
 
 # null disables the configuration-variables check, so any `vars.*` used later
 # is accepted without being listed here.
