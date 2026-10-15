@@ -136,7 +136,7 @@ fn write_json(path: &Path, value: &Value) -> Result<(), Error> {
     let fail =
         |e: &dyn std::fmt::Display| Error::Account(format!("cannot write {}: {e}", path.display()));
     let text = serde_json::to_vec_pretty(value).map_err(|e| fail(&e))?;
-    let temporary = path.with_extension("json.cs-tmp");
+    let temporary = path.with_extension("json.cc-shift-tmp");
     fs::write(&temporary, text).map_err(|e| fail(&e))?;
     #[cfg(unix)]
     {
