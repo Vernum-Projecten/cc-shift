@@ -13,6 +13,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   in to the same account, the state file, an unfinished switch, logged-out
   accounts and the account details in `~/.claude.json`, and prints the
   command that fixes each problem. It exits 1 when a check fails.
+- `cc-shift completion zsh` prints a zsh completion script for the commands,
+  the profile names after `use` and `remove`, and the flags.
 - `cc-shift remove <name>` deletes a profile, its Keychain login and what
   the state remembers about it, after you type `yes`; the active account
   cannot be removed.

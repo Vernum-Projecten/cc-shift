@@ -16,6 +16,8 @@ Commands:
   refresh       Refresh parked logins and read their usage now
   doctor        Check the setup and say what to fix
   remove <name> Delete a profile and its Keychain login
+  completion zsh
+                Print the zsh completion script
   uninstall [--all]
                 Undo setup; --all also removes every profile and its login
   list          Print the profiles
@@ -49,6 +51,8 @@ pub enum Command {
     Doctor,
     /// Delete a profile and its Keychain login.
     Remove(OsString),
+    /// Print the completion script for a shell.
+    Completion(String),
     /// Undo setup; with `all`, also remove every profile.
     Uninstall {
         /// Whether to remove the profiles and their logins too.
@@ -96,6 +100,10 @@ where
             [] => Command::Uninstall { all: false },
             ["--all"] => Command::Uninstall { all: true },
             _ => Command::Misuse("uninstall takes only --all".to_owned()),
+        },
+        "completion" => match flags.as_slice() {
+            [shell] => Command::Completion((*shell).to_owned()),
+            _ => Command::Misuse("completion takes one shell: zsh".to_owned()),
         },
         "hook" => match flags.as_slice() {
             ["rate-limit"] => Command::HookRateLimit,

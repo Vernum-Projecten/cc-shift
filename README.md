@@ -79,6 +79,14 @@ cd cc-shift
 cargo install --path . --locked
 ```
 
+### Shell completion
+
+To complete the commands and profile names with Tab in zsh, add this line to `~/.zshrc`, after `compinit`:
+
+```sh
+source <(cc-shift completion zsh)
+```
+
 ## Set up
 
 **1. Add each account once.** For every account:
@@ -130,6 +138,7 @@ From here on you never need to run `cc-shift` while you work.
 | `cc-shift use <name>` | Moves every open window to that account now. Never needed; for steering by hand. |
 | `cc-shift refresh` | Refreshes the logins of the accounts that are not active and reads their usage now. Runs on its own as well. |
 | `cc-shift list` | Prints the profile names. |
+| `cc-shift completion zsh` | Prints the zsh completion script ([how to load it](#shell-completion)). |
 | `cc-shift doctor` | Checks the setup (status line and hook, `claude`, every login and account, two profiles on one account, the state) and says how to fix what is wrong. |
 | `cc-shift remove <name>` | Deletes a profile and its Keychain login, after you type `yes`. The active account cannot be removed. |
 | `cc-shift uninstall [--all]` | Undoes `cc-shift setup`; with `--all`, also deletes every profile and its Keychain login. |
