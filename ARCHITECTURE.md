@@ -20,7 +20,7 @@ Claude Code keeps its login in the macOS Keychain, in one item per config folder
 
 - Each account is logged in once, in its own profile folder. That login stays parked in the profile's Keychain item.
 - Every window runs with the default `~/.claude`. Its Keychain item holds the active account.
-- A switch moves the next account's parked login into the item of `~/.claude`. Every open window continues on it.
+- A switch moves the next account's parked login into the item of `~/.claude`, and copies that account's details (`oauthAccount` in the profile's `.claude.json`) into `~/.claude.json`. `/login` writes both, and open windows follow only when both change (observed on Claude Code 2.1.300, #24). Every open window continues on the new account.
 
 A refresh token works once: after a refresh the old one is dead, and presenting a dead copy can revoke the login. So a login is always moved, never copied, and each login has exactly one live copy and one process that refreshes it: Claude Code for the active login, `cs` for the parked ones.
 
@@ -75,7 +75,7 @@ All windows share the active account, so a switch moves all of them, as `/login`
 Under the lock, in this order:
 
 1. Save the login now in the item of `~/.claude` back to the parked item of the account that was active. Claude Code may have refreshed it, so this keeps the live tokens.
-2. Write `member2`'s parked login into the item of `~/.claude`.
+2. Write `member2`'s parked login into the item of `~/.claude`, and set `oauthAccount` in `~/.claude.json` to `member2`'s, changing nothing else in that file.
 3. Clear `member2`'s parked item and record `member2` as active in the state.
 
 The state records each step before it runs, so a switch that stops halfway is finished by the next `cs` run, and no login is lost or left with two copies. Steps 1 and 2 are recorded as one step: run again after a stop between them, it saves `~/.claude` once more, so tokens Claude Code refreshed in the meantime are kept, and it skips both when `~/.claude` already holds the next login.
@@ -116,6 +116,7 @@ A small library with a thin binary: `src/main.rs` only calls `cs::run` in `src/l
 - `keychain`: the `Logins` trait every Keychain access goes through, so tests use an in-memory store, and the opaque `Login` whose debug output never shows a token.
 - `switch`: the move of section 5 with its recovery.
 - `setup`: puts the status line and the rate-limit hook into `~/.claude/settings.json`, keeping every other setting and chaining the user's own status line.
+- `account`: copies a profile's `oauthAccount` into `~/.claude.json`, keeping every other key and its order.
 - `system_keychain`: the macOS backend of `Logins` through `/usr/bin/security`, the same tool Claude Code's items were made with, so their access rules stay as they are. A login goes in on stdin as hex and every write is read back.
 - Planned: the usage endpoint for parked accounts, the refresh of parked logins, and the hook entry point.
 

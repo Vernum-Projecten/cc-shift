@@ -4,6 +4,7 @@
 //! its parked login. The binary in `main.rs` only calls [`run`], so the
 //! whole run path is testable from `tests/`.
 
+pub mod account;
 pub mod cli;
 pub mod error;
 pub mod keychain;
@@ -106,9 +107,18 @@ fn fail(result: Result<Infallible, Error>) -> ExitCode {
 /// continues on it.
 fn use_command(raw: &OsStr) -> Result<(), Error> {
     let name = ProfileName::parse(raw)?;
-    let root = ProfilesRoot::from_env()?;
+    let home = std::env::var_os("HOME")
+        .filter(|h| !h.is_empty())
+        .ok_or(Error::NoHome)?;
+    let root = ProfilesRoot::from_home(Some(home.clone()))?;
     let logins = system_keychain::SystemKeychain::for_user(&root)?;
-    match switch::switch_to(&logins, &StateFile::in_root(&root), name.as_str())? {
+    let accounts = account::AccountFiles::new(std::path::Path::new(&home), &root);
+    match switch::switch_to(
+        &logins,
+        &accounts,
+        &StateFile::in_root(&root),
+        name.as_str(),
+    )? {
         switch::Outcome::AlreadyActive => {
             report(&format!("'{}' is already active", name.as_str()));
         }
