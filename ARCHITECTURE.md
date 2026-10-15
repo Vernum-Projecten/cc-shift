@@ -33,12 +33,13 @@ A refresh token works once: after a refresh the old one is dead, and presenting 
 | `cs status` | Shows every account with its usage and reset times, and marks the active one. |
 | `cs use <name>` | Makes an account active now. Never needed; for steering by hand. |
 | `cs list` | Prints the profile names. |
+| `cs refresh` | Refreshes parked logins and reads parked accounts' usage now. `cs status` and the status line run it on their own. |
 | `cs statusline` | Called by Claude Code after every reply. Not run by hand. |
 | `cs hook rate-limit` | Called by Claude Code when a turn hits a usage limit. Not run by hand. |
 
 After `cs add` for each account and one `cs setup`, the user never runs `cs` while working.
 
-A profile name uses ASCII letters, digits, `-` and `_`, starts with a letter or digit, and is not a command word (`add`, `setup`, `status`, `use`, `list`, `statusline`, `hook`, `help`, `remove`).
+A profile name uses ASCII letters, digits, `-` and `_`, starts with a letter or digit, and is not a command word (`add`, `setup`, `status`, `use`, `list`, `statusline`, `hook`, `help`, `remove`, `refresh`).
 
 ## 4. Automatic switching
 
@@ -68,7 +69,7 @@ A source that fails or returns an unknown shape makes that account "unknown". It
 - **Before the limit:** each `cs statusline` run records the active account's numbers. When a window reaches 95%, it switches to the next account. The switch falls between two replies, so no turn fails.
 - **At the limit:** Claude Code runs a `StopFailure` hook with matcher `rate_limit` when a turn ends on a usage limit (<https://code.claude.com/docs/en/hooks>). `cs hook rate-limit` records the active account as full and switches at once. The next message runs on the new account.
 
-The status line prints at once. A switch is a few local Keychain calls and runs in the status line itself. Slow work (refreshing a parked login, asking for a parked account's usage when its numbers are more than five minutes old) runs in a detached `cs` process, so the next choice is made on current numbers.
+The status line prints at once. A switch is a few local Keychain calls and runs in the status line itself. Slow work (refreshing a parked login, asking for a parked account's usage when its numbers are more than five minutes old) runs in a detached `cs refresh`, so the next choice is made on current numbers. Only one `cs refresh` runs at a time.
 
 ### Several windows
 
@@ -125,7 +126,9 @@ A small library with a thin binary: `src/main.rs` only calls `cs::run` in `src/l
 - `account`: copies a profile's `oauthAccount` into `~/.claude.json`, keeping every other key and its order.
 - `system_keychain`: the macOS backend of `Logins` through `/usr/bin/security`, the same tool Claude Code's items were made with, so their access rules stay as they are. A login goes in on stdin as hex and every write is read back.
 - `auto`: when to switch on its own (the status line at 95%, the rate-limit hook, `cs setup`) and where to go, skipping a profile with no usable login. A hook within a minute of a switch is taken to belong to the account just left.
-- Planned: the usage endpoint for parked accounts and the refresh of parked logins.
+- `http`: requests through the system `curl`, with the whole request on stdin so no token is ever a command-line argument.
+- `oauth`: the refresh and usage calls Claude Code makes, and how their responses map onto a stored login and the state.
+- `parked`: refreshing parked logins (under the lock for the whole request) and reading parked accounts' usage.
 
 The runtime dependencies are `thiserror` for the error type and `serde` with `serde_json` for the state and the status line input; each further dependency is added in the pull request that needs it.
 

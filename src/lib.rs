@@ -8,8 +8,11 @@ pub mod account;
 pub mod auto;
 pub mod cli;
 pub mod error;
+pub mod http;
 pub mod keychain;
 pub mod launch;
+pub mod oauth;
+pub mod parked;
 pub mod profile;
 pub mod select;
 pub mod setup;
@@ -73,6 +76,13 @@ where
             }
         },
         Command::Setup => match setup_command() {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(error) => {
+                report(&error.to_string());
+                ExitCode::from(FAILURE)
+            }
+        },
+        Command::Refresh => match refresh_command() {
             Ok(()) => ExitCode::SUCCESS,
             Err(error) => {
                 report(&error.to_string());
@@ -200,6 +210,48 @@ fn automatic(trigger: auto::Trigger) -> Result<Option<String>, Error> {
     auto::run(&context, trigger, unix_now())
 }
 
+/// Refreshes the parked logins and reads the parked accounts' usage against
+/// the real Keychain and network.
+fn refresh_parked() -> Result<Vec<parked::Report>, Error> {
+    let root = ProfilesRoot::from_env()?;
+    let logins = system_keychain::SystemKeychain::for_user(&root)?;
+    parked::refresh_all(
+        &logins,
+        &http::Curl,
+        &StateFile::in_root(&root),
+        &root,
+        unix_now(),
+    )
+}
+
+/// Runs `cs refresh` and says what happened per account.
+fn refresh_command() -> Result<(), Error> {
+    for item in refresh_parked()? {
+        match item.usage {
+            Ok(_) if item.refreshed => {
+                report(&format!("{}: login refreshed, usage read", item.name));
+            }
+            Ok(true) => report(&format!("{}: usage read", item.name)),
+            Ok(false) => report(&format!("{}: up to date", item.name)),
+            Err(error) => report(&format!("{}: {error}", item.name)),
+        }
+    }
+    Ok(())
+}
+
+/// Starts `cs refresh` as a detached process, so the status line prints at
+/// once; a run that is already going makes the new one return at once.
+fn start_refresh_in_background() {
+    if let Ok(cs) = std::env::current_exe() {
+        let _child: std::io::Result<std::process::Child> = std::process::Command::new(cs)
+            .arg("refresh")
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn();
+    }
+}
+
 /// Prints every account with its usage and which account comes next.
 fn status() -> Result<(), Error> {
     let root = ProfilesRoot::from_env()?;
@@ -208,6 +260,9 @@ fn status() -> Result<(), Error> {
         report("no profiles yet; create one with 'cs add <name>'");
         return Ok(());
     }
+    // NOTE: no specification governs this: our own design. A refresh that
+    // fails leaves the last numbers, which the table still shows.
+    let _reports: Result<Vec<parked::Report>, Error> = refresh_parked();
     let state = StateFile::in_root(&root).read()?;
     let accounts = status::accounts(&profiles, &state);
     let text = status::render(&accounts, state.active.as_deref(), unix_now());
@@ -237,6 +292,9 @@ fn statusline_command() {
     let file = StateFile::in_root(&root);
     let chained = statusline::record(&input, &file, now).ok().flatten();
     let _switched: Result<Option<String>, Error> = automatic(auto::Trigger::Usage);
+    if parked::any_stale(&file, &root, now).unwrap_or(false) {
+        start_refresh_in_background();
+    }
     let mut line = chained
         .map(|command| statusline::chained(&command, &input))
         .unwrap_or_default();
