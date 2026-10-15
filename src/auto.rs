@@ -260,17 +260,17 @@ mod tests {
     }
 
     #[test]
-    fn usage_at_the_threshold_switches_to_the_most_left() -> Result<(), Box<dyn std::error::Error>>
-    {
+    fn usage_at_the_threshold_switches_by_the_selection_rule()
+    -> Result<(), Box<dyn std::error::Error>> {
         let world = World::new(Some("a"))?;
         world.usage("a", 95.0)?;
         world.usage("b", 60.0)?;
-        world.usage("c", 20.0)?;
         assert_eq!(
             run(&world.context(), Trigger::Usage, NOW)?.as_deref(),
-            Some("c")
+            Some("b"),
+            "b has a running window; c has none read yet"
         );
-        assert_eq!(world.active()?.as_deref(), Some("c"));
+        assert_eq!(world.active()?.as_deref(), Some("b"));
         assert!(
             world.home.path().join(".claude.json").exists(),
             "details set"

@@ -55,7 +55,13 @@ A source that fails or returns an unknown shape makes that account "unknown". It
 
 ### Which account is next
 
-Among the available accounts, the one with the most usage left in its fuller window wins. On a tie, the one whose window resets first wins, so usage that would expire unused is spent first. If none is available, `cs` stays on the current account and `cs status` shows when the first one resets.
+`cs` spends what expires first (owner decision, #36). Usage left in a window when it resets is lost, and the 5-hour window only starts with an account's first message, so an untouched account loses nothing by waiting. Among the available accounts:
+
+1. An account whose 5-hour window is running goes first, the one that resets soonest first. Its remaining usage is the next to be lost.
+2. Then an account with no running 5-hour window, the one whose 7-day window resets soonest first, then the one with the most 7-day usage left. This spreads the weekly limits, so no account runs out of its week early.
+3. Then the name, so the choice is the same every run.
+
+`cs` stays on the active account until it reaches the threshold, so it never switches back and forth. The effect is that one account is drained at a time and a new 5-hour clock starts only when it is needed; by the time the others are used, the first has reset. If none is available, `cs` stays on the current account and `cs status` shows when the first one resets.
 
 ### When it switches
 
