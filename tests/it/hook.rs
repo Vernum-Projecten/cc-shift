@@ -38,6 +38,9 @@ fn succeeds_before_setup() -> io::Result<()> {
     Ok(())
 }
 
+// NOTE: <https://doc.rust-lang.org/std/env/fn.home_dir.html> falls back to the
+// real profile folder on Windows, so the case runs where `HOME` is the only source.
+#[cfg(unix)]
 #[test]
 fn succeeds_without_home() -> io::Result<()> {
     let sandbox = Sandbox::new()?;

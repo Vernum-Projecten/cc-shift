@@ -4,7 +4,7 @@
 # The release lane. One workflow owns the `v*` tag, and every ordering in it is
 # a `needs` edge:
 #
-#   plan ── github-release (draft) ─┬─ build (4 targets) ─┬─ finalize-release (publish)
+#   plan ── github-release (draft) ─┬─ build (6 targets) ─┬─ finalize-release (publish)
 #                                   └─ crates-io ─────────┘
 #
 # The GitHub release is created as a DRAFT, the binaries with their SHA-256
@@ -21,9 +21,11 @@
 #
 # The binaries are built for Apple Silicon and Intel Macs on macOS, and as
 # static musl binaries for x86_64 and aarch64 Linux, each on a native Ubuntu
-# runner. Every dependency is pure Rust, so the musl link needs only the C
-# compiler the runner image ships. No job restores a cache: a cache an
-# untrusted run could poison must never feed a release.
+# runner, and for x64 and Arm64 Windows on native Windows runners. Every
+# dependency is pure Rust, so the musl link needs only the C compiler the
+# runner image ships, and the Windows link the MSVC tools the image ships. No
+# job restores a cache: a cache an untrusted run could poison must never feed a
+# release.
 #
 # The workflow is dormant until a `v*` tag is pushed. It does not run on a push
 # to main or on a pull request.
@@ -177,10 +179,19 @@ jobs:
             os: ubuntu-latest
           - target: aarch64-unknown-linux-musl
             os: ubuntu-24.04-arm
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+          - target: aarch64-pc-windows-msvc
+            os: windows-11-arm
     permissions:
       contents: write # attach the binary to the draft release
       id-token: write # Sigstore, for the provenance attestation
       attestations: write # store it against this repository
+    defaults:
+      run:
+        # The Windows runners run bash from Git for Windows, so one script
+        # packages every target.
+        shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -205,16 +216,28 @@ jobs:
           set -euo pipefail
           name="cc-shift-${TAG}-${TARGET}"
           mkdir -p "dist/$name"
-          cp "target/$TARGET/release/cc-shift" README.md LICENSE NOTICE "dist/$name/"
-          tar -C dist -czf "dist/$name.tar.gz" "$name"
-          # sha256sum where the runner has it (Ubuntu), shasum otherwise
-          # (macOS); both print the same "<hash>  <file>" line.
+          # A Windows target ships cc-shift.exe in a zip, packed by the 7-Zip
+          # of the runner image; every other target ships a tarball.
+          case "$TARGET" in
+            *-windows-*)
+              cp "target/$TARGET/release/cc-shift.exe" README.md LICENSE NOTICE "dist/$name/"
+              archive="$name.zip"
+              (cd dist && 7z a -tzip -bd "$archive" "$name" > /dev/null)
+              ;;
+            *)
+              cp "target/$TARGET/release/cc-shift" README.md LICENSE NOTICE "dist/$name/"
+              archive="$name.tar.gz"
+              tar -C dist -czf "dist/$archive" "$name"
+              ;;
+          esac
+          # sha256sum where the runner has it (Ubuntu, Git Bash on Windows),
+          # shasum otherwise (macOS); both print the same "<hash>  <file>" line.
           if command -v sha256sum > /dev/null; then
-            (cd dist && sha256sum "$name.tar.gz" > "$name.tar.gz.sha256")
+            (cd dist && sha256sum "$archive" > "$archive.sha256")
           else
-            (cd dist && shasum -a 256 "$name.tar.gz" > "$name.tar.gz.sha256")
+            (cd dist && shasum -a 256 "$archive" > "$archive.sha256")
           fi
-          echo "archive=dist/$name.tar.gz" >> "$GITHUB_OUTPUT"
+          echo "archive=dist/$archive" >> "$GITHUB_OUTPUT"
       - name: Attest the build provenance
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
@@ -311,8 +334,13 @@ jobs:
           printf '%s\n' "$assets"
           missing=""
           for target in aarch64-apple-darwin x86_64-apple-darwin \
-            x86_64-unknown-linux-musl aarch64-unknown-linux-musl; do
-            for suffix in ".tar.gz" ".tar.gz.sha256"; do
+            x86_64-unknown-linux-musl aarch64-unknown-linux-musl \
+            x86_64-pc-windows-msvc aarch64-pc-windows-msvc; do
+            case "$target" in
+              *-windows-*) kind=".zip" ;;
+              *) kind=".tar.gz" ;;
+            esac
+            for suffix in "$kind" "$kind.sha256"; do
               printf '%s\n' "$assets" | grep -Fxq "cc-shift-${TAG}-${target}${suffix}" \
                 || missing="$missing cc-shift-${TAG}-${target}${suffix}"
             done
