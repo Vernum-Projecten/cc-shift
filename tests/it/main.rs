@@ -9,5 +9,6 @@ mod list;
 mod log;
 mod sandbox;
 mod setup;
+mod stats;
 mod status;
 mod statusline;

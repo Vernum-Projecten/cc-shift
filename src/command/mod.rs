@@ -16,6 +16,7 @@ pub mod parse;
 pub mod refresh;
 pub mod remove;
 pub mod setup;
+pub mod stats;
 pub mod status;
 pub mod statusline;
 pub mod uninstall;
@@ -69,6 +70,7 @@ where
         Command::Remove(name) => remove::run(&name),
         Command::Uninstall { all } => uninstall::run(all),
         Command::Status { json } => status::run(json),
+        Command::Stats(options) => stats::run(&options),
         Command::HookRateLimit => {
             hook::run();
             Ok(())

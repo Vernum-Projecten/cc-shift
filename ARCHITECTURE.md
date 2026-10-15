@@ -32,6 +32,7 @@ A refresh token works once: after a refresh the old one is dead, and presenting 
 | `cc-shift setup` | Installs the status line and the hook in `~/.claude/settings.json` and makes the best account active. Run once. |
 | `cc-shift status` | Shows every account in the order of use, with both windows as bars, their reset times and each account's state. |
 | `cc-shift status --json` | The same overview as JSON, for scripts. |
+| `cc-shift stats` | Shows the tokens of all accounts together per project, model and day, read from Claude Code's transcripts; `--since`, `--all`, `--project`, `--cost` and `--json` choose the period, one project, the cost at API prices and JSON. |
 | `cc-shift use <name>` | Makes an account active now. Never needed; for steering by hand. |
 | `cc-shift list` | Prints the profile names. |
 | `cc-shift refresh` | Refreshes parked logins and reads parked accounts' usage now. `cc-shift status` and the status line run it on their own. |
@@ -44,7 +45,7 @@ A refresh token works once: after a refresh the old one is dead, and presenting 
 
 After `cc-shift add` for each account and one `cc-shift setup`, `cc-shift` tracks every account and switches on its own.
 
-A profile name uses ASCII letters, digits, `-` and `_`, starts with a letter or digit, and is not a command word (`add`, `setup`, `status`, `use`, `list`, `statusline`, `hook`, `help`, `remove`, `refresh`, `doctor`, `uninstall`, `completion`).
+A profile name uses ASCII letters, digits, `-` and `_`, starts with a letter or digit, and is not a command word (`add`, `setup`, `status`, `use`, `list`, `statusline`, `hook`, `help`, `remove`, `refresh`, `doctor`, `uninstall`, `completion`, `stats`).
 
 ## 4. Automatic switching
 
@@ -117,6 +118,7 @@ A parked login has no Claude Code process to refresh it, so `cc-shift` does. Whe
 | The active login | Keychain, `Claude Code-credentials` (the item of `~/.claude`) | Claude Code; cc-shift on a switch |
 | Active account, usage per account, unfinished switch | `~/.claude-profiles/state.json` | cc-shift |
 | The lock | `~/.claude-profiles/.lock` | cc-shift |
+| Token counts read from the transcripts, per file | `~/.claude-profiles/stats-cache.json` | cc-shift stats |
 | Status line and hook | `~/.claude/settings.json` | cc-shift setup |
 
 `cc-shift list` treats every folder in `~/.claude-profiles/` as a profile, so the state and lock are files there. A profile's item is `Claude Code-credentials-` followed by the first 8 hex characters of the SHA-256 of its folder's absolute path, with the macOS user name as the account (observed on Claude Code 2.1.300, #6).
@@ -129,16 +131,22 @@ A small library with a thin binary: `src/main.rs` only calls `cs::run` in `src/l
 src/
 ├── main.rs, lib.rs, error.rs
 ├── command/      the command line: parse, and one file per command
-│                 (add, list, activate for cc-shift use, setup, status, refresh,
-│                 statusline, hook); mod.rs dispatches and holds the helpers
+│                 (add, list, activate for cc-shift use, setup, status, stats,
+│                 refresh, statusline, hook); mod.rs dispatches and holds the
+│                 helpers
 ├── store/        the files cc-shift owns: profile (names, the profiles folder),
 │                 state (state.json behind the lock, written in one rename),
 │                 history (history.jsonl, appended under its own lock)
 ├── usage/        mod.rs: the two windows per account, the selection view
 │                 and time left; select: the selection rule; overview:
 │                 every account's state in the order of use
-├── render/       the status table and the status line, with bars and
-│                 colour (NO_COLOR is honoured)
+├── render/       the status table, the status line and the stats tables
+│                 and JSON, with bars and colour (NO_COLOR is honoured)
+├── stats/        transcript: finding the session transcripts and reading
+│                 only the usage fields; cache: stats-cache.json per file
+│                 by size and modification time; summary: one count per
+│                 message id, per project, model and local day; price: the
+│                 API price table and the cost of a response
 ├── login/        mod.rs: Login, Slot and the Logins trait every Keychain
 │                 access goes through; keychain: the macOS backend through
 │                 /usr/bin/security; account: oauthAccount in .claude.json
@@ -153,7 +161,7 @@ src/
 
 Every import names the module that defines the item; there are no re-exports. A login never appears in debug output, and the Keychain and HTTP are behind traits, so tests use memory and fakes.
 
-The runtime dependencies are `thiserror` for the error type, `serde` with `serde_json` (key order kept) for the JSON files, `sha2` for the Keychain service names, and `jiff` for the reset times; each further dependency is added in the pull request that needs it.
+The runtime dependencies are `thiserror` for the error type, `serde` with `serde_json` (key order kept) for the JSON files, `sha2` for the Keychain service names, and `jiff` for the reset times and, with its system time zone support, the local days of `cc-shift stats`; each further dependency is added in the pull request that needs it.
 
 ## 8. Errors
 

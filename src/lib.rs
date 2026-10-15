@@ -7,8 +7,9 @@
 //! The modules follow the domain: `command` is the command line, `store`
 //! the files `cc-shift` owns, `usage` what is known about each account, `login`
 //! the Keychain and the account details, `switching` moving between
-//! accounts, `anthropic` the calls to Anthropic, and `claude_code` the
-//! places where `cc-shift` plugs into Claude Code.
+//! accounts, `anthropic` the calls to Anthropic, `claude_code` the places
+//! where `cc-shift` plugs into Claude Code, and `stats` the token statistics
+//! read from Claude Code's transcripts.
 
 // NOTE: no specification governs this: our own design. The logins live in
 // the macOS login Keychain, so a build for another system stops here.
@@ -21,6 +22,7 @@ pub mod command;
 pub mod error;
 pub mod login;
 pub mod render;
+pub mod stats;
 pub mod store;
 pub mod switching;
 pub mod usage;

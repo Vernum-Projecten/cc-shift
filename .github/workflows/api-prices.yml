@@ -1,0 +1,73 @@
+# API price watch. Once a week it compares the model table of Anthropic's
+# pricing page with scripts/checks/api-prices.txt, the snapshot the price
+# table of `cc-shift stats --cost` is tested against. A changed price or a new
+# model opens an issue that says how to update both; an open issue with the
+# same title is not opened twice. A page that cannot be read opens an issue
+# of its own, so the watch never stops in silence.
+name: API prices
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+# No permissions by default: the job grants its own.
+permissions: {}
+
+jobs:
+  compare:
+    name: compare prices
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Compare the pricing page with the snapshot
+        id: compare
+        run: |
+          set +e
+          scripts/checks/api-prices.sh > "$RUNNER_TEMP/prices.txt" 2>&1
+          code=$?
+          set -e
+          cat "$RUNNER_TEMP/prices.txt"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+      - name: Open an issue
+        if: steps.compare.outputs.code != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CODE: ${{ steps.compare.outputs.code }}
+        run: |
+          if [ "$CODE" = 2 ]; then
+            title="API price watch cannot read the pricing page"
+          else
+            title="API prices changed: update the cc-shift stats price table"
+          fi
+          open="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --search "in:title \"$title\"" --json title \
+            --jq "map(select(.title == \"$title\")) | length")"
+          if [ "$open" != 0 ]; then
+            echo "An open issue already tracks this: $title"
+            exit 0
+          fi
+          {
+            echo "The weekly price watch found a difference between"
+            echo "<https://platform.claude.com/docs/en/about-claude/pricing> and"
+            echo "\`scripts/checks/api-prices.txt\`:"
+            echo
+            echo '```diff'
+            cat "$RUNNER_TEMP/prices.txt"
+            echo '```'
+            echo
+            echo "To update:"
+            echo
+            echo "1. Run \`scripts/checks/api-prices.sh --print > scripts/checks/api-prices.txt\`."
+            echo "2. Change \`PRICES\` in \`src/stats/price.rs\` to match, adding a row for a new model."
+            echo "3. Run \`cargo nextest run\`: the tests in \`src/stats/price.rs\` check that the table and the snapshot agree."
+            echo "4. Add a CHANGELOG entry."
+          } > "$RUNNER_TEMP/body.md"
+          gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" \
+            --body-file "$RUNNER_TEMP/body.md"

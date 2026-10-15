@@ -2,6 +2,8 @@
 
 use std::ffi::OsString;
 
+use crate::stats::{Options, Period};
+
 /// The usage text printed by `cc-shift help` and after a command line `cc-shift` does
 /// not understand.
 pub const USAGE: &str = "\
@@ -12,6 +14,11 @@ Commands:
   setup         Install cc-shift in Claude Code once, so switching is automatic
   status        Show every account with its usage and reset times
   status --json The same as JSON, for scripts
+  stats         Show today's tokens of all accounts per project and model
+  stats [--since 2h|7d|30d | --all] [--project <name>] [--cost]
+        [--per-account] [--json]
+                Pick the period or one project, add the API cost or a split
+                per account, or print JSON
   use <name>    Make an account active in every Claude Code window now
   refresh       Refresh parked logins and read their usage now
   doctor        Check the setup and say what to fix
@@ -50,6 +57,8 @@ pub enum Command {
         /// Whether to print JSON instead of the table.
         json: bool,
     },
+    /// Print token statistics across all accounts.
+    Stats(Options),
     /// Refresh parked logins and read parked accounts' usage.
     Refresh,
     /// Check the setup and say what to fix.
@@ -104,6 +113,7 @@ where
             ["--json"] => Command::Status { json: true },
             _ => Command::Misuse("status takes only --json".to_owned()),
         },
+        "stats" => stats(&flags),
         "uninstall" => match flags.as_slice() {
             [] => Command::Uninstall { all: false },
             ["--all"] => Command::Uninstall { all: true },
@@ -142,6 +152,53 @@ fn one_name(command: &str, rest: Vec<OsString>) -> Result<OsString, Command> {
     }
 }
 
+/// Returns the options of `cc-shift stats`, or the misuse.
+fn stats(flags: &[&str]) -> Command {
+    let mut options = Options::default();
+    let mut period = None;
+    let mut rest = flags.iter();
+    while let Some(flag) = rest.next() {
+        match *flag {
+            "--cost" => options.cost = true,
+            "--json" => options.json = true,
+            "--per-account" => options.per_account = true,
+            "--all" if period.is_none() => period = Some(Period::All),
+            "--since" if period.is_none() => match rest.next().and_then(|v| since(v)) {
+                Some(p) => period = Some(p),
+                None => {
+                    return Command::Misuse(
+                        "--since takes a number of hours or days, like 2h, 7d or 30d".to_owned(),
+                    );
+                }
+            },
+            "--all" | "--since" => {
+                return Command::Misuse("stats takes one of --since and --all".to_owned());
+            }
+            "--project" => match rest.next() {
+                Some(name) if !name.is_empty() && options.project.is_none() => {
+                    options.project = Some((*name).to_owned());
+                }
+                _ => return Command::Misuse("--project takes one project name".to_owned()),
+            },
+            other => return Command::Misuse(format!("stats does not take '{other}'")),
+        }
+    }
+    options.period = period.unwrap_or(Period::Today);
+    Command::Stats(options)
+}
+
+/// Parses a `--since` value: a whole number of hours (`2h`) or days (`7d`),
+/// at least one.
+fn since(value: &str) -> Option<Period> {
+    let unit = value.chars().last()?;
+    let number: u32 = value.strip_suffix(unit)?.parse().ok().filter(|n| *n > 0)?;
+    match unit {
+        'h' => Some(Period::Hours(number)),
+        'd' => Some(Period::Days(number)),
+        _ => None,
+    }
+}
+
 /// Returns `command` when no argument follows it, or the misuse.
 fn bare(name: &str, rest: &[OsString], command: Command) -> Command {
     match rest.first() {
@@ -156,6 +213,7 @@ fn bare(name: &str, rest: &[OsString], command: Command) -> Command {
 #[cfg(test)]
 mod tests {
     use super::{Command, parse};
+    use crate::stats::{Options, Period};
     use std::ffi::OsString;
 
     fn args(words: &[&str]) -> Vec<OsString> {
@@ -235,6 +293,75 @@ mod tests {
             parse(args(&["uninstall", "--force"])),
             Command::Misuse(_)
         ));
+    }
+
+    #[test]
+    fn stats_counts_today_by_default() {
+        assert_eq!(parse(args(&["stats"])), Command::Stats(Options::default()));
+    }
+
+    #[test]
+    fn stats_options_combine_freely() {
+        assert_eq!(
+            parse(args(&[
+                "stats",
+                "--json",
+                "--since",
+                "30d",
+                "--cost",
+                "--project",
+                "shop"
+            ])),
+            Command::Stats(Options {
+                period: Period::Days(30),
+                project: Some("shop".to_owned()),
+                cost: true,
+                json: true,
+                per_account: false,
+            })
+        );
+        assert_eq!(
+            parse(args(&["stats", "--since", "2h"])),
+            Command::Stats(Options {
+                period: Period::Hours(2),
+                ..Options::default()
+            })
+        );
+        assert_eq!(
+            parse(args(&["stats", "--all"])),
+            Command::Stats(Options {
+                period: Period::All,
+                ..Options::default()
+            })
+        );
+        assert_eq!(
+            parse(args(&["stats", "--per-account"])),
+            Command::Stats(Options {
+                per_account: true,
+                ..Options::default()
+            })
+        );
+    }
+
+    #[test]
+    fn stats_refuses_bad_options() {
+        for words in [
+            &["stats", "--since"][..],
+            &["stats", "--since", "7"],
+            &["stats", "--since", "0d"],
+            &["stats", "--since", "7w"],
+            &["stats", "--since", "d"],
+            &["stats", "--since", "7d", "--all"],
+            &["stats", "--all", "--all"],
+            &["stats", "--project"],
+            &["stats", "--project", "a", "--project", "b"],
+            &["stats", "--per-day"],
+        ] {
+            assert!(
+                matches!(parse(args(words)), Command::Misuse(_)),
+                "{words:?}"
+            );
+        }
     }
 
     #[test]
