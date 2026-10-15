@@ -1,0 +1,59 @@
+//! `cs status`: every account with its usage, the active one marked.
+
+use std::fs;
+use std::io;
+use std::process::Output;
+
+use crate::sandbox::Sandbox;
+
+fn stdout(out: &Output) -> String {
+    String::from_utf8_lossy(&out.stdout).into_owned()
+}
+
+fn stderr(out: &Output) -> String {
+    String::from_utf8_lossy(&out.stderr).into_owned()
+}
+
+#[test]
+fn marks_the_active_account_and_shows_unknown_ones() -> io::Result<()> {
+    let sandbox = Sandbox::new()?;
+    for name in ["claude1", "claude2"] {
+        fs::create_dir_all(sandbox.root().join(name))?;
+    }
+    fs::write(
+        sandbox.root().join("state.json"),
+        r#"{"active": "claude1", "usage": {"claude1": {
+            "five_hour": {"used_percent": 40.0, "resets_at": 4102444800},
+            "read_at": 1}}}"#,
+    )?;
+    let out = sandbox.run(&["status"])?;
+    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    let text = stdout(&out);
+    assert!(text.contains("* claude1  40% "), "{text}");
+    assert!(
+        text.contains("  claude2  unknown: no usage read yet"),
+        "{text}"
+    );
+    assert!(text.ends_with("next: claude2\n"), "{text}");
+    Ok(())
+}
+
+#[test]
+fn explains_how_to_create_the_first_profile() -> io::Result<()> {
+    let sandbox = Sandbox::new()?;
+    let out = sandbox.run(&["status"])?;
+    assert_eq!(out.status.code(), Some(0), "exit code");
+    assert!(stderr(&out).contains("cs add <name>"), "{}", stderr(&out));
+    Ok(())
+}
+
+#[test]
+fn reports_a_damaged_state_file() -> io::Result<()> {
+    let sandbox = Sandbox::new()?;
+    fs::create_dir_all(sandbox.root().join("claude1"))?;
+    fs::write(sandbox.root().join("state.json"), "{ damaged")?;
+    let out = sandbox.run(&["status"])?;
+    assert_eq!(out.status.code(), Some(1), "exit code");
+    assert!(stderr(&out).contains("is damaged"), "{}", stderr(&out));
+    Ok(())
+}

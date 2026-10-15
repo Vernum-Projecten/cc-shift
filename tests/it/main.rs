@@ -6,4 +6,5 @@ mod add;
 mod cli;
 mod list;
 mod sandbox;
+mod status;
 mod statusline;
