@@ -1,8 +1,9 @@
 //! Switching on its own: when to leave the active account, and where to go.
 //!
-//! The status line switches when the active account reaches the threshold,
-//! between two replies. The rate-limit hook marks the active account full
-//! and switches at once. `cc-shift setup` makes the best account active.
+//! The status line switches when a reading proven to be the active
+//! account's reaches the threshold, the rate-limit hook when a turn hits a
+//! limit, and `cc-shift setup` makes the best account active. No automatic
+//! switch follows another within [`SETTLE_SECONDS`].
 
 use crate::error::Error;
 use crate::login::Logins;
@@ -13,10 +14,12 @@ use crate::switching::transfer::{self, Outcome};
 use crate::usage::Window;
 use crate::usage::select::{self, Choice, SWITCH_THRESHOLD};
 
-/// How long after a switch a rate-limit hook is taken to belong to the
-/// account that was just left, so a second window cannot mark the new
-/// account full.
-pub const SETTLE_SECONDS: i64 = 60;
+/// How long after a switch no automatic switch follows.
+///
+/// The status line still reports a window's last response, made before the
+/// switch, and a second window's rate-limit hook may belong to the account
+/// just left.
+pub const SETTLE_SECONDS: i64 = 5 * 60;
 
 /// The length of the 5-hour window, used when a limit is hit before any
 /// reset time was read.
@@ -77,6 +80,12 @@ pub fn run<L: Logins>(
             mark_full(context.file, active, now)?;
         }
         (Trigger::Usage, Some(active)) => {
+            if state
+                .switched_at
+                .is_some_and(|at| now - at < SETTLE_SECONDS)
+            {
+                return Ok(None);
+            }
             let profiles = context.root.list()?;
             let view = crate::usage::accounts(&profiles, &state);
             let used = view
@@ -239,6 +248,7 @@ mod tests {
                         }),
                         seven_day: None,
                         read_at: Some(NOW),
+                        confirmed: true,
                     },
                 );
             })

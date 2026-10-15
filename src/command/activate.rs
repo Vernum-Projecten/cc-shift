@@ -10,8 +10,10 @@ use crate::store::profile::{ProfileName, ProfilesRoot};
 use crate::store::state::StateFile;
 use crate::switching::transfer::{self, Outcome};
 
-/// Moves an account's parked login into `~/.claude`, so every window
-/// continues on it, and says what moved.
+/// Moves an account's parked login into `~/.claude` and says what moved.
+///
+/// Running Claude Code windows re-read their login before each request, so
+/// they follow within about 30 seconds.
 ///
 /// # Errors
 ///
@@ -29,11 +31,11 @@ pub fn run(raw: &OsStr) -> Result<(), Error> {
             report(&format!("'{}' is already active", name.as_str()));
         }
         Outcome::Switched { from: Some(from) } => report(&format!(
-            "'{}' is active; '{from}' is parked",
+            "'{}' is active; '{from}' is parked. Open Claude Code windows follow within about 30 seconds",
             name.as_str()
         )),
         Outcome::Switched { from: None } => report(&format!(
-            "'{}' is active; the login that was in ~/.claude belonged to no profile and was replaced",
+            "'{}' is active; the login that was in ~/.claude belonged to no profile and was replaced. Open Claude Code windows follow within about 30 seconds",
             name.as_str()
         )),
     }

@@ -6,6 +6,28 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.0.5] - 2026-10-15
+
+### Fixed
+
+- Automatic switching no longer cascades through accounts. Right after a
+  switch the status line still reports the usage of the account just left;
+  that reading was recorded under the new account, which then looked full.
+  Readings are now matched to the account whose own confirmed usage has the
+  same reset times, a switch needs a reading proven to be the active
+  account's, and no switch follows another within five minutes.
+- The active account's usage is read from Anthropic's usage endpoint in the
+  background too, so every number in `cc-shift status` comes from the
+  account itself.
+- The account details in `~/.claude.json` are put right when a Claude Code
+  window writes old ones back.
+
+### Changed
+
+- The status line names the account the window really uses, shows
+  `moving to <account>` right after a switch, and names the next account
+  when all are full.
+
 ## [0.0.4] - 2026-10-15
 
 ### Added
@@ -60,6 +82,7 @@ Claude accounts on macOS on its own, before a usage limit is hit.
 - A token is never a command-line argument: Keychain writes and HTTP
   requests receive it on stdin.
 
-[Unreleased]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.0.4...HEAD
+[Unreleased]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.0.5...HEAD
+[0.0.5]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.0.3...v0.0.4
 [0.0.3]: https://github.com/Vernum-Projecten/cc-shift/releases/tag/v0.0.3

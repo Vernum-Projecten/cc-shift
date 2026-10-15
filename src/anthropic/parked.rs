@@ -33,7 +33,8 @@ pub struct Report {
 }
 
 /// Refreshes every parked login that is close to expiry and reads the usage
-/// of every parked account whose numbers are stale.
+/// of every account whose numbers are stale or unconfirmed, the active one
+/// included: its access token is read, never refreshed.
 ///
 /// Only one run happens at a time: a run that finds another one busy
 /// returns no reports.
@@ -54,9 +55,6 @@ pub fn refresh_all(
     };
     let mut reports = Vec::new();
     for name in root.list()? {
-        if file.read()?.active.as_deref() == Some(name.as_str()) {
-            continue;
-        }
         let refreshed = match refresh_if_due(logins, http, file, &name, now) {
             Ok(refreshed) => refreshed,
             Err(error) => {
@@ -78,8 +76,8 @@ pub fn refresh_all(
     Ok(reports)
 }
 
-/// Returns whether any parked account's usage is stale, so the status line
-/// knows to start a run.
+/// Returns whether any account's usage is stale or not yet confirmed with
+/// its own token, so the status line knows to start a run.
 ///
 /// # Errors
 ///
@@ -87,11 +85,11 @@ pub fn refresh_all(
 pub fn any_stale(file: &StateFile, root: &ProfilesRoot, now: i64) -> Result<bool, Error> {
     let state = file.read()?;
     Ok(root.list()?.iter().any(|name| {
-        state.active.as_deref() != Some(name.as_str())
-            && !state.logged_out.contains(name)
+        !state.logged_out.contains(name)
             && state
                 .usage
                 .get(name)
+                .filter(|r| r.confirmed)
                 .and_then(|r| r.read_at)
                 .is_none_or(|at| now - at >= STALE_SECONDS)
     }))
@@ -152,20 +150,28 @@ fn read_usage_if_stale(
         let fresh = state
             .usage
             .get(name)
+            .filter(|r| r.confirmed)
             .and_then(|r| r.read_at)
             .is_some_and(|at| now - at < STALE_SECONDS);
-        if fresh || state.active.as_deref() == Some(name) {
+        if fresh {
             return Ok(false);
         }
+        let active = state.active.as_deref() == Some(name);
+        let slot = if active {
+            Slot::Active
+        } else {
+            Slot::Parked(name.to_owned())
+        };
         let login = logins
-            .read(&Slot::Parked(name.to_owned()))?
+            .read(&slot)?
             .ok_or_else(|| Error::NoParkedLogin(name.to_owned()))?;
-        Stored::of(&login)?
+        (Stored::of(&login)?, active)
     };
+    let (stored, active) = stored;
     let response = http.send(&stored.usage_request())?;
     let recorded = match oauth::parse_usage(name, &response, now) {
         Ok(recorded) => recorded,
-        Err(Error::LoggedOut(who)) => {
+        Err(Error::LoggedOut(who)) if !active => {
             file.update(|s| s.logged_out.insert(who.clone()))?;
             return Err(Error::LoggedOut(who));
         }
@@ -321,8 +327,9 @@ mod tests {
     fn a_parked_login_close_to_expiry_is_refreshed() -> Result<(), Box<dyn std::error::Error>> {
         let (_home, memory, file, root) = world(60)?;
         let reports = refresh_all(&memory, &fake(), &file, &root, NOW)?;
-        assert_eq!(reports.len(), 1, "only the parked account");
-        assert!(reports.first().is_some_and(|r| r.refreshed), "{reports:?}");
+        let report = |name: &str| reports.iter().find(|r| r.name == name);
+        assert!(report("b").is_some_and(|r| r.refreshed), "{reports:?}");
+        assert!(report("a").is_some_and(|r| !r.refreshed), "{reports:?}");
         assert_eq!(parked_access(&memory)?, "new");
         Ok(())
     }
@@ -350,8 +357,11 @@ mod tests {
         memory.write(&Slot::Active, &login(60))?;
         refresh_all(&memory, &fake(), &file, &root, NOW)?;
         let active = memory.read(&Slot::Active)?.ok_or("active")?;
-        assert_eq!(active, login(60), "unchanged");
-        assert!(!file.read()?.usage.contains_key("a"), "no usage read for a");
+        assert_eq!(active, login(60), "never refreshed or changed");
+        assert!(
+            file.read()?.usage.get("a").is_some_and(|r| r.confirmed),
+            "its usage is read, with its own token"
+        );
         Ok(())
     }
 
@@ -370,13 +380,16 @@ mod tests {
     fn fresh_usage_is_not_read_again() -> Result<(), Box<dyn std::error::Error>> {
         let (_home, memory, file, root) = world(3600)?;
         file.update(|s| {
-            s.usage.insert(
-                "b".to_owned(),
-                Recorded {
-                    read_at: Some(NOW - 60),
-                    ..Recorded::default()
-                },
-            );
+            for name in ["a", "b"] {
+                s.usage.insert(
+                    name.to_owned(),
+                    Recorded {
+                        read_at: Some(NOW - 60),
+                        confirmed: true,
+                        ..Recorded::default()
+                    },
+                );
+            }
         })?;
         let http = fake();
         refresh_all(&memory, &http, &file, &root, NOW)?;
@@ -396,7 +409,7 @@ mod tests {
         let reports = refresh_all(&memory, &http, &file, &root, NOW)?;
         assert!(
             matches!(
-                reports.first().map(|r| &r.usage),
+                reports.iter().find(|r| r.name == "b").map(|r| &r.usage),
                 Some(Err(Error::LoggedOut(_)))
             ),
             "{reports:?}"

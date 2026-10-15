@@ -214,6 +214,7 @@ pub fn parse_usage(name: &str, response: &Response, now: i64) -> Result<Recorded
         five_hour: window(at(&body, "five_hour")),
         seven_day: window(at(&body, "seven_day")),
         read_at: Some(now),
+        confirmed: true,
     })
 }
 

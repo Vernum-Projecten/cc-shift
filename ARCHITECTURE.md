@@ -8,7 +8,7 @@ The accounts are several work accounts, each with a profile of its own. The exam
 
 ## 2. How it works
 
-Claude Code keeps its login in the macOS Keychain, in one item per config folder (<https://code.claude.com/docs/en/authentication#credential-management>). A running session picks up a login written into its folder's item: on Claude Code 2.1.300 a `/login` in one window also applies to the other windows already open on that folder (observed by the owner, #12).
+Claude Code keeps its login in the macOS Keychain, in one item per config folder (<https://code.claude.com/docs/en/authentication#credential-management>). A new session reads that item when it starts. A running session re-reads that item before each request, with a 30-second cache, so it picks up a login written there while it runs; the owner saw a `/login` in one window reach the others (#12), and the Claude Code 2.1.300 binary shows how (#50).
 
 `cc-shift` builds on that:
 
@@ -20,7 +20,7 @@ Claude Code keeps its login in the macOS Keychain, in one item per config folder
 
 - Each account is logged in once, in its own profile folder. That login stays parked in the profile's Keychain item.
 - Every window runs with the default `~/.claude`. Its Keychain item holds the active account.
-- A switch moves the next account's parked login into the item of `~/.claude`, and copies that account's details (`oauthAccount` in the profile's `.claude.json`) into `~/.claude.json`. `/login` writes both, and open windows follow only when both change (observed on Claude Code 2.1.300, #24). Every open window continues on the new account.
+- A switch moves the next account's parked login into the item of `~/.claude`, and copies that account's details (`oauthAccount` in the profile's `.claude.json`) into `~/.claude.json`. `/login` writes both, and open windows follow only when both change (observed on Claude Code 2.1.300, #24). Every open window continues on the new account within about 30 seconds.
 
 A refresh token works once: after a refresh the old one is dead, and presenting a dead copy can revoke the login. So a login is always moved, never copied, and each login has exactly one live copy and one process that refreshes it: Claude Code for the active login, `cc-shift` for the parked ones.
 
@@ -37,7 +37,7 @@ A refresh token works once: after a refresh the old one is dead, and presenting 
 | `cc-shift statusline` | Called by Claude Code after every reply. Not run by hand. |
 | `cc-shift hook rate-limit` | Called by Claude Code when a turn hits a usage limit. Not run by hand. |
 
-After `cc-shift add` for each account and one `cc-shift setup`, the user never runs `cc-shift` while working.
+After `cc-shift add` for each account and one `cc-shift setup`, `cc-shift` tracks every account on its own. From then on it switches on its own.
 
 A profile name uses ASCII letters, digits, `-` and `_`, starts with a letter or digit, and is not a command word (`add`, `setup`, `status`, `use`, `list`, `statusline`, `hook`, `help`, `remove`, `refresh`).
 
@@ -66,14 +66,23 @@ A source that fails or returns an unknown shape makes that account "unknown". It
 
 ### When it switches
 
-- **Before the limit:** each `cc-shift statusline` run records the active account's numbers. When a window reaches 95%, it switches to the next account. The switch falls between two replies, so no turn fails.
-- **At the limit:** Claude Code runs a `StopFailure` hook with matcher `rate_limit` when a turn ends on a usage limit (<https://code.claude.com/docs/en/hooks>). `cc-shift hook rate-limit` records the active account as full and switches at once. The next message runs on the new account.
+A running Claude Code session re-reads its login from the Keychain before each request (with a 30-second cache) and after a 401, and before it refreshes a token it re-reads the Keychain under a lock and takes over a login it finds there instead of refreshing over it (Claude Code 2.1.300, read from the binary, #50). So every open window follows a switch within about 30 seconds, and a window never refreshes over a login `cc-shift` moved in.
 
-The status line prints at once. A switch is a few local Keychain calls and runs in the status line itself. Slow work (refreshing a parked login, asking for a parked account's usage when its numbers are more than five minutes old) runs in a detached `cc-shift refresh`, so the next choice is made on current numbers. Only one `cc-shift refresh` runs at a time.
+The status line reports the usage of the window's last response. Right after a switch that response was still made on the account just left, so a reading cannot be trusted by when it arrives. On 2026-10-15 this made the switches cascade: the old account's numbers were recorded under the new one, which then looked full (#50). So:
+
+- **Readings are matched to accounts.** Every account's windows reset at their own times, so a status line reading belongs to the account whose confirmed reading (from the usage endpoint, with its own token) has the same reset times. A reading that matches no confirmed account goes to the active account only when that account has no confirmed reading yet, and is dropped otherwise.
+- **Before the limit:** when a reading proven to be the active account's reaches 95% in either window, the status line switches to the next account, between two replies.
+- **At the limit:** Claude Code runs a `StopFailure` hook with matcher `rate_limit` when a turn ends on a usage limit (<https://code.claude.com/docs/en/hooks>). `cc-shift hook rate-limit` records the active account as full and switches at once.
+- **No switch follows another within five minutes,** so a reading or a hook left over from before a switch cannot start a second one.
+- **The account details are put right.** A window can write its old account details back into `~/.claude.json`, so each proven reading of the active account sets them again.
+
+The status line names the account the window really uses. Right after a switch it shows `moving to <account>` until the window's next request runs on the new login.
+
+The status line prints at once. Slow work (refreshing a parked login, reading an account's usage when its numbers are older than five minutes or not yet confirmed, the active account included) runs in a detached `cc-shift refresh`. Only one runs at a time.
 
 ### Several windows
 
-All windows share the active account, so a switch moves all of them, as `/login` does. Every switch and every write of the state takes one lock. A second window that decides to switch at the same moment gets the lock after the first, sees that the account it wanted to leave is no longer active, and does nothing.
+All windows share the active account, so a switch moves all of them, as `/login` does. Every switch and every write of the state takes one lock, and the five-minute pause after a switch keeps a second window from starting another.
 
 ## 5. Logins and tokens
 
