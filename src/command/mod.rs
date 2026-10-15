@@ -14,6 +14,7 @@ pub mod refresh;
 pub mod setup;
 pub mod status;
 pub mod statusline;
+pub mod uninstall;
 
 use std::ffi::OsString;
 use std::io::Write;
@@ -58,6 +59,7 @@ where
         Command::Setup => setup::run(),
         Command::Refresh => refresh::run(),
         Command::Doctor => doctor::run(),
+        Command::Uninstall { all } => uninstall::run(all),
         Command::Status { json } => status::run(json),
         Command::HookRateLimit => {
             hook::run();

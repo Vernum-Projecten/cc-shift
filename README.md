@@ -131,6 +131,7 @@ From here on you never need to run `cc-shift` while you work.
 | `cc-shift refresh` | Refreshes the logins of the accounts that are not active and reads their usage now. Runs on its own as well. |
 | `cc-shift list` | Prints the profile names. |
 | `cc-shift doctor` | Checks the setup (status line and hook, `claude`, every login and account, two profiles on one account, the state) and says how to fix what is wrong. |
+| `cc-shift uninstall [--all]` | Undoes `cc-shift setup`; with `--all`, also deletes every profile and its Keychain login. |
 | `cc-shift help` | Prints the commands. |
 
 Claude Code itself runs `cc-shift statusline` after every reply and `cc-shift hook rate-limit` when a turn hits a limit; you never run those.
@@ -205,14 +206,14 @@ Update to the latest version:
 cargo install cc-shift
 ```
 
-To uninstall, remove `cc-shift`'s `statusLine` and its `StopFailure` hook from `~/.claude/settings.json`, then:
+To uninstall:
 
 ```sh
+cc-shift uninstall --all   # removes the status line, the hook, every profile and its login
 cargo uninstall cc-shift
-rm -r ~/.claude-profiles
 ```
 
-Removing `~/.claude-profiles` leaves the parked logins in the Keychain. Delete the "Claude Code-credentials-…" items in Keychain Access to remove them too.
+`cc-shift uninstall` without `--all` only removes the status line and the hook (and puts back a status line you had before), and keeps the profiles. `--all` asks you to type `yes` first. The login in `~/.claude` stays, so Claude Code keeps working with the account that was active.
 
 ## FAQ
 

@@ -100,6 +100,57 @@ pub fn install(settings: Value, cs_path: &str) -> Result<Installed, Error> {
     })
 }
 
+/// Removes this tool's status line and rate-limit hook from `settings`.
+///
+/// Every other setting and hook is kept. The status line goes back to
+/// `previous_statusline` when the user had one, and is removed otherwise.
+/// A hook event or the `hooks` object left empty is removed too. Returns
+/// the settings and whether anything changed.
+///
+/// # Errors
+///
+/// Returns [`Error::Settings`] when `settings` is not a JSON object.
+pub fn uninstall(
+    settings: Value,
+    previous_statusline: Option<&str>,
+) -> Result<(Value, bool), Error> {
+    let Value::Object(mut root) = settings else {
+        return Err(not_an_object("the settings"));
+    };
+    let before = root.clone();
+    let our_statusline = root
+        .get("statusLine")
+        .and_then(|s| s.get("command"))
+        .and_then(Value::as_str)
+        .is_some_and(|command| ours(command, "statusline"));
+    if our_statusline {
+        match previous_statusline {
+            Some(command) => {
+                root.insert(
+                    "statusLine".to_owned(),
+                    json!({ "type": "command", "command": command }),
+                );
+            }
+            None => {
+                root.remove("statusLine");
+            }
+        }
+    }
+    if let Some(Value::Object(hooks)) = root.get_mut("hooks") {
+        if let Some(Value::Array(entries)) = hooks.get_mut(HOOK_EVENT) {
+            drop_older_hooks(entries, "");
+            if entries.is_empty() {
+                hooks.remove(HOOK_EVENT);
+            }
+        }
+        if hooks.is_empty() {
+            root.remove("hooks");
+        }
+    }
+    let changed = root != before;
+    Ok((Value::Object(root), changed))
+}
+
 /// The names this tool's binary has had; a command run through any of them
 /// is this tool's own.
 const OWN_NAMES: [&str; 2] = ["cc-shift", "cs"];
@@ -305,6 +356,30 @@ mod tests {
         ));
         assert!(!super::ours("cs-other statusline", "statusline"));
         assert!(super::ours("'/a b/cc-shift' statusline", "statusline"));
+    }
+
+    #[test]
+    fn uninstall_removes_only_what_setup_added() -> Result<(), Error> {
+        let settings = json!({
+            "model": "opus",
+            "statusLine": {"type": "command", "command": "mine"},
+            "hooks": {"PreToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": "guard"}]}]}
+        });
+        let installed = install(settings.clone(), CS)?;
+        let (cleaned, changed) = super::uninstall(installed.settings, Some("mine"))?;
+        assert!(changed, "changed");
+        assert_eq!(cleaned, settings, "back to what it was");
+        let (again, changed) = super::uninstall(cleaned, Some("mine"))?;
+        assert!(!changed, "a second run changes nothing: {again}");
+        Ok(())
+    }
+
+    #[test]
+    fn uninstall_without_a_previous_line_removes_it() -> Result<(), Error> {
+        let installed = install(json!({}), "/Users/someone/.cargo/bin/cs")?;
+        let (cleaned, _) = super::uninstall(installed.settings, None)?;
+        assert_eq!(cleaned, json!({}), "old name, nothing left");
+        Ok(())
     }
 
     #[test]

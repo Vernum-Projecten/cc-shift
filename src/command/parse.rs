@@ -15,6 +15,8 @@ Commands:
   use <name>    Make an account active in every Claude Code window now
   refresh       Refresh parked logins and read their usage now
   doctor        Check the setup and say what to fix
+  uninstall [--all]
+                Undo setup; --all also removes every profile and its login
   list          Print the profiles
   statusline    Record usage; run by Claude Code as its status line
   hook rate-limit
@@ -44,6 +46,11 @@ pub enum Command {
     Refresh,
     /// Check the setup and say what to fix.
     Doctor,
+    /// Undo setup; with `all`, also remove every profile.
+    Uninstall {
+        /// Whether to remove the profiles and their logins too.
+        all: bool,
+    },
     /// A turn ended on a usage limit; run by Claude Code's `StopFailure`
     /// hook.
     HookRateLimit,
@@ -65,98 +72,64 @@ where
     let Some(first) = args.next() else {
         return Command::Help;
     };
-    if first == "help" || first == "-h" || first == "--help" {
-        return Command::Help;
-    }
-    if first == "add" {
-        return match (args.next(), args.next()) {
-            (Some(name), None) => Command::Add(name),
-            (None, _) => Command::Misuse("add needs a profile name".to_owned()),
-            (Some(_), Some(extra)) => Command::Misuse(format!(
-                "add takes one profile name, not '{}'",
-                extra.to_string_lossy()
-            )),
-        };
-    }
-    if first == "use" {
-        return match (args.next(), args.next()) {
-            (Some(name), None) => Command::Use(name),
-            (None, _) => Command::Misuse("use needs a profile name".to_owned()),
-            (Some(_), Some(extra)) => Command::Misuse(format!(
-                "use takes one profile name, not '{}'",
-                extra.to_string_lossy()
-            )),
-        };
-    }
-    if first == "setup" {
-        return match args.next() {
-            None => Command::Setup,
-            Some(extra) => Command::Misuse(format!(
-                "setup takes no arguments, not '{}'",
-                extra.to_string_lossy()
-            )),
-        };
-    }
-    if first == "doctor" {
-        return match args.next() {
-            None => Command::Doctor,
-            Some(extra) => Command::Misuse(format!(
-                "doctor takes no arguments, not '{}'",
-                extra.to_string_lossy()
-            )),
-        };
-    }
-    if first == "refresh" {
-        return match args.next() {
-            None => Command::Refresh,
-            Some(extra) => Command::Misuse(format!(
-                "refresh takes no arguments, not '{}'",
-                extra.to_string_lossy()
-            )),
-        };
-    }
-    if first == "status" {
-        return match args.next() {
-            None => Command::Status { json: false },
-            Some(flag) if flag == "--json" && args.next().is_none() => {
-                Command::Status { json: true }
-            }
-            Some(extra) => Command::Misuse(format!(
-                "status takes no arguments, not '{}'",
-                extra.to_string_lossy()
-            )),
-        };
-    }
-    if first == "hook" {
-        return match (args.next(), args.next()) {
-            (Some(event), None) if event == "rate-limit" => Command::HookRateLimit,
+    let rest: Vec<OsString> = args.collect();
+    let flags: Vec<&str> = rest.iter().map(|a| a.to_str().unwrap_or("")).collect();
+    match first.to_str().unwrap_or("") {
+        "help" | "-h" | "--help" => Command::Help,
+        "add" => one_name("add", rest).map_or_else(|misuse| misuse, Command::Add),
+        "use" => one_name("use", rest).map_or_else(|misuse| misuse, Command::Use),
+        "setup" => bare("setup", &rest, Command::Setup),
+        "doctor" => bare("doctor", &rest, Command::Doctor),
+        "refresh" => bare("refresh", &rest, Command::Refresh),
+        "statusline" => bare("statusline", &rest, Command::Statusline),
+        "list" => bare("list", &rest, Command::List),
+        "status" => match flags.as_slice() {
+            [] => Command::Status { json: false },
+            ["--json"] => Command::Status { json: true },
+            _ => Command::Misuse("status takes only --json".to_owned()),
+        },
+        "uninstall" => match flags.as_slice() {
+            [] => Command::Uninstall { all: false },
+            ["--all"] => Command::Uninstall { all: true },
+            _ => Command::Misuse("uninstall takes only --all".to_owned()),
+        },
+        "hook" => match flags.as_slice() {
+            ["rate-limit"] => Command::HookRateLimit,
             _ => Command::Misuse("hook takes one event: rate-limit".to_owned()),
-        };
+        },
+        _ => {
+            let kind = if first.as_encoded_bytes().starts_with(b"-") {
+                "option"
+            } else {
+                "command"
+            };
+            Command::Misuse(format!("unknown {kind} '{}'", first.to_string_lossy()))
+        }
     }
-    if first == "statusline" {
-        return match args.next() {
-            None => Command::Statusline,
-            Some(extra) => Command::Misuse(format!(
-                "statusline takes no arguments, not '{}'",
-                extra.to_string_lossy()
-            )),
-        };
+}
+
+/// Returns the one profile name a command takes, or the misuse.
+fn one_name(command: &str, rest: Vec<OsString>) -> Result<OsString, Command> {
+    let mut rest = rest.into_iter();
+    match (rest.next(), rest.next()) {
+        (Some(name), None) => Ok(name),
+        (None, _) => Err(Command::Misuse(format!("{command} needs a profile name"))),
+        (Some(_), Some(extra)) => Err(Command::Misuse(format!(
+            "{command} takes one profile name, not '{}'",
+            extra.to_string_lossy()
+        ))),
     }
-    if first == "list" {
-        return match args.next() {
-            None => Command::List,
-            Some(extra) => Command::Misuse(format!(
-                "list takes no arguments, not '{}'",
-                extra.to_string_lossy()
-            )),
-        };
+}
+
+/// Returns `command` when no argument follows it, or the misuse.
+fn bare(name: &str, rest: &[OsString], command: Command) -> Command {
+    match rest.first() {
+        None => command,
+        Some(extra) => Command::Misuse(format!(
+            "{name} takes no arguments, not '{}'",
+            extra.to_string_lossy()
+        )),
     }
-    let kind = if first.as_encoded_bytes().starts_with(b"-") {
-        "option"
-    } else {
-        "command"
-    };
-    Command::Misuse(format!("unknown {kind} '{}'", first.to_string_lossy()))
 }
 
 #[cfg(test)]
@@ -223,6 +196,22 @@ mod tests {
         );
         assert!(matches!(
             parse(args(&["status", "--yaml"])),
+            Command::Misuse(_)
+        ));
+    }
+
+    #[test]
+    fn uninstall_takes_an_optional_all_flag() {
+        assert_eq!(
+            parse(args(&["uninstall"])),
+            Command::Uninstall { all: false }
+        );
+        assert_eq!(
+            parse(args(&["uninstall", "--all"])),
+            Command::Uninstall { all: true }
+        );
+        assert!(matches!(
+            parse(args(&["uninstall", "--force"])),
             Command::Misuse(_)
         ));
     }
