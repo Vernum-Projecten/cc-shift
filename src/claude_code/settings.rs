@@ -321,7 +321,7 @@ pub fn write_settings(path: &Path, settings: &Value) -> Result<(), Error> {
     }
     let mut text = serde_json::to_vec_pretty(settings).map_err(|e| fail(&e))?;
     text.push(b'\n');
-    let temporary = path.with_extension("json.cs-tmp");
+    let temporary = path.with_extension("json.cc-shift-tmp");
     fs::write(&temporary, text).map_err(|e| fail(&e))?;
     fs::rename(&temporary, path).map_err(|e| fail(&e))
 }
