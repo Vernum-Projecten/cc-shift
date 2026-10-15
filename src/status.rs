@@ -98,7 +98,7 @@ fn cell(window: Option<Window>, now: i64) -> String {
 }
 
 /// Formats seconds as the two largest units, for example `2h15m` or `3d4h`.
-fn duration(seconds: i64) -> String {
+pub(crate) fn duration(seconds: i64) -> String {
     let minutes = seconds.div_euclid(60);
     let (days, hours, mins) = (
         minutes.div_euclid(1440),

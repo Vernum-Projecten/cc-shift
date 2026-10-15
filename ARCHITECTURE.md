@@ -111,7 +111,7 @@ A small library with a thin binary: `src/main.rs` only calls `cs::run` in `src/l
 - `usage`: the two windows per account and how full each is at a given time.
 - `select`: the selection rule, a pure function of the accounts and the current time.
 - `state`: `state.json` behind the lock, written in one rename.
-- `statusline`: records the active account's usage and runs the user's own status line.
+- `statusline`: records the active account's usage and prints the status line: the user's own line, if any, then the active account with both windows and their time to reset.
 - `status`: the `cs status` table, with reset times shown as time left (`2h15m`), so no time zone handling is needed.
 - `keychain`: the `Logins` trait every Keychain access goes through, so tests use an in-memory store, and the opaque `Login` whose debug output never shows a token.
 - `switch`: the move of section 5 with its recovery.
