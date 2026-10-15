@@ -14,6 +14,9 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   early start runs from a systemd user timer.
 - `doctor` checks that `curl` is installed, and `cc-shift` finds `curl` on
   `PATH` when `/usr/bin/curl` is missing, as on `NixOS`.
+- A switch holds Claude Code's own refresh lock of `~/.claude` while it
+  saves and replaces the active login, so no open window refreshes the login
+  at that moment. This makes switching safer on macOS and Linux.
 
 ### Changed
 

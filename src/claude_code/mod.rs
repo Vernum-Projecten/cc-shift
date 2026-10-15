@@ -2,5 +2,6 @@
 //! and starting `claude` with a profile's config folder.
 
 pub mod launch;
+pub mod refresh_lock;
 pub mod settings;
 pub mod statusline;

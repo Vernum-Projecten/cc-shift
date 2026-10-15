@@ -130,6 +130,9 @@ pub enum Error {
     /// `claude` was found but could not be started.
     #[error("cannot start claude: {0}")]
     Launch(#[source] io::Error),
+    /// Claude Code held its refresh lock for longer than a switch waits.
+    #[error("Claude Code is refreshing the login in {}; the switch is retried later", .0.display())]
+    RefreshLocked(PathBuf),
     /// The message that starts a 5-hour window failed.
     #[error("{0}")]
     EarlyStart(String),

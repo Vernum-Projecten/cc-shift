@@ -111,7 +111,8 @@ Claude Code sends the message itself, in the account's profile folder (or `~/.cl
 
 ### A switch: `cc-shift use member2`
 
-Under the lock, in this order:
+Under the lock, in this order. Steps 1 and 2 also hold Claude Code's own refresh lock of `~/.claude` (the folder `.oauth_refresh.lock`, which Claude Code takes before it refreshes and treats as abandoned after 60 seconds; #90), so no window refreshes the login between the save and the write. A switch waits up to 10 seconds for a lock Claude Code holds, takes over an abandoned one, and otherwise stops and is retried later.
+
 
 1. Save the login now in the item of `~/.claude` back to the parked item of the account that was active. Claude Code may have refreshed it, so this keeps the live tokens.
 2. Write `member2`'s parked login into the item of `~/.claude`, and set `oauthAccount` in `~/.claude.json` to `member2`'s, changing nothing else in that file.
