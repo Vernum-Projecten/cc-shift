@@ -9,7 +9,7 @@ Run the gates in the working copy on the host: the tier-1 guards (`zizmor`,
 `actionlint`, `shellcheck`, `scripts/checks/*.sh`) and the Rust set in
 `.claude/rules/ci-cd.md`.
 
-**Why:** `cs` is macOS-only and launches a macOS binary, so a Linux container
+**Why:** `cc-shift` is macOS-only and launches a macOS binary, so a Linux container
 cannot run its tests faithfully; on another of the owner's projects a
 container's target volume reached 104 GB and crashed Docker.
 

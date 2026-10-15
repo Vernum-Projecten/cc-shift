@@ -1,4 +1,4 @@
-//! `cs add <name>`: creates a profile and starts Claude Code in it for
+//! `cc-shift add <name>`: creates a profile and starts Claude Code in it for
 //! `/login`.
 
 use std::convert::Infallible;
@@ -9,7 +9,7 @@ use crate::command::report;
 use crate::error::Error;
 use crate::store::profile::{ProfileName, ProfilesRoot};
 
-/// Creates the profile when missing and replaces `cs` with Claude Code in it.
+/// Creates the profile when missing and replaces `cc-shift` with Claude Code in it.
 ///
 /// # Errors
 ///

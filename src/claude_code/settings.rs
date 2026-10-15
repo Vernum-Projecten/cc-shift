@@ -1,4 +1,4 @@
-//! `cs setup`: installs the status line and the rate-limit hook in
+//! `cc-shift setup`: installs the status line and the rate-limit hook in
 //! `~/.claude/settings.json`.
 //!
 //! The status line is a `statusLine` entry of type `command`
@@ -14,7 +14,7 @@ use serde_json::{Map, Value, json};
 
 use crate::error::Error;
 
-/// The hook event and matcher `cs` installs under.
+/// The hook event and matcher `cc-shift` installs under.
 const HOOK_EVENT: &str = "StopFailure";
 const HOOK_MATCHER: &str = "rate_limit";
 
@@ -23,17 +23,17 @@ const HOOK_MATCHER: &str = "rate_limit";
 pub struct Installed {
     /// The settings with the status line and the hook in place.
     pub settings: Value,
-    /// The status line command the user had, to run after `cs statusline`.
+    /// The status line command the user had, to run after `cc-shift statusline`.
     pub previous_statusline: Option<String>,
     /// Whether anything changed.
     pub changed: bool,
 }
 
-/// Puts `cs statusline` and `cs hook rate-limit` into `settings`.
+/// Puts `cc-shift statusline` and `cc-shift hook rate-limit` into `settings`.
 ///
-/// `cs` names its own binary by the absolute path `cs_path`, so the
+/// `cc-shift` names its own binary by the absolute path `cs_path`, so the
 /// commands work whatever `PATH` Claude Code runs them with. A status line
-/// the user had is returned to be chained; one that is already `cs` is
+/// the user had is returned to be chained; one that is already `cc-shift` is
 /// left as it is. Running it on its own output changes nothing.
 ///
 /// # Errors
@@ -52,9 +52,13 @@ pub fn install(settings: Value, cs_path: &str) -> Result<Installed, Error> {
         .get("statusLine")
         .and_then(|s| s.get("command"))
         .and_then(Value::as_str)
-        .filter(|command| *command != statusline)
+        .filter(|command| *command != statusline && !ours(command, "statusline"))
         .map(str::to_owned);
-    if previous_statusline.is_some() || !root.contains_key("statusLine") {
+    let current = root
+        .get("statusLine")
+        .and_then(|s| s.get("command"))
+        .and_then(Value::as_str);
+    if current != Some(statusline.as_str()) {
         root.insert(
             "statusLine".to_owned(),
             json!({ "type": "command", "command": statusline }),
@@ -69,6 +73,9 @@ pub fn install(settings: Value, cs_path: &str) -> Result<Installed, Error> {
     let entries = hooks
         .entry(HOOK_EVENT)
         .or_insert_with(|| Value::Array(Vec::new()));
+    if let Value::Array(list) = entries {
+        drop_older_hooks(list, &hook);
+    }
     let present = entries.as_array().is_some_and(|list| {
         list.iter()
             .filter_map(|entry| entry.get("hooks").and_then(Value::as_array))
@@ -91,6 +98,41 @@ pub fn install(settings: Value, cs_path: &str) -> Result<Installed, Error> {
         previous_statusline,
         changed,
     })
+}
+
+/// The names this tool's binary has had; a command run through any of them
+/// is this tool's own.
+const OWN_NAMES: [&str; 2] = ["cc-shift", "cs"];
+
+/// Returns whether `command` is this tool's binary, at any path and under
+/// any of its names, running `tail` (`statusline` or `hook rate-limit`).
+fn ours(command: &str, tail: &str) -> bool {
+    let Some(binary) = command.strip_suffix(tail).and_then(|c| c.strip_suffix(' ')) else {
+        return false;
+    };
+    let binary = binary.trim_matches('\'');
+    let name = binary.rsplit('/').next().unwrap_or(binary);
+    OWN_NAMES.contains(&name)
+}
+
+/// Removes hook commands of this tool other than `hook`, such as one left by
+/// an older install or name, and entries left with no command.
+fn drop_older_hooks(entries: &mut Vec<Value>, hook: &str) {
+    for entry in entries.iter_mut() {
+        if let Some(Value::Array(commands)) = entry.get_mut("hooks") {
+            commands.retain(|h| {
+                h.get("command")
+                    .and_then(Value::as_str)
+                    .is_none_or(|c| c == hook || !ours(c, "hook rate-limit"))
+            });
+        }
+    }
+    entries.retain(|entry| {
+        entry
+            .get("hooks")
+            .and_then(Value::as_array)
+            .is_none_or(|commands| !commands.is_empty())
+    });
 }
 
 /// Quotes a path for `/bin/sh` when it holds anything but plain characters.
@@ -160,7 +202,7 @@ mod tests {
     use crate::error::Error;
     use serde_json::json;
 
-    const CS: &str = "/Users/someone/.cargo/bin/cs";
+    const CS: &str = "/Users/someone/.cargo/bin/cc-shift";
 
     #[test]
     fn installs_into_empty_settings() -> Result<(), Error> {
@@ -168,10 +210,10 @@ mod tests {
         assert_eq!(
             done.settings,
             json!({
-                "statusLine": {"type": "command", "command": "/Users/someone/.cargo/bin/cs statusline"},
+                "statusLine": {"type": "command", "command": "/Users/someone/.cargo/bin/cc-shift statusline"},
                 "hooks": {"StopFailure": [{
                     "matcher": "rate_limit",
-                    "hooks": [{"type": "command", "command": "/Users/someone/.cargo/bin/cs hook rate-limit"}]
+                    "hooks": [{"type": "command", "command": "/Users/someone/.cargo/bin/cc-shift hook rate-limit"}]
                 }]}
             })
         );
@@ -213,7 +255,7 @@ mod tests {
         assert_eq!(done.previous_statusline.as_deref(), Some("~/bin/my-line"));
         assert_eq!(
             done.settings["statusLine"]["command"],
-            json!("/Users/someone/.cargo/bin/cs statusline")
+            json!("/Users/someone/.cargo/bin/cc-shift statusline")
         );
         Ok(())
     }
@@ -229,6 +271,40 @@ mod tests {
         assert_eq!(second.previous_statusline, None);
         assert_eq!(second.settings, first.settings);
         Ok(())
+    }
+
+    #[test]
+    fn replaces_an_install_under_the_old_name() -> Result<(), Error> {
+        let old = "/Users/someone/.cargo/bin/cs";
+        let first = install(json!({}), old)?;
+        let done = install(first.settings, CS)?;
+        assert_eq!(
+            done.previous_statusline, None,
+            "the old line is not chained"
+        );
+        assert_eq!(
+            done.settings["statusLine"]["command"],
+            json!(format!("{CS} statusline"))
+        );
+        let entries = done.settings["hooks"]["StopFailure"]
+            .as_array()
+            .map_or(0, Vec::len);
+        assert_eq!(entries, 1, "one hook: {}", done.settings);
+        assert_eq!(
+            done.settings["hooks"]["StopFailure"][0]["hooks"][0]["command"],
+            json!(format!("{CS} hook rate-limit"))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn a_users_own_command_is_never_ours() {
+        assert!(!super::ours(
+            "/usr/local/bin/my-line statusline",
+            "statusline"
+        ));
+        assert!(!super::ours("cs-other statusline", "statusline"));
+        assert!(super::ours("'/a b/cc-shift' statusline", "statusline"));
     }
 
     #[test]

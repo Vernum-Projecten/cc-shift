@@ -2,7 +2,7 @@
 //!
 //! The status line switches when the active account reaches the threshold,
 //! between two replies. The rate-limit hook marks the active account full
-//! and switches at once. `cs setup` makes the best account active.
+//! and switches at once. `cc-shift setup` makes the best account active.
 
 use crate::error::Error;
 use crate::login::Logins;
@@ -22,14 +22,14 @@ pub const SETTLE_SECONDS: i64 = 60;
 /// reset time was read.
 const FIVE_HOURS: i64 = 5 * 60 * 60;
 
-/// Why `cs` considers a switch.
+/// Why `cc-shift` considers a switch.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Trigger {
     /// The status line recorded new usage for the active account.
     Usage,
     /// A turn ended on a usage limit.
     LimitHit,
-    /// `cs setup` runs and no account is active yet.
+    /// `cc-shift setup` runs and no account is active yet.
     Setup,
 }
 

@@ -9,7 +9,7 @@
 #      Cargo.toml, so a tree without one skips the cargo lanes cleanly.
 #      hashFiles() cannot gate a job at `if:` time, because the runner
 #      workspace is empty before checkout, so a real detection job is the
-#      correct primitive. cs is a macOS tool, so the lanes that compile run on
+#      correct primitive. cc-shift is a macOS tool, so the lanes that compile run on
 #      macos-latest; fmt and cargo-deny compile nothing and run on Linux.
 #
 # The `conclusion` job is the single required status check on main; it is what

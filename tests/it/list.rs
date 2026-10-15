@@ -1,4 +1,4 @@
-//! `cs list`: prints the profiles, sorted.
+//! `cc-shift list`: prints the profiles, sorted.
 
 use std::fs;
 use std::io;
@@ -43,7 +43,11 @@ fn explains_how_to_create_the_first_profile() -> io::Result<()> {
     let out = sandbox.run(&["list"])?;
     assert_eq!(out.status.code(), Some(0), "exit code");
     assert_eq!(stdout(&out), "", "nothing listed");
-    assert!(stderr(&out).contains("cs add <name>"), "{}", stderr(&out));
+    assert!(
+        stderr(&out).contains("cc-shift add <name>"),
+        "{}",
+        stderr(&out)
+    );
     Ok(())
 }
 
@@ -70,7 +74,7 @@ fn fails_when_the_root_is_not_a_folder() -> io::Result<()> {
 #[test]
 fn fails_without_home() -> io::Result<()> {
     let sandbox = Sandbox::new()?;
-    let out = sandbox.cs().env_remove("HOME").arg("list").output()?;
+    let out = sandbox.cc_shift().env_remove("HOME").arg("list").output()?;
     assert_eq!(out.status.code(), Some(1), "exit code");
     assert!(stderr(&out).contains("HOME is not set"), "{}", stderr(&out));
     Ok(())

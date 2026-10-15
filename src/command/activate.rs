@@ -1,4 +1,4 @@
-//! `cs use <name>`: makes an account the active account of `~/.claude`.
+//! `cc-shift use <name>`: makes an account the active account of `~/.claude`.
 
 use std::ffi::OsStr;
 

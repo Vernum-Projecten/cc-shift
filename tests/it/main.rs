@@ -1,4 +1,4 @@
-//! The single integration-test binary for `cs`.
+//! The single integration-test binary for `cc-shift`.
 
 #![allow(clippy::panic_in_result_fn, reason = "test assertions")]
 

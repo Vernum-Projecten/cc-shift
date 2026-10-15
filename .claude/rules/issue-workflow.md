@@ -1,6 +1,6 @@
 # Issue workflow (the tracker loop)
 
-**The tracker is GitHub Issues on `Vernum-Projecten/cs`: the open issue list
+**The tracker is GitHub Issues on `Vernum-Projecten/cc-shift`: the open issue list
 IS the worklist.** Issue state is edited only via `gh`; never track work only
 in chat. This file is the loop, the label taxonomy, and the cadence.
 Relationships between issues live in `issue-relationships.md`; the board is

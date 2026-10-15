@@ -1,4 +1,4 @@
-//! `cs refresh`: refreshes parked logins and reads parked accounts' usage.
+//! `cc-shift refresh`: refreshes parked logins and reads parked accounts' usage.
 
 use crate::anthropic::http::Curl;
 use crate::anthropic::parked::{self, Report};
@@ -47,11 +47,11 @@ pub fn refresh_parked() -> Result<Vec<Report>, Error> {
     )
 }
 
-/// Starts `cs refresh` as a detached process; a run that is already going
+/// Starts `cc-shift refresh` as a detached process; a run that is already going
 /// makes the new one return at once.
 pub fn start_in_background() {
-    if let Ok(cs) = std::env::current_exe() {
-        let _child: std::io::Result<std::process::Child> = std::process::Command::new(cs)
+    if let Ok(binary) = std::env::current_exe() {
+        let _child: std::io::Result<std::process::Child> = std::process::Command::new(binary)
             .arg("refresh")
             .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::null())

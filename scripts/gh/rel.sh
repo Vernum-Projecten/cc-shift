@@ -42,7 +42,7 @@
 #   exits 2 before any gh call.
 #
 # All commands act on the current repository (`gh repo view`); default
-# Vernum-Projecten/cs when run inside its clone.
+# Vernum-Projecten/cc-shift when run inside its clone.
 
 set -euo pipefail
 

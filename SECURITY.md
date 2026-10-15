@@ -20,8 +20,8 @@ is published with credit to you, unless you ask to stay anonymous.
 
 ## Scope
 
-cs reads no credentials of its own design: Claude Code stores each profile's
-login in the macOS login Keychain. A report is in scope when cs exposes a
+cc-shift reads no credentials of its own design: Claude Code stores each profile's
+login in the macOS login Keychain. A report is in scope when cc-shift exposes a
 profile's login, session history or usage data to another user or process,
 starts Claude Code with the wrong profile, or writes outside
 `~/.claude-profiles/`. A vulnerability in Claude Code itself goes to

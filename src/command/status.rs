@@ -1,4 +1,4 @@
-//! `cs status`: every account with its usage, its reset times and which
+//! `cc-shift status`: every account with its usage, its reset times and which
 //! account comes next.
 
 use std::fmt::Write;
@@ -23,7 +23,7 @@ pub fn run() -> Result<(), Error> {
     let root = ProfilesRoot::from_env()?;
     let profiles = root.list()?;
     if profiles.is_empty() {
-        report("no profiles yet; create one with 'cs add <name>'");
+        report("no profiles yet; create one with 'cc-shift add <name>'");
         return Ok(());
     }
     // NOTE: no specification governs this: our own design. A refresh that
@@ -57,7 +57,7 @@ pub fn render(accounts: &[Account], active: Option<&str>, now: i64) -> String {
             ' '
         };
         let detail = match (&account.usage, account.logged_in) {
-            (_, false) => "logged out; run cs add again".to_owned(),
+            (_, false) => "logged out; run cc-shift add again".to_owned(),
             (Usage::Unknown(reason), true) => format!("unknown: {reason}"),
             (
                 Usage::Known {
@@ -96,7 +96,7 @@ fn cell(window: Option<Window>, now: i64) -> String {
     format!("{used:.0}% {}{full}", time_left(window.resets_at - now))
 }
 
-/// The closing line: which account `cs` would switch to next.
+/// The closing line: which account `cc-shift` would switch to next.
 fn next_line(accounts: &[Account], active: Option<&str>, now: i64) -> String {
     match select::next(accounts, active, now) {
         Choice::Account(account) => format!("next: {}\n", account.name),
@@ -154,7 +154,7 @@ mod tests {
             "  ACCOUNT  5-HOUR            7-DAY\n\
              * member1  23% 2h15m         41% 3d4h\n\
              \x20 member2  97% 10m full      10% 1d1h\n\
-             \x20 member3  logged out; run cs add again\n\
+             \x20 member3  logged out; run cc-shift add again\n\
              \x20 member5  unknown: no usage read yet\n\
              \n\
              next: member5\n"

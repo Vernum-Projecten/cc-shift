@@ -78,7 +78,7 @@ cargo deny check
 ```
 
 `cargo deny check` covers advisories, licences, bans and sources, which
-subsumes `cargo audit`. `cs` is macOS-only, so the test lane runs on a macOS
+subsumes `cargo audit`. `cc-shift` is macOS-only, so the test lane runs on a macOS
 runner; the lint and format lanes may run on Linux. **Always `--locked`**, so
 CI fails on lockfile drift rather than on registry drift. Commit `Cargo.lock`.
 

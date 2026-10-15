@@ -1,9 +1,9 @@
-//! The errors `cs` reports to the user.
+//! The errors `cc-shift` reports to the user.
 
 use std::io;
 use std::path::PathBuf;
 
-/// A failure that stops a `cs` command, printed as one short line.
+/// A failure that stops a `cc-shift` command, printed as one short line.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// `HOME` is unset or empty, so the profiles root cannot be found.
@@ -14,13 +14,13 @@ pub enum Error {
         "invalid profile name '{0}': use letters, digits, '-' or '_', starting with a letter or digit"
     )]
     InvalidName(String),
-    /// A profile name that is also a `cs` command.
-    #[error("'{0}' is a cs command and cannot be a profile name")]
+    /// A profile name that is also a `cc-shift` command.
+    #[error("'{0}' is a cc-shift command and cannot be a profile name")]
     ReservedName(String),
     /// The profile folder could not be created.
     #[error("cannot create {}: {source}", path.display())]
     CreateFolder {
-        /// The folder `cs` tried to create.
+        /// The folder `cc-shift` tried to create.
         path: PathBuf,
         /// The underlying I/O error.
         #[source]
@@ -38,7 +38,7 @@ pub enum Error {
     /// The state file or its lock cannot be used.
     #[error("cannot use {}: {source}", path.display())]
     State {
-        /// The file or folder `cs` tried to use.
+        /// The file or folder `cc-shift` tried to use.
         path: PathBuf,
         /// The underlying I/O error.
         #[source]
@@ -62,14 +62,14 @@ pub enum Error {
         reason: String,
     },
     /// The account to switch to has no parked login.
-    #[error("'{0}' has no parked login; run 'cs add {0}' and /login")]
+    #[error("'{0}' has no parked login; run 'cc-shift add {0}' and /login")]
     NoParkedLogin(String),
     /// An HTTP request got no response.
     #[error("{0}")]
     Http(String),
     /// Anthropic's token endpoint refused a refresh: the login is revoked or
     /// expired.
-    #[error("'{0}' is logged out; run 'cs add {0}' and /login")]
+    #[error("'{0}' is logged out; run 'cc-shift add {0}' and /login")]
     LoggedOut(String),
     /// A stored login or a response is not in the expected form.
     #[error("{0}")]

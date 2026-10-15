@@ -49,9 +49,9 @@ impl Sandbox {
         self.home().join(".claude-profiles")
     }
 
-    /// Returns a `cs` command with the sandbox's `HOME` and `PATH`.
-    pub(crate) fn cs(&self) -> Command {
-        let mut command = Command::new(env!("CARGO_BIN_EXE_cs"));
+    /// Returns a `cc-shift` command with the sandbox's `HOME` and `PATH`.
+    pub(crate) fn cc_shift(&self) -> Command {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_cc-shift"));
         command.env_clear().env("HOME", self.home()).env(
             "PATH",
             format!("{}:/usr/bin:/bin", self.bin.path().display()),
@@ -59,9 +59,9 @@ impl Sandbox {
         command
     }
 
-    /// Runs `cs` with the given arguments.
+    /// Runs `cc-shift` with the given arguments.
     pub(crate) fn run(&self, args: &[&str]) -> io::Result<Output> {
-        self.cs().args(args).output()
+        self.cc_shift().args(args).output()
     }
 
     /// Returns what the stub `claude` recorded, or `None` if it never ran.

@@ -1,4 +1,4 @@
-//! `cs status`: every account with its usage, the active one marked.
+//! `cc-shift status`: every account with its usage, the active one marked.
 
 use std::fs;
 use std::io;
@@ -43,7 +43,11 @@ fn explains_how_to_create_the_first_profile() -> io::Result<()> {
     let sandbox = Sandbox::new()?;
     let out = sandbox.run(&["status"])?;
     assert_eq!(out.status.code(), Some(0), "exit code");
-    assert!(stderr(&out).contains("cs add <name>"), "{}", stderr(&out));
+    assert!(
+        stderr(&out).contains("cc-shift add <name>"),
+        "{}",
+        stderr(&out)
+    );
     Ok(())
 }
 

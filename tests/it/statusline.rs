@@ -1,4 +1,4 @@
-//! `cs statusline`: records usage and never breaks the status line.
+//! `cc-shift statusline`: records usage and never breaks the status line.
 
 use std::fs;
 use std::io::{self, Write};
@@ -10,7 +10,7 @@ const INPUT: &str =
     r#"{"rate_limits": {"five_hour": {"used_percentage": 12.5, "resets_at": 4102444800}}}"#;
 
 fn run(sandbox: &Sandbox, input: &str, home: bool) -> io::Result<Output> {
-    let mut command = sandbox.cs();
+    let mut command = sandbox.cc_shift();
     if !home {
         command.env_remove("HOME");
     }
@@ -55,7 +55,7 @@ fn prints_the_chained_status_line() -> io::Result<()> {
     let text = String::from_utf8_lossy(&out.stdout);
     assert!(
         text.starts_with("my line │ member1 · 5h 12% ("),
-        "the user's line, then the cs part: {text}"
+        "the user's line, then the cc-shift part: {text}"
     );
     Ok(())
 }

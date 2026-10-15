@@ -18,7 +18,7 @@ body:
     id: solution
     attributes:
       label: Proposed solution
-      description: What you want cs to do.
+      description: What you want cc-shift to do.
     validations:
       required: true
   - type: textarea
