@@ -49,6 +49,12 @@ impl Paint {
         self.wrap("2", text)
     }
 
+    /// Returns `text` in cyan, the colour of the logo.
+    #[must_use]
+    pub fn cyan(self, text: &str) -> String {
+        self.wrap("36", text)
+    }
+
     /// Returns `text` in green.
     #[must_use]
     pub fn green(self, text: &str) -> String {

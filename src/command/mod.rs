@@ -8,6 +8,7 @@ pub mod activate;
 pub mod add;
 pub mod completion;
 pub mod doctor;
+pub mod help;
 pub mod hook;
 pub mod list;
 pub mod log;
@@ -46,10 +47,11 @@ where
 {
     let result = match parse::parse(args) {
         Command::Help => {
-            // NOTE: no specification governs this: our own design. A failed
-            // write to stdout (a closed pipe) is not an error for help text.
-            let _ignored: std::io::Result<()> =
-                std::io::stdout().write_all(parse::USAGE.as_bytes());
+            help::run();
+            Ok(())
+        }
+        Command::Version => {
+            help::version();
             Ok(())
         }
         Command::Misuse(reason) => {

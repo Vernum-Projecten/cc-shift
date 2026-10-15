@@ -33,3 +33,27 @@ fn unknown_option_prints_usage_to_stderr_and_exits_2() -> std::io::Result<()> {
     );
     Ok(())
 }
+
+#[test]
+fn version_prints_the_crate_version() -> std::io::Result<()> {
+    for flag in ["--version", "-V", "version"] {
+        let out = cc_shift().arg(flag).output()?;
+        assert_eq!(out.status.code(), Some(0), "{flag}");
+        assert_eq!(
+            String::from_utf8_lossy(&out.stdout),
+            format!("cc-shift {}\n", env!("CARGO_PKG_VERSION")),
+            "{flag}"
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn piped_help_has_no_logo() -> std::io::Result<()> {
+    let out = cc_shift().arg("help").output()?;
+    assert!(
+        String::from_utf8_lossy(&out.stdout).starts_with("Usage: cc-shift"),
+        "plain usage when piped"
+    );
+    Ok(())
+}

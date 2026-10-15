@@ -8,6 +8,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `cc-shift --version` (also `-V` and `cc-shift version`) prints the running
+  version, and `cc-shift help` opens with an ASCII logo on a terminal.
 - `cc-shift log` shows the history of switches (with their reason), refreshed
   and logged-out logins, and when all accounts were full and free again,
   from `~/.claude-profiles/history.jsonl`; `--since`, `--all`, `--verbose`

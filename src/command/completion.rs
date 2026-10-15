@@ -29,6 +29,7 @@ _cc_shift() {
     'remove:delete a profile and its login'
     'uninstall:undo setup'
     'completion:print the shell completion'
+    'version:print the version'
     'help:print the commands'
   )
   if (( CURRENT == 2 )); then
