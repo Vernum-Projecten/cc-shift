@@ -6,6 +6,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.0.9] - 2026-10-15
+
 ### Added
 
 - `cc-shift early on [--at 06:00] [--accounts 2]` starts the 5-hour windows of
@@ -164,7 +166,8 @@ Claude accounts on macOS on its own, before a usage limit is hit.
 - A token is never a command-line argument: Keychain writes and HTTP
   requests receive it on stdin.
 
-[Unreleased]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.0.8...HEAD
+[Unreleased]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.0.9...HEAD
+[0.0.9]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.0.8...v0.0.9
 [0.0.8]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.0.7...v0.0.8
 [0.0.7]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.0.6...v0.0.7
 [0.0.6]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.0.5...v0.0.6
