@@ -9,15 +9,15 @@ use crate::usage::{Account, Usage, Window};
 
 /// Builds the selection view of every profile from the recorded state.
 ///
-/// A profile with no usage read yet is unknown. Every profile counts as
-/// logged in until the Keychain check exists.
+/// A profile with no usage read yet is unknown, and a profile whose refresh
+/// was refused is logged out.
 #[must_use]
 pub fn accounts(profiles: &[String], state: &State) -> Vec<Account> {
     profiles
         .iter()
         .map(|name| Account {
             name: name.clone(),
-            logged_in: true,
+            logged_in: !state.logged_out.contains(name),
             usage: state
                 .usage
                 .get(name)

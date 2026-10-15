@@ -64,6 +64,16 @@ pub enum Error {
     /// The account to switch to has no parked login.
     #[error("'{0}' has no parked login; run 'cs add {0}' and /login")]
     NoParkedLogin(String),
+    /// An HTTP request got no response.
+    #[error("{0}")]
+    Http(String),
+    /// Anthropic's token endpoint refused a refresh: the login is revoked or
+    /// expired.
+    #[error("'{0}' is logged out; run 'cs add {0}' and /login")]
+    LoggedOut(String),
+    /// A stored login or a response is not in the expected form.
+    #[error("{0}")]
+    Format(String),
     /// A `.claude.json` with the account details cannot be used.
     #[error("{0}")]
     Account(String),

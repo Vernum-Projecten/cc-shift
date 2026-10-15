@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use crate::error::Error;
 
 /// The words `cs` uses as commands, which can never name a profile.
-pub const RESERVED: [&str; 9] = [
+pub const RESERVED: [&str; 10] = [
     "add",
     "setup",
     "status",
@@ -18,6 +18,7 @@ pub const RESERVED: [&str; 9] = [
     "hook",
     "help",
     "remove",
+    "refresh",
 ];
 
 /// The name of the profiles root inside the home folder.
