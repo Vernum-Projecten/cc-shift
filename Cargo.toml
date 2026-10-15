@@ -3,7 +3,7 @@
 
 [package]
 name = "cc-shift"
-version = "0.0.9"
+version = "0.1.0"
 edition = "2024"
 rust-version = "1.98"
 description = "Switches Claude Code between several Claude accounts on its own, before a usage limit is hit. For macOS and Linux."
