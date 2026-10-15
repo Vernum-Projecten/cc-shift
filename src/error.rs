@@ -17,6 +17,9 @@ pub enum Error {
     /// A profile name that is also a `cs` command.
     #[error("'{0}' is a cs command and cannot be a profile name")]
     ReservedName(String),
+    /// No folder exists for the named profile.
+    #[error("profile '{0}' does not exist; create it with 'cs add {0}'")]
+    NoProfile(String),
     /// The profile folder could not be created.
     #[error("cannot create {}: {source}", path.display())]
     CreateFolder {
