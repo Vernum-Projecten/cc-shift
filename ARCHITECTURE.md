@@ -163,15 +163,16 @@ src/
 │                 log: the history; stats and stats_json: cc-shift stats;
 │                 bars and colour (NO_COLOR is honoured)
 ├── early/        mod.rs: the setting, the next run and which accounts to
-│                 start; launchd: the agent; start: the claude -p run
+│                 start; start: the claude -p run; macos/launchd: the agent
 ├── stats/        transcript: finding the session transcripts and reading
 │                 only the usage fields; cache: stats-cache.json per file
 │                 by size and modification time; summary: one count per
 │                 message id, per project, model and local day; price: the
 │                 API price table and the cost of a response
 ├── login/        mod.rs: Login, Slot and the Logins trait every Keychain
-│                 access goes through; keychain: the macOS backend through
-│                 /usr/bin/security; account: oauthAccount in .claude.json
+│                 access goes through; account: oauthAccount in
+│                 .claude.json; macos/keychain: the macOS backend through
+│                 /usr/bin/security
 ├── switching/    transfer: the move of section 5 with its recovery;
 │                 auto: when to switch on its own and where to go
 ├── anthropic/    http: requests through curl with the request on stdin;
@@ -181,7 +182,7 @@ src/
                   launch (exec claude for cc-shift add)
 ```
 
-Every import names the module that defines the item; there are no re-exports. A login never appears in debug output, and the Keychain and HTTP are behind traits, so tests use memory and fakes.
+Code that differs per operating system lives in a `macos/` folder inside its own module, compiled only on that system (`#[cfg(target_os = "macos")]`); everything else is shared. Every import names the module that defines the item; there are no re-exports. A login never appears in debug output, and the Keychain and HTTP are behind traits, so tests use memory and fakes.
 
 The runtime dependencies are `thiserror` for the error type, `serde` with `serde_json` (key order kept) for the JSON files, `sha2` for the Keychain service names, and `jiff` for the reset times and, with its system time zone support, the local days of `cc-shift stats`; each further dependency is added in the pull request that needs it.
 

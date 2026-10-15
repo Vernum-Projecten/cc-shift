@@ -9,7 +9,8 @@ use jiff::tz::TimeZone;
 
 use crate::anthropic::parked;
 use crate::command::{home, refresh, unix_now};
-use crate::early::{self, EarlyStart, MOST_ACCOUNTS, launchd, start};
+use crate::early::macos::launchd;
+use crate::early::{self, EarlyStart, MOST_ACCOUNTS, start};
 use crate::error::Error;
 use crate::store::history::{self, Event};
 use crate::store::profile::ProfilesRoot;

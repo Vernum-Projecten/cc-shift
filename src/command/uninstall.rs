@@ -6,9 +6,9 @@ use std::io::BufRead;
 
 use crate::claude_code::settings;
 use crate::command::{home, report};
-use crate::early::launchd;
+use crate::early::macos::launchd;
 use crate::error::Error;
-use crate::login::keychain::SystemKeychain;
+use crate::login::macos::keychain::SystemKeychain;
 use crate::login::{Logins, Slot};
 use crate::store::profile::ProfilesRoot;
 use crate::store::state::StateFile;

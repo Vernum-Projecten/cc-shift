@@ -5,7 +5,7 @@ use std::ffi::OsStr;
 use crate::command::{home, report, unix_now};
 use crate::error::Error;
 use crate::login::account::AccountFiles;
-use crate::login::keychain::SystemKeychain;
+use crate::login::macos::keychain::SystemKeychain;
 use crate::store::history::{self, Event, Reason};
 use crate::store::profile::{ProfileName, ProfilesRoot};
 use crate::store::state::StateFile;

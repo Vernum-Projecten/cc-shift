@@ -5,7 +5,8 @@
 //! tested against an in-memory store and never touches the real Keychain.
 
 pub mod account;
-pub mod keychain;
+#[cfg(target_os = "macos")]
+pub mod macos;
 
 use std::fmt;
 
