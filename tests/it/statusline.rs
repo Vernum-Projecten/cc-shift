@@ -52,7 +52,21 @@ fn prints_the_chained_status_line() -> io::Result<()> {
     )?;
     let out = run(&sandbox, INPUT, true)?;
     assert_eq!(out.status.code(), Some(0), "exit code");
-    assert_eq!(String::from_utf8_lossy(&out.stdout), "my line");
+    let text = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        text.starts_with("my line │ claude1 · 5h 12% ("),
+        "the user's line, then the cs part: {text}"
+    );
+    Ok(())
+}
+
+#[test]
+fn shows_the_active_account_without_a_chained_line() -> io::Result<()> {
+    let sandbox = Sandbox::new()?;
+    write_state(&sandbox, r#"{"active": "claude1"}"#)?;
+    let out = run(&sandbox, INPUT, true)?;
+    let text = String::from_utf8_lossy(&out.stdout);
+    assert!(text.starts_with("claude1 · 5h 12% ("), "{text}");
     Ok(())
 }
 

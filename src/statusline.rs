@@ -13,7 +13,8 @@ use std::process::{Command, Stdio};
 use serde::Deserialize;
 
 use crate::error::Error;
-use crate::state::{Recorded, StateFile};
+use crate::state::{Recorded, State, StateFile};
+use crate::status;
 use crate::usage::Window;
 
 /// The part of the status line input `cs` reads; every other field is
@@ -77,6 +78,31 @@ pub fn record(input: &[u8], state_file: &StateFile, now: i64) -> Result<Option<S
     })
 }
 
+/// Returns the `cs` part of the status line: the active account and both
+/// windows with the time to reset, for example
+/// `claude5 · 5h 31% (4h0m) · 7d 26% (5d8h)`.
+#[must_use]
+pub fn summary(state: &State, now: i64) -> String {
+    let Some(active) = &state.active else {
+        return "cs: run cs setup".to_owned();
+    };
+    let recorded = state.usage.get(active);
+    let window = |label: &str, window: Option<Window>| match window {
+        Some(w) if w.resets_at > now => format!(
+            " · {label} {:.0}% ({})",
+            w.used_percent,
+            status::duration(w.resets_at - now)
+        ),
+        Some(_) => format!(" · {label} 0%"),
+        None => String::new(),
+    };
+    format!(
+        "{active}{}{}",
+        window("5h", recorded.and_then(|r| r.five_hour)),
+        window("7d", recorded.and_then(|r| r.seven_day))
+    )
+}
+
 /// Runs the user's own status line command with the same input and returns
 /// what it printed; any failure gives an empty line.
 #[must_use]
@@ -105,10 +131,11 @@ pub fn chained(command: &str, input: &[u8]) -> Vec<u8> {
 #[cfg(test)]
 #[expect(clippy::panic_in_result_fn, reason = "test assertions")]
 mod tests {
-    use super::{chained, record};
+    use super::{chained, record, summary};
     use crate::error::Error;
     use crate::profile::ProfilesRoot;
     use crate::state::StateFile;
+    use crate::state::{Recorded, State};
     use crate::usage::Window;
     use tempfile::TempDir;
 
@@ -185,6 +212,37 @@ mod tests {
         record(INPUT.as_bytes(), &file, 1500)?;
         assert!(file.read()?.usage.is_empty(), "nothing recorded");
         Ok(())
+    }
+
+    #[test]
+    fn the_summary_names_the_account_and_both_windows() {
+        let mut state = State {
+            active: Some("claude5".to_owned()),
+            ..State::default()
+        };
+        state.usage.insert(
+            "claude5".to_owned(),
+            Recorded {
+                five_hour: Some(Window {
+                    used_percent: 31.0,
+                    resets_at: 1000 + 14_400,
+                }),
+                seven_day: Some(Window {
+                    used_percent: 26.4,
+                    resets_at: 1000 + 460_800,
+                }),
+                read_at: Some(1000),
+            },
+        );
+        assert_eq!(
+            summary(&state, 1000),
+            "claude5 · 5h 31% (4h0m) · 7d 26% (5d8h)"
+        );
+    }
+
+    #[test]
+    fn the_summary_before_setup_says_so() {
+        assert_eq!(summary(&State::default(), 0), "cs: run cs setup");
     }
 
     #[test]
