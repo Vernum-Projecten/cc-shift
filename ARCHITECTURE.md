@@ -5,7 +5,7 @@
 
 ## 1. Purpose
 
-`cc-shift` lets one person use several Claude accounts with Claude Code without ever thinking about usage limits. It runs on macOS and Linux, and native Windows support is being built for v0.1.1 (#102). Every Claude Code window (RustRover, a terminal) keeps running as normal. When the account in use gets close to its limit, `cc-shift` moves the windows to the next account, the same way `/login` does: no restart, no lost conversation.
+`cc-shift` lets one person use several Claude accounts with Claude Code without ever thinking about usage limits. It runs on macOS, Linux and Windows (#102). Every Claude Code window (RustRover, a terminal) keeps running as normal. When the account in use gets close to its limit, `cc-shift` moves the windows to the next account, the same way `/login` does: no restart, no lost conversation.
 
 The accounts are several work accounts, each with a profile of its own. The examples below use invented profile names.
 
@@ -211,6 +211,7 @@ These need real accounts, so they are done once by the owner and recorded on the
 - With two windows open on `~/.claude`, `cc-shift use` to the other account, then `/status` in both windows shows the new account.
 - The status line of the work accounts receives `rate_limits`.
 - On Linux, still to be done with real accounts: `cc-shift add` and `/login` write the profile's `.credentials.json` with mode 0600; two open windows follow `cc-shift use` and an automatic switch with their next message; a window refreshing during a switch loses no login; the early start timer runs, catches up after a power-off and is gone after `cc-shift early off`.
+- On Windows (#112), still to be done with real accounts: two open windows follow `cc-shift use` and an automatic switch; the status line and the hook run with and without Git for Windows; a parked refresh and a window refreshing during a switch lose no login; the early start task runs, catches up and is gone after `cc-shift early off`; and whether each account uses the login file or Credential Manager.
 
 ## 10. Security
 

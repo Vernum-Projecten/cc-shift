@@ -102,7 +102,8 @@ never in a public issue.
 
 The version-bump pull request changes the version in `Cargo.toml`, turns the
 `Unreleased` section of `CHANGELOG.md` into the new version, and updates
-`version=` in the prebuilt-binary example of `README.md`. After it merges, a
+the version in both prebuilt-binary examples of `README.md` (`version=` and
+`$version =`). After it merges, a
 signed `v*` tag on `main` starts
 [`release.yml`](.github/workflows/release.yml), which does the rest:
 

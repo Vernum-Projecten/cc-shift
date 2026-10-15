@@ -22,6 +22,9 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `cc-shift completion powershell` prints a completion script for Windows
   PowerShell 5.1 and PowerShell 7, for the commands, the profile names and
   the flags.
+- The README, the crates.io description, docs.rs and the GitHub repository
+  describe Windows, with a `platform: macOS | Linux | Windows` badge and the
+  PowerShell steps to install the Windows binary.
 
 ### Changed
 
