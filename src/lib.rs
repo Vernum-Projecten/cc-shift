@@ -8,6 +8,8 @@ pub mod cli;
 pub mod error;
 pub mod launch;
 pub mod profile;
+pub mod select;
+pub mod usage;
 
 use std::convert::Infallible;
 use std::ffi::{OsStr, OsString};
