@@ -93,8 +93,8 @@ mod tests {
     #[test]
     fn slots_name_themselves_without_content() {
         assert_eq!(
-            Slot::Parked("claude1".to_owned()).to_string(),
-            "the parked login of 'claude1'"
+            Slot::Parked("member1".to_owned()).to_string(),
+            "the parked login of 'member1'"
         );
     }
 }

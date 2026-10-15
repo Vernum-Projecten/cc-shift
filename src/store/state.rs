@@ -228,12 +228,12 @@ mod tests {
             read_at: Some(900),
         };
         file.update(|state| {
-            state.active = Some("claude1".to_owned());
-            state.usage.insert("claude1".to_owned(), recorded.clone());
+            state.active = Some("member1".to_owned());
+            state.usage.insert("member1".to_owned(), recorded.clone());
         })?;
         let state = file.read()?;
-        assert_eq!(state.active.as_deref(), Some("claude1"));
-        assert_eq!(state.usage.get("claude1"), Some(&recorded));
+        assert_eq!(state.active.as_deref(), Some("member1"));
+        assert_eq!(state.usage.get("member1"), Some(&recorded));
         Ok(())
     }
 

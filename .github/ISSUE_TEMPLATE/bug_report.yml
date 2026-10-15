@@ -27,7 +27,7 @@ body:
       label: Steps to reproduce
       description: The exact commands that trigger the bug.
       placeholder: |
-        1. Run `cs add claude1`
+        1. Run `cs add member1`
         2. Run `cs auto`
         3. See the output
     validations:
