@@ -3,13 +3,14 @@
 
 //! Where logins live: the slot of `~/.claude` and one parked slot per profile.
 //!
-//! On macOS a slot is a Keychain item, on Linux a `.credentials.json` file.
+//! On macOS a slot is a Keychain item, on Linux and Windows a
+//! `.credentials.json` file.
 //! Every access goes through [`Logins`], so the switch logic is tested
 //! against an in-memory store and never touches a real login.
 
 pub mod account;
-#[cfg(target_os = "linux")]
-pub mod linux;
+#[cfg(any(target_os = "linux", windows))]
+pub mod files;
 #[cfg(target_os = "macos")]
 pub mod macos;
 
@@ -21,9 +22,9 @@ use crate::error::Error;
 #[cfg(target_os = "macos")]
 pub type SystemLogins = macos::keychain::SystemKeychain;
 
-/// The login store of this system: the login files on Linux.
-#[cfg(target_os = "linux")]
-pub type SystemLogins = linux::credentials::CredentialFiles;
+/// The login store of this system: the login files on Linux and Windows.
+#[cfg(any(target_os = "linux", windows))]
+pub type SystemLogins = files::CredentialFiles;
 
 /// One slot that can hold a login.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

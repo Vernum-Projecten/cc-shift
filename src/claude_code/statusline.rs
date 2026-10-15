@@ -155,12 +155,74 @@ fn owner(
     Some((active, false))
 }
 
+/// Returns the shell and its command flag that run a status line command as
+/// Claude Code does: `/bin/sh -c` on macOS and Linux, and on Windows Git Bash
+/// when it is installed, otherwise `PowerShell`
+/// (<https://code.claude.com/docs/en/statusline#windows-configuration>).
+fn chain_shell() -> (std::ffi::OsString, &'static str) {
+    if !cfg!(windows) {
+        return ("/bin/sh".into(), "-c");
+    }
+    let git = crate::claude_code::launch::find_program(
+        &std::env::var_os("PATH").unwrap_or_default(),
+        &["git.exe"],
+    );
+    let bash = git_bash_candidates(
+        std::env::var_os("CLAUDE_CODE_GIT_BASH_PATH"),
+        &[
+            std::env::var_os("ProgramFiles"),
+            std::env::var_os("ProgramFiles(x86)"),
+        ],
+        git.as_deref(),
+    )
+    .into_iter()
+    .find(|candidate| candidate.is_file());
+    match bash {
+        Some(bash) => (bash.into_os_string(), "-c"),
+        None => ("powershell.exe".into(), "-Command"),
+    }
+}
+
+/// Returns where Git Bash may be, in the order Claude Code looks: the path
+/// `CLAUDE_CODE_GIT_BASH_PATH` names, `Git\bin\bash.exe` in each program files
+/// folder (`%ProgramFiles%`, `%ProgramFiles(x86)%`), and the `bin\bash.exe` of
+/// the Git whose `git.exe` is on `PATH` (in its `cmd` or `bin` folder)
+/// (<https://code.claude.com/docs/en/setup#install-on-native-windows>).
+fn git_bash_candidates(
+    configured: Option<std::ffi::OsString>,
+    program_files: &[Option<std::ffi::OsString>],
+    git: Option<&std::path::Path>,
+) -> Vec<std::path::PathBuf> {
+    let installed = program_files
+        .iter()
+        .flatten()
+        .filter(|folder| !folder.is_empty())
+        .map(|folder| {
+            std::path::Path::new(folder)
+                .join("Git")
+                .join("bin")
+                .join("bash.exe")
+        });
+    let beside_git = git
+        .and_then(std::path::Path::parent)
+        .and_then(std::path::Path::parent)
+        .map(|root| root.join("bin").join("bash.exe"));
+    configured
+        .filter(|path| !path.is_empty())
+        .map(std::path::PathBuf::from)
+        .into_iter()
+        .chain(installed)
+        .chain(beside_git)
+        .collect()
+}
+
 /// Runs the user's own status line command with the same input and returns
 /// what it printed; any failure gives an empty line.
 #[must_use]
 pub fn chained(command: &str, input: &[u8]) -> Vec<u8> {
-    let Ok(mut child) = Command::new("/bin/sh")
-        .arg("-c")
+    let (shell, flag) = chain_shell();
+    let Ok(mut child) = crate::claude_code::launch::without_window(&mut Command::new(shell))
+        .arg(flag)
         .arg(command)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -183,7 +245,7 @@ pub fn chained(command: &str, input: &[u8]) -> Vec<u8> {
 #[cfg(test)]
 #[expect(clippy::panic_in_result_fn, reason = "test assertions")]
 mod tests {
-    use super::{chained, record};
+    use super::{chained, git_bash_candidates, record};
     use crate::error::Error;
     use crate::store::profile::ProfilesRoot;
     use crate::store::state::Recorded;
@@ -341,5 +403,30 @@ mod tests {
     #[test]
     fn a_failing_chained_command_prints_what_it_printed() {
         assert_eq!(chained("printf hi; exit 3", b""), b"hi");
+    }
+
+    #[test]
+    fn git_bash_is_looked_for_where_claude_code_looks() {
+        use std::ffi::OsString;
+        use std::path::{Path, PathBuf};
+        let found = git_bash_candidates(
+            Some(OsString::from("/custom/bash.exe")),
+            &[
+                Some(OsString::from("/pf")),
+                None,
+                Some(OsString::new()),
+                Some(OsString::from("/pf86")),
+            ],
+            Some(Path::new("/tools/Git/cmd/git.exe")),
+        );
+        let expected: Vec<PathBuf> = [
+            PathBuf::from("/custom/bash.exe"),
+            Path::new("/pf").join("Git").join("bin").join("bash.exe"),
+            Path::new("/pf86").join("Git").join("bin").join("bash.exe"),
+            Path::new("/tools/Git").join("bin").join("bash.exe"),
+        ]
+        .into();
+        assert_eq!(found, expected);
+        assert!(git_bash_candidates(None, &[], None).is_empty());
     }
 }

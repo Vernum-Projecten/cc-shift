@@ -48,8 +48,8 @@ pub fn install(settings: Value, cs_path: &str) -> Result<Installed, Error> {
         return Err(not_an_object("the settings"));
     };
     let before = root.clone();
-    let statusline = format!("{} statusline", quoted(cs_path));
-    let hook = format!("{} hook rate-limit", quoted(cs_path));
+    let statusline = format!("{} statusline", shell_path(cs_path)?);
+    let hook = hook_entry(cs_path);
 
     let previous_statusline = root
         .get("statusLine")
@@ -77,13 +77,13 @@ pub fn install(settings: Value, cs_path: &str) -> Result<Installed, Error> {
         .entry(HOOK_EVENT)
         .or_insert_with(|| Value::Array(Vec::new()));
     if let Value::Array(list) = entries {
-        drop_older_hooks(list, &hook);
+        drop_older_hooks(list, Some(&hook));
     }
     let present = entries.as_array().is_some_and(|list| {
         list.iter()
             .filter_map(|entry| entry.get("hooks").and_then(Value::as_array))
             .flatten()
-            .any(|h| h.get("command").and_then(Value::as_str) == Some(hook.as_str()))
+            .any(|h| same_hook(h, &hook))
     });
     if !present {
         let Value::Array(list) = entries else {
@@ -91,7 +91,7 @@ pub fn install(settings: Value, cs_path: &str) -> Result<Installed, Error> {
         };
         list.push(json!({
             "matcher": HOOK_MATCHER,
-            "hooks": [{ "type": "command", "command": hook }]
+            "hooks": [hook]
         }));
     }
 
@@ -141,7 +141,7 @@ pub fn uninstall(
     }
     if let Some(Value::Object(hooks)) = root.get_mut("hooks") {
         if let Some(Value::Array(entries)) = hooks.get_mut(HOOK_EVENT) {
-            drop_older_hooks(entries, "");
+            drop_older_hooks(entries, None);
             if entries.is_empty() {
                 hooks.remove(HOOK_EVENT);
             }
@@ -164,21 +164,98 @@ fn ours(command: &str, tail: &str) -> bool {
     let Some(binary) = command.strip_suffix(tail).and_then(|c| c.strip_suffix(' ')) else {
         return false;
     };
-    let binary = binary.trim_matches('\'');
-    let name = binary.rsplit('/').next().unwrap_or(binary);
+    own_binary(binary)
+}
+
+/// Returns whether `binary` (a path, quoted or not) is this tool's binary
+/// under any of its names, with `/` or `\` and with or without `.exe`.
+fn own_binary(binary: &str) -> bool {
+    let binary = binary.trim_matches(|c| c == '\'' || c == '"');
+    let name = binary.rsplit(['/', '\\']).next().unwrap_or(binary);
+    let name = name.strip_suffix(".exe").unwrap_or(name);
     OWN_NAMES.contains(&name)
 }
 
-/// Removes hook commands of this tool other than `hook`, such as one left by
-/// an older install or name, and entries left with no command.
-fn drop_older_hooks(entries: &mut Vec<Value>, hook: &str) {
+/// Returns whether the hook `h` is this tool's rate-limit hook, in the shell
+/// form (`command` alone) or the exec form (`command` and `args`).
+fn own_hook(h: &Value) -> bool {
+    let Some(command) = h.get("command").and_then(Value::as_str) else {
+        return false;
+    };
+    match h.get("args") {
+        Some(args) => own_binary(command) && *args == json!(["hook", "rate-limit"]),
+        None => ours(command, "hook rate-limit"),
+    }
+}
+
+/// Returns whether two hooks run the same command with the same arguments.
+fn same_hook(a: &Value, b: &Value) -> bool {
+    a.get("command") == b.get("command") && a.get("args") == b.get("args")
+}
+
+/// Returns the rate-limit hook for the binary at `cs_path`.
+///
+/// On Windows the hook uses the exec form, which runs the program directly
+/// with `args` and needs no shell (<https://code.claude.com/docs/en/hooks>);
+/// on macOS and Linux it is a command line for `sh -c`.
+fn hook_entry(cs_path: &str) -> Value {
+    if cfg!(windows) {
+        json!({ "type": "command", "command": cs_path, "args": ["hook", "rate-limit"] })
+    } else {
+        json!({ "type": "command", "command": format!("{} hook rate-limit", quoted(cs_path)) })
+    }
+}
+
+/// Returns `cs_path` as the status line command needs it.
+///
+/// On macOS and Linux it is quoted for `/bin/sh`. On Windows Claude Code
+/// runs the status line through Git Bash, or PowerShell without it, and no
+/// quoting works in both, so the path is written with `/` and with `~` for
+/// the home folder (<https://code.claude.com/docs/en/statusline#windows-configuration>).
+///
+/// # Errors
+///
+/// Returns [`Error::Settings`] on Windows for a path that holds a space or
+/// another character neither shell takes unquoted.
+fn shell_path(cs_path: &str) -> Result<String, Error> {
+    if cfg!(windows) {
+        windows_shell_path(cs_path, std::env::var("USERPROFILE").ok().as_deref())
+    } else {
+        Ok(quoted(cs_path))
+    }
+}
+
+/// Returns `path` with `/` for `\` and `~` for the leading `home`, or the
+/// error when the result needs quoting in Git Bash or PowerShell.
+fn windows_shell_path(path: &str, home: Option<&str>) -> Result<String, Error> {
+    let slashed = path.replace('\\', "/");
+    let short = home
+        .map(|h| h.replace('\\', "/"))
+        .filter(|h| !h.is_empty())
+        .and_then(|h| {
+            let rest = slashed.get(h.len()..)?;
+            (slashed.get(..h.len())?.eq_ignore_ascii_case(&h) && rest.starts_with('/'))
+                .then(|| format!("~{rest}"))
+        })
+        .unwrap_or(slashed);
+    let plain = short
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || "/._-+~:".contains(c));
+    if plain {
+        Ok(short)
+    } else {
+        Err(Error::Settings(format!(
+            "the status line cannot run {path}: move cc-shift.exe to a folder without spaces, such as %USERPROFILE%\\.cargo\\bin"
+        )))
+    }
+}
+
+/// Removes this tool's rate-limit hooks other than `hook`, such as one left
+/// by an older install or name, and entries left with no command.
+fn drop_older_hooks(entries: &mut Vec<Value>, hook: Option<&Value>) {
     for entry in entries.iter_mut() {
         if let Some(Value::Array(commands)) = entry.get_mut("hooks") {
-            commands.retain(|h| {
-                h.get("command")
-                    .and_then(Value::as_str)
-                    .is_none_or(|c| c == hook || !ours(c, "hook rate-limit"))
-            });
+            commands.retain(|h| hook.is_some_and(|keep| same_hook(h, keep)) || !own_hook(h));
         }
     }
     entries.retain(|entry| {
@@ -399,5 +476,52 @@ mod tests {
         assert_eq!(quoted("/a b/cs"), "'/a b/cs'");
         assert_eq!(quoted("/a/it's/cs"), r"'/a/it'\''s/cs'");
         assert_eq!(quoted(CS), CS);
+    }
+
+    #[test]
+    fn a_windows_status_line_path_uses_slashes_and_the_home_shorthand() {
+        use super::windows_shell_path;
+        assert_eq!(
+            windows_shell_path(
+                r"C:\Users\Ann\.cargo\bin\cc-shift.exe",
+                Some(r"C:\Users\Ann")
+            )
+            .ok()
+            .as_deref(),
+            Some("~/.cargo/bin/cc-shift.exe")
+        );
+        assert_eq!(
+            windows_shell_path(r"D:\tools\cc-shift.exe", Some(r"C:\Users\Ann"))
+                .ok()
+                .as_deref(),
+            Some("D:/tools/cc-shift.exe"),
+            "outside the home folder the full path stays"
+        );
+        assert!(
+            windows_shell_path(r"C:\Program Files\cc-shift.exe", None).is_err(),
+            "a space cannot be written for both shells"
+        );
+    }
+
+    #[test]
+    fn windows_paths_and_the_exec_form_hook_are_recognised_as_ours() {
+        use super::{own_binary, own_hook};
+        assert!(own_binary(r"C:\Users\Ann\.cargo\bin\cc-shift.exe"));
+        assert!(own_binary("~/.cargo/bin/cc-shift.exe"));
+        assert!(!own_binary(r"C:\tools\other.exe"));
+        assert!(own_hook(&json!({
+            "type": "command",
+            "command": r"C:\Users\Ann\.cargo\bin\cc-shift.exe",
+            "args": ["hook", "rate-limit"]
+        })));
+        assert!(!own_hook(&json!({
+            "type": "command",
+            "command": r"C:\Users\Ann\.cargo\bin\cc-shift.exe",
+            "args": ["status"]
+        })));
+        assert!(own_hook(&json!({
+            "type": "command",
+            "command": "/Users/ann/.cargo/bin/cc-shift hook rate-limit"
+        })));
     }
 }

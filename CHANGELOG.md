@@ -9,6 +9,22 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `cc-shift` builds for Windows. Logins move between the `.credentials.json`
+  files Claude Code keeps on Windows, under `%USERPROFILE%`; a switch stops
+  with a clear message while Claude Code keeps logins in Windows Credential
+  Manager. On Windows the rate-limit hook runs `cc-shift.exe` directly, the
+  status line works in Git Bash and PowerShell, `cc-shift add` waits for
+  Claude Code, `curl.exe` comes from the Windows system folder, child
+  programs start without a console window, and the early start runs from
+  Task Scheduler.
+
+### Changed
+
+- The error for a missing home folder names `USERPROFILE` on Windows as well
+  as `HOME`.
+
 ## [0.1.0] - 2026-10-15
 
 ### Added

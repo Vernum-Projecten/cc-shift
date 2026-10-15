@@ -76,6 +76,16 @@ impl ProfileName {
     }
 }
 
+/// Returns the home folder from the environment.
+///
+/// That is `HOME` on macOS and Linux, and `USERPROFILE` on Windows, where
+/// Claude Code keeps `.claude` and `.claude.json`
+/// (<https://code.claude.com/docs/en/authentication#credential-management>).
+#[must_use]
+pub fn home_var() -> Option<OsString> {
+    std::env::var_os(if cfg!(windows) { "USERPROFILE" } else { "HOME" })
+}
+
 /// The folder that holds one subfolder per profile.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProfilesRoot(PathBuf);
@@ -93,13 +103,13 @@ impl ProfilesRoot {
         }
     }
 
-    /// Finds the profiles root inside `$HOME`.
+    /// Finds the profiles root inside the home folder, see [`home_var`].
     ///
     /// # Errors
     ///
-    /// Returns [`Error::NoHome`] when `HOME` is unset or empty.
+    /// Returns [`Error::NoHome`] when the home folder is unset or empty.
     pub fn from_env() -> Result<Self, Error> {
-        Self::from_home(std::env::var_os("HOME"))
+        Self::from_home(home_var())
     }
 
     /// Returns the path of the profiles root.

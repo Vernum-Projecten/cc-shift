@@ -54,11 +54,12 @@ pub fn refresh_parked() -> Result<Vec<Report>, Error> {
 /// makes the new one return at once.
 pub fn start_in_background() {
     if let Ok(binary) = std::env::current_exe() {
-        let _child: std::io::Result<std::process::Child> = std::process::Command::new(binary)
-            .arg("refresh")
-            .stdin(std::process::Stdio::null())
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .spawn();
+        let _child: std::io::Result<std::process::Child> =
+            crate::claude_code::launch::without_window(&mut std::process::Command::new(binary))
+                .arg("refresh")
+                .stdin(std::process::Stdio::null())
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .spawn();
     }
 }

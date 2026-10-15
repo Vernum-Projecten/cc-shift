@@ -57,8 +57,8 @@ pub fn start_window(config_dir: Option<&Path>, workdir: &Path) -> Result<(), Err
         path: workdir.to_path_buf(),
         source,
     })?;
-    let mut command = Command::new("claude");
-    command
+    let mut command = Command::new(crate::claude_code::launch::claude_program());
+    crate::claude_code::launch::without_window(&mut command)
         .args(arguments())
         .current_dir(workdir)
         .stdin(Stdio::null())

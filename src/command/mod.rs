@@ -109,13 +109,13 @@ pub fn unix_now() -> i64 {
         .map_or(0, |d| i64::try_from(d.as_secs()).unwrap_or(i64::MAX))
 }
 
-/// Returns `$HOME`.
+/// Returns the home folder (`HOME`, or `USERPROFILE` on Windows).
 ///
 /// # Errors
 ///
 /// Returns [`Error::NoHome`] when it is unset or empty.
 pub fn home() -> Result<PathBuf, Error> {
-    std::env::var_os("HOME")
+    crate::store::profile::home_var()
         .filter(|h| !h.is_empty())
         .map(PathBuf::from)
         .ok_or(Error::NoHome)

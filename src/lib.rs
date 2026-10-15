@@ -16,9 +16,9 @@
 //! read from Claude Code's transcripts, and `early` the early start.
 
 // NOTE: no specification governs this: our own design. cc-shift knows where
-// Claude Code keeps logins on macOS and Linux only, so other builds stop here.
-#[cfg(not(any(target_os = "macos", target_os = "linux")))]
-compile_error!("cc-shift works on macOS and Linux only");
+// Claude Code keeps logins on macOS, Linux and Windows, so other builds stop here.
+#[cfg(not(any(target_os = "macos", target_os = "linux", windows)))]
+compile_error!("cc-shift works on macOS, Linux and Windows only");
 
 pub mod anthropic;
 pub mod claude_code;

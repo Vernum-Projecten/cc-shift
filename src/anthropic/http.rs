@@ -14,6 +14,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
+use crate::claude_code::launch::{system32, without_window};
 use crate::error::Error;
 
 /// How long one request may take, in seconds.
@@ -60,19 +61,36 @@ pub trait Http {
     fn send(&self, request: &Request) -> Result<Response, Error>;
 }
 
-/// The `curl` macOS ships and most Linux systems install.
-pub const SYSTEM_CURL: &str = "/usr/bin/curl";
+/// The name of curl's program on this system.
+const CURL_NAME: &str = if cfg!(windows) { "curl.exe" } else { "curl" };
 
-/// Returns the `curl` to run: `system` when it exists, otherwise the first
-/// `curl` in the folders of `path` (some Linux systems, such as `NixOS`, have
-/// none in `/usr/bin`); `None` when there is none.
+/// Returns the `curl` the system ships, `None` when it cannot be located.
+///
+/// That is `/usr/bin/curl` on macOS and most Linux systems, and `curl.exe`
+/// in the Windows system folder (see [`system32`]), which Windows has from
+/// Windows 10 version 1803
+/// (<https://devblogs.microsoft.com/commandline/tar-and-curl-come-to-windows/>).
 #[must_use]
-pub fn find_curl(system: &Path, path: Option<&OsStr>) -> Option<PathBuf> {
-    if system.is_file() {
+pub fn system_curl() -> Option<PathBuf> {
+    if cfg!(windows) {
+        system32().map(|folder| folder.join(CURL_NAME))
+    } else {
+        Some(PathBuf::from("/usr/bin/curl"))
+    }
+}
+
+/// Returns the `curl` to run, `None` when there is none.
+///
+/// That is `system` when it exists, otherwise the first `curl` (`curl.exe`
+/// on Windows) in the folders of `path`, since some Linux systems, such as
+/// `NixOS`, have none in `/usr/bin`.
+#[must_use]
+pub fn find_curl(system: Option<&Path>, path: Option<&OsStr>) -> Option<PathBuf> {
+    if let Some(system) = system.filter(|s| s.is_file()) {
         return Some(system.to_path_buf());
     }
     std::env::split_paths(path?)
-        .map(|folder| folder.join("curl"))
+        .map(|folder| folder.join(CURL_NAME))
         .find(|candidate| candidate.is_file())
 }
 
@@ -84,11 +102,14 @@ impl Http for Curl {
     fn send(&self, request: &Request) -> Result<Response, Error> {
         let fail =
             |what: String| Error::Http(format!("{} {}: {what}", request.method, request.url));
-        let curl = find_curl(Path::new(SYSTEM_CURL), std::env::var_os("PATH").as_deref())
-            .ok_or_else(|| {
-                fail("curl was not found; install it with the system's package manager".to_owned())
-            })?;
-        let mut child = Command::new(curl)
+        let curl = find_curl(
+            system_curl().as_deref(),
+            std::env::var_os("PATH").as_deref(),
+        )
+        .ok_or_else(|| {
+            fail("curl was not found; install it with the system's package manager".to_owned())
+        })?;
+        let mut child = without_window(&mut Command::new(curl))
             .args(["--config", "-"])
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -214,24 +235,24 @@ mod tests {
     #[expect(clippy::panic_in_result_fn, reason = "test assertions")]
     fn the_system_curl_comes_first_then_path() -> Result<(), Box<dyn std::error::Error>> {
         use super::find_curl;
-        use std::ffi::OsString;
         use std::fs;
         let dir = tempfile::TempDir::new()?;
         let system = dir.path().join("usr-bin-curl");
         let folder = dir.path().join("bin");
         fs::create_dir_all(&folder)?;
-        fs::write(folder.join("curl"), "")?;
-        let path = OsString::from(format!("/nowhere:{}", folder.display()));
+        fs::write(folder.join(super::CURL_NAME), "")?;
+        let path = std::env::join_paths([dir.path().join("nowhere"), folder.clone()])?;
         assert_eq!(
-            find_curl(&system, Some(&path)),
-            Some(folder.join("curl")),
+            find_curl(Some(&system), Some(&path)),
+            Some(folder.join(super::CURL_NAME)),
             "no system curl: the one on PATH"
         );
         fs::write(&system, "")?;
-        assert_eq!(find_curl(&system, Some(&path)), Some(system.clone()));
+        assert_eq!(find_curl(Some(&system), Some(&path)), Some(system.clone()));
         fs::remove_file(&system)?;
-        assert_eq!(find_curl(&system, Some(&OsString::from("/nowhere"))), None);
-        assert_eq!(find_curl(&system, None), None);
+        let nowhere = std::env::join_paths([dir.path().join("nowhere")])?;
+        assert_eq!(find_curl(Some(&system), Some(&nowhere)), None);
+        assert_eq!(find_curl(Some(&system), None), None);
         Ok(())
     }
 }

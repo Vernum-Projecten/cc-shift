@@ -1,30 +1,39 @@
 // SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
 // SPDX-License-Identifier: Apache-2.0
 
-//! The Linux login files: `.credentials.json` in each config folder.
+//! The login files of Linux and Windows: `.credentials.json` in each config
+//! folder.
 //!
-//! On Linux, Claude Code keeps a config folder's login in
-//! `<folder>/.credentials.json` with mode 0600 and uses no keyring
+//! On Linux and Windows, Claude Code keeps a config folder's login in
+//! `<folder>/.credentials.json`: with mode 0600 on Linux, and with the
+//! access rules of the user's profile folder on Windows
 //! (<https://code.claude.com/docs/en/authentication#credential-management>).
-//! A running window checks the file's modification time before each request
-//! and drops its cached login when it changed (observed in the 2.1.300 Linux
-//! build, recorded on #85), so a login is written to a fresh temporary file
-//! and renamed into place: the window then sees a new file and follows.
+//! A running window checks the file before each request and drops its cached
+//! login when it changed (the 2.1.300 builds, recorded on #85 and #102), so a
+//! login is written to a fresh file and renamed into place: the window then
+//! sees a new file and follows.
+//!
+//! On Windows a server-side flag can move Claude Code's logins into Windows
+//! Credential Manager, which it then reads before the file. A moved file
+//! would be ignored there, so every access stops while the flag is on (#104).
 
-use std::fs::{self, File, OpenOptions};
+use std::ffi::OsStr;
+use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
-use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
 
 use crate::error::Error;
 use crate::login::{Login, Logins, Slot};
-use crate::store::profile::ProfilesRoot;
+use crate::store::profile::{ProfilesRoot, home_var};
 
 /// The name of the login file in a config folder.
 pub const FILE_NAME: &str = ".credentials.json";
 
-/// The mode of a login file: readable and writable by its owner only.
-const MODE: u32 = 0o600;
+/// The variable that makes Claude Code on Windows use Credential Manager.
+pub const FORCE_CREDMAN: &str = "CLAUDE_CODE_FORCE_WINDOWS_CREDMAN";
+
+/// How often a rename blocked by another process is tried on Windows.
+const RENAME_TRIES: u32 = 10;
 
 /// The login files of `~/.claude` and of every profile.
 #[derive(Debug, Clone)]
@@ -34,14 +43,14 @@ pub struct CredentialFiles {
 }
 
 impl CredentialFiles {
-    /// Returns the login files of the user named by `$HOME`, for the
-    /// profiles in `root`.
+    /// Returns the login files in the user's home folder (`HOME`, or
+    /// `USERPROFILE` on Windows), for the profiles in `root`.
     ///
     /// # Errors
     ///
-    /// Returns [`Error::NoHome`] when `$HOME` is unset or empty.
+    /// Returns [`Error::NoHome`] when the home folder is unset or empty.
     pub fn for_user(root: &ProfilesRoot) -> Result<Self, Error> {
-        let home = std::env::var_os("HOME")
+        let home = home_var()
             .filter(|h| !h.is_empty())
             .map(PathBuf::from)
             .ok_or(Error::NoHome)?;
@@ -53,17 +62,47 @@ impl CredentialFiles {
     #[must_use]
     pub fn new(active: &Path, root: &Path) -> Self {
         Self {
-            active: active.join(FILE_NAME),
+            active: active.to_path_buf(),
             root: root.to_path_buf(),
+        }
+    }
+
+    /// Returns the config folder of a slot.
+    fn folder(&self, slot: &Slot) -> PathBuf {
+        match slot {
+            Slot::Active => self.active.clone(),
+            Slot::Parked(name) => self.root.join(name),
         }
     }
 
     /// Returns the path of a slot's file.
     #[must_use]
     pub fn path(&self, slot: &Slot) -> PathBuf {
+        self.folder(slot).join(FILE_NAME)
+    }
+
+    /// Returns the global config Claude Code reads for a slot's folder:
+    /// `.config.json` in the folder when it is not empty, otherwise
+    /// `~/.claude.json` for `~/.claude` and `.claude.json` in a profile.
+    fn global_config(&self, slot: &Slot) -> PathBuf {
+        let folder = self.folder(slot);
+        let config = folder.join(".config.json");
+        if fs::metadata(&config).is_ok_and(|m| m.len() > 0) {
+            return config;
+        }
         match slot {
-            Slot::Active => self.active.clone(),
-            Slot::Parked(name) => self.root.join(name).join(FILE_NAME),
+            Slot::Active => folder.with_file_name(".claude.json"),
+            Slot::Parked(_) => folder.join(".claude.json"),
+        }
+    }
+
+    /// Stops when Claude Code keeps this slot's login in Credential Manager.
+    fn refuse_credential_manager(&self, slot: &Slot) -> Result<(), Error> {
+        let forced = std::env::var_os(FORCE_CREDMAN);
+        if cfg!(windows) && uses_credential_manager(&self.global_config(slot), forced.as_deref()) {
+            Err(Error::CredentialManager(self.folder(slot)))
+        } else {
+            Ok(())
         }
     }
 
@@ -87,12 +126,18 @@ impl CredentialFiles {
             Err(e) => Err(Self::fail(slot, path, e)),
         }
     }
+
+    /// Runs the checks every access makes first.
+    fn check(&self, slot: &Slot, path: &Path) -> Result<(), Error> {
+        self.refuse_credential_manager(slot)?;
+        Self::refuse_link(slot, path)
+    }
 }
 
 impl Logins for CredentialFiles {
     fn read(&self, slot: &Slot) -> Result<Option<Login>, Error> {
         let path = self.path(slot);
-        Self::refuse_link(slot, &path)?;
+        self.check(slot, &path)?;
         match fs::read(&path) {
             Ok(bytes) => Ok(Some(Login::from_bytes(bytes))),
             Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(None),
@@ -102,7 +147,7 @@ impl Logins for CredentialFiles {
 
     fn write(&self, slot: &Slot, login: &Login) -> Result<(), Error> {
         let path = self.path(slot);
-        Self::refuse_link(slot, &path)?;
+        self.check(slot, &path)?;
         let folder = path
             .parent()
             .ok_or_else(|| Self::fail(slot, &path, "has no folder"))?;
@@ -111,8 +156,8 @@ impl Logins for CredentialFiles {
         // name is left from an earlier run with the same process id.
         let _stale: io::Result<()> = fs::remove_file(&temporary);
         let written = write_new(&temporary, login.as_bytes())
-            .and_then(|()| fs::rename(&temporary, &path))
-            .and_then(|()| File::open(folder)?.sync_all());
+            .and_then(|()| replace(&temporary, &path))
+            .and_then(|()| sync_folder(folder));
         if let Err(e) = written {
             // NOTE: no specification governs this: our own design. A
             // temporary file that was never created is already gone.
@@ -128,7 +173,7 @@ impl Logins for CredentialFiles {
 
     fn clear(&self, slot: &Slot) -> Result<(), Error> {
         let path = self.path(slot);
-        Self::refuse_link(slot, &path)?;
+        self.check(slot, &path)?;
         match fs::remove_file(&path) {
             Ok(()) => Ok(()),
             Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
@@ -137,25 +182,81 @@ impl Logins for CredentialFiles {
     }
 }
 
-/// Creates `path` with mode 0600, writes `bytes` and flushes them to disk;
-/// fails when `path` already exists.
+/// Returns whether Claude Code on Windows keeps a folder's login in
+/// Credential Manager.
+///
+/// That is when `forced` (the [`FORCE_CREDMAN`] variable) is `1`, or when the
+/// folder's global config caches the server feature `tengu_windows_credman`
+/// as `true` (the 2.1.300 Windows build, #104).
+#[must_use]
+pub fn uses_credential_manager(global_config: &Path, forced: Option<&OsStr>) -> bool {
+    if forced.is_some_and(|v| v == "1") {
+        return true;
+    }
+    // NOTE: no specification governs this: our own design. A missing or
+    // unreadable config holds no flag, which is Claude Code's default too.
+    fs::read(global_config)
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok())
+        .and_then(|json| {
+            json.get("cachedGrowthBookFeatures")?
+                .get("tengu_windows_credman")?
+                .as_bool()
+        })
+        .unwrap_or(false)
+}
+
+/// Creates `path` (mode 0600 on Unix), writes `bytes` and flushes them to
+/// disk; fails when `path` already exists.
 fn write_new(path: &Path, bytes: &[u8]) -> io::Result<()> {
-    let mut file = OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .mode(MODE)
-        .open(path)?;
+    let mut options = OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    std::os::unix::fs::OpenOptionsExt::mode(&mut options, 0o600);
+    let mut file = options.open(path)?;
     file.write_all(bytes)?;
     file.sync_all()
+}
+
+/// Renames `from` over `to`. On Windows a file another process holds open
+/// for a moment (a virus scanner, the search indexer) refuses the rename, so
+/// it is tried again for about a second.
+fn replace(from: &Path, to: &Path) -> io::Result<()> {
+    let mut tries = 1;
+    loop {
+        match fs::rename(from, to) {
+            Err(e) if cfg!(windows) && tries < RENAME_TRIES && held_open(&e) => {
+                tries += 1;
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            }
+            result => return result,
+        }
+    }
+}
+
+/// Returns whether `e` is Windows refusing a file another process has open:
+/// access denied (5) or a sharing violation (32).
+fn held_open(e: &io::Error) -> bool {
+    matches!(e.raw_os_error(), Some(5 | 32))
+}
+
+/// Flushes the folder entry of the rename to disk on Unix; Windows cannot
+/// open a folder as a file and needs no such step.
+fn sync_folder(folder: &Path) -> io::Result<()> {
+    if cfg!(unix) {
+        fs::File::open(folder)?.sync_all()
+    } else {
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 #[expect(clippy::panic_in_result_fn, reason = "test assertions")]
 mod tests {
-    use super::{CredentialFiles, FILE_NAME};
+    use super::{CredentialFiles, FILE_NAME, uses_credential_manager};
     use crate::login::{Login, Logins, Slot};
+    use std::ffi::OsStr;
     use std::fs;
-    use std::os::unix::fs::{PermissionsExt, symlink};
     use tempfile::TempDir;
 
     type TestResult = Result<(), Box<dyn std::error::Error>>;
@@ -202,8 +303,12 @@ mod tests {
         files.write(&slot, &login("{\"first\":1}"))?;
         files.write(&slot, &login("{\"second\":2}"))?;
         assert_eq!(files.read(&slot)?, Some(login("{\"second\":2}")));
-        let mode = fs::metadata(files.path(&slot))?.permissions().mode() & 0o777;
-        assert_eq!(mode, 0o600);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = fs::metadata(files.path(&slot))?.permissions().mode() & 0o777;
+            assert_eq!(mode, 0o600);
+        }
         let leftovers: Vec<_> = fs::read_dir(home.path().join(".claude-profiles/work"))?
             .filter_map(Result::ok)
             .map(|e| e.file_name())
@@ -212,6 +317,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(unix)]
     #[test]
     fn a_write_gives_the_file_a_new_inode() -> TestResult {
         use std::os::unix::fs::MetadataExt;
@@ -236,8 +342,10 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(unix)]
     #[test]
     fn a_linked_file_is_refused() -> TestResult {
+        use std::os::unix::fs::symlink;
         let home = TempDir::new()?;
         let files = files(&home)?;
         let elsewhere = home.path().join("elsewhere.json");
@@ -251,6 +359,30 @@ mod tests {
             "{}",
             "the target is untouched"
         );
+        Ok(())
+    }
+
+    #[test]
+    fn credential_manager_follows_the_cached_flag_and_the_variable() -> TestResult {
+        let dir = TempDir::new()?;
+        let config = dir.path().join(".claude.json");
+        assert!(
+            !uses_credential_manager(&config, None),
+            "no config: the file"
+        );
+        fs::write(
+            &config,
+            r#"{"cachedGrowthBookFeatures":{"tengu_windows_credman":false}}"#,
+        )?;
+        assert!(!uses_credential_manager(&config, None));
+        fs::write(
+            &config,
+            r#"{"cachedGrowthBookFeatures":{"tengu_windows_credman":true}}"#,
+        )?;
+        assert!(uses_credential_manager(&config, None));
+        fs::write(&config, "{}")?;
+        assert!(uses_credential_manager(&config, Some(OsStr::new("1"))));
+        assert!(!uses_credential_manager(&config, Some(OsStr::new("0"))));
         Ok(())
     }
 }
