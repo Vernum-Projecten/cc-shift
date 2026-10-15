@@ -139,6 +139,7 @@ From here on you never need to run `cc-shift` while you work.
 | `cc-shift refresh` | Refreshes the logins of the accounts that are not active and reads their usage now. Runs on its own as well. |
 | `cc-shift list` | Prints the profile names. |
 | `cc-shift completion zsh` | Prints the zsh completion script ([how to load it](#shell-completion)). |
+| `cc-shift --version` | Prints the version (also `-V` and `cc-shift version`). |
 | `cc-shift doctor` | Checks the setup (status line and hook, `claude`, every login and account, two profiles on one account, the state) and says how to fix what is wrong. |
 | `cc-shift log` | Shows the history: switches with their reason, refreshes, logged-out accounts and when all were full. |
 | `cc-shift remove <name>` | Deletes a profile and its Keychain login, after you type `yes`. The active account cannot be removed. |

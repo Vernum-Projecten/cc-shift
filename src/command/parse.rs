@@ -26,6 +26,7 @@ Commands:
   statusline    Record usage; run by Claude Code as its status line
   hook rate-limit
                 Switch after a usage limit; run by Claude Code as a hook
+  version       Print the version (also --version, -V)
   help          Print this help
 ";
 
@@ -34,6 +35,8 @@ Commands:
 pub enum Command {
     /// Print the usage text.
     Help,
+    /// Print the version.
+    Version,
     /// Create a profile and start Claude Code in it.
     Add(OsString),
     /// Print the profiles.
@@ -87,6 +90,7 @@ where
     let flags: Vec<&str> = rest.iter().map(|a| a.to_str().unwrap_or("")).collect();
     match first.to_str().unwrap_or("") {
         "help" | "-h" | "--help" => Command::Help,
+        "version" | "-V" | "--version" => bare("version", &rest, Command::Version),
         "add" => one_name("add", rest).map_or_else(|misuse| misuse, Command::Add),
         "use" => one_name("use", rest).map_or_else(|misuse| misuse, Command::Use),
         "remove" => one_name("remove", rest).map_or_else(|misuse| misuse, Command::Remove),
