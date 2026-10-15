@@ -11,6 +11,7 @@ const INPUT: &str =
 
 fn run(sandbox: &Sandbox, input: &str, home: bool) -> io::Result<Output> {
     let mut command = sandbox.cc_shift();
+    command.env("NO_COLOR", "1");
     if !home {
         command.env_remove("HOME");
     }
@@ -27,7 +28,7 @@ fn run(sandbox: &Sandbox, input: &str, home: bool) -> io::Result<Output> {
 }
 
 fn write_state(sandbox: &Sandbox, json: &str) -> io::Result<()> {
-    fs::create_dir_all(sandbox.root())?;
+    fs::create_dir_all(sandbox.root().join("member1"))?;
     fs::write(sandbox.root().join("state.json"), json)
 }
 
@@ -54,7 +55,7 @@ fn prints_the_chained_status_line() -> io::Result<()> {
     assert_eq!(out.status.code(), Some(0), "exit code");
     let text = String::from_utf8_lossy(&out.stdout);
     assert!(
-        text.starts_with("my line │ member1 · 5h 12% ("),
+        text.starts_with("my line │ member1 ▕█░░░░░░░░░▏ 12% · "),
         "the user's line, then the cc-shift part: {text}"
     );
     Ok(())
@@ -66,7 +67,7 @@ fn shows_the_active_account_without_a_chained_line() -> io::Result<()> {
     write_state(&sandbox, r#"{"active": "member1"}"#)?;
     let out = run(&sandbox, INPUT, true)?;
     let text = String::from_utf8_lossy(&out.stdout);
-    assert!(text.starts_with("member1 · 5h 12% ("), "{text}");
+    assert!(text.starts_with("member1 ▕█░░░░░░░░░▏ 12% · "), "{text}");
     Ok(())
 }
 

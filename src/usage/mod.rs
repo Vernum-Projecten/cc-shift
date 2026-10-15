@@ -4,6 +4,7 @@
 //! window, each as a percentage used and a reset time
 //! (<https://code.claude.com/docs/en/statusline>).
 
+pub mod overview;
 pub mod select;
 
 use crate::store::state::{Recorded, State};

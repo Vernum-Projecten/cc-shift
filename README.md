@@ -31,7 +31,7 @@ cc-shift setup           # once; switching is automatic from now on
 Then use Claude Code as you always do. Under the prompt you see which account is active and how much of it is used:
 
 ```text
-work · 5h 60% (3h33m) · 7d 31% (5d7h)
+work ▕██████░░░░▏ 60% · 3h33m │ 7d 31% │ next spare · 2/4 free
 ```
 
 ## Contents
@@ -106,12 +106,16 @@ cc-shift status
 ```
 
 ```text
-  ACCOUNT  5-HOUR            7-DAY
-  spare    9% 4h3m           64% 3d13h
-* work     60% 3h33m         31% 5d7h
+cc-shift · 4 accounts · 2 free now · active work · next spare
 
-next: spare
+  ACCOUNT  5-HOUR                   7-DAY                    STATE
+▶ work     ██░░░░░░░░  23%  4h22m   ███████░░░  67%  4d2h    active
+  spare    █░░░░░░░░░  10%  2h52m   ██████░░░░  64%  3d12h   next
+  extra    ██████████ 100%  2m      █████░░░░░  49%  3d18h   full · free in 2m
+  old      not started              ██████████ 100%  16h22m  week full · free in 16h22m
 ```
+
+Accounts are listed in the order `cc-shift` will use them. In a terminal the bars are green, yellow or red by how full they are; set `NO_COLOR` to turn colour off.
 
 From here on you never need to run `cc-shift` while you work.
 

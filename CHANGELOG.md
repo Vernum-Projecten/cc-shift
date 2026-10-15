@@ -6,6 +6,18 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- `cc-shift status` opens with a summary line (accounts, how many are free,
+  the active and the next account) and lists the accounts in the order
+  `cc-shift` will use them, each window as a bar with its percentage and
+  time to reset, and a state: active, next, ready, full or week full with
+  when it frees up, logged out, or unknown with the reason.
+- The status line shows the window's account with a bar for the 5-hour
+  window, the 7-day percentage, the next account and how many are free.
+- Colour (green, yellow, red by how full) on a terminal and in the status
+  line, off when `NO_COLOR` is set.
+
 ## [0.0.5] - 2026-10-15
 
 ### Fixed

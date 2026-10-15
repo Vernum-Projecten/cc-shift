@@ -8,9 +8,11 @@ use crate::claude_code::statusline;
 use crate::command::{automatic, home, refresh, unix_now};
 use crate::error::Error;
 use crate::login::account::AccountFiles;
+use crate::render::{self, Paint};
 use crate::store::profile::ProfilesRoot;
 use crate::store::state::StateFile;
 use crate::switching::auto::Trigger;
+use crate::usage::overview::overview;
 
 /// Records usage, switches when needed, and prints the status line.
 ///
@@ -54,8 +56,14 @@ pub fn run() {
         if !line.is_empty() {
             line.extend_from_slice(" │ ".as_bytes());
         }
-        let summary = statusline::summary(&state, &profiles, reading.account.as_deref(), now);
-        line.extend_from_slice(summary.as_bytes());
+        let view = overview(&profiles, &state, now);
+        let text = render::line::line(
+            &view,
+            reading.account.as_deref(),
+            now,
+            Paint::unless_no_color(true),
+        );
+        line.extend_from_slice(text.as_bytes());
     }
     let _ignored: std::io::Result<()> = std::io::stdout().write_all(&line);
 }

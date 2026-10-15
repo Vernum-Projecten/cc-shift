@@ -20,6 +20,7 @@ pub mod claude_code;
 pub mod command;
 pub mod error;
 pub mod login;
+pub mod render;
 pub mod store;
 pub mod switching;
 pub mod usage;
