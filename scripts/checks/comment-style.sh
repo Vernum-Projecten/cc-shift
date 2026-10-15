@@ -132,10 +132,17 @@ CITE_AWK='
     RLENGTH = len
     return found
   }
+  # Whether text names the rules tree of this repository or its root
+  # instructions file. The config folder of the user under ~ is no citation.
+  function repo_claude(text,   t) {
+    t = text
+    gsub(/(~|\$HOME)\/\.claude/, "", t)
+    return t ~ claude_re
+  }
   function cite_check(text, what, strict) {
     if ((strict ? text ~ arch_any_re : text ~ arch_cite_re) \
         || path_cited(text, doc_re) || path_cited(text, readme_re) \
-        || text ~ claude_re || (names_re != "" && text ~ names_re))
+        || repo_claude(text) || (names_re != "" && text ~ names_re))
       printf ":%d: %s cites an internal markdown file: cite the official documentation it rests on, or write \"no specification governs this: our own design\"\n", NR, what
   }
 '
@@ -506,6 +513,10 @@ self_test() {
   expect l.rs accepted "" '// The frame opens with the byte 0xA1.'
   expect p.rs accepted "" '// The notes live in docs/usage.md; the user reads them.'
   expect q.rs accepted "" 'let url = "https://example.org/.claude/x";'
+  # shellcheck disable=SC2016 # literal comment text, never expanded
+  expect q2.rs accepted "" '/// Writes `~/.claude/settings.json`, the user config (`$HOME/.claude/x`).'
+  # shellcheck disable=SC2016 # literal comment text, never expanded
+  expect q3.rs refused "$internal" '/// See `~/.claude/x` and (.claude/rules/rust-style.md).'
   expect r.rs accepted "" '#[expect(clippy::expect_used, reason = "the test seam: a fixture is valid TOML")]'
   expect y.rs accepted "" '// The vendored overview (vendor/keychain/README.md).'
 

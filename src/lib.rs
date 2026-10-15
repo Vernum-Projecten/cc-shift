@@ -10,6 +10,7 @@ pub mod keychain;
 pub mod launch;
 pub mod profile;
 pub mod select;
+pub mod setup;
 pub mod state;
 pub mod status;
 pub mod statusline;
@@ -61,6 +62,13 @@ where
             }
         },
         Command::Add(name) => fail(add(&name)),
+        Command::Setup => match setup_command() {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(error) => {
+                report(&error.to_string());
+                ExitCode::from(FAILURE)
+            }
+        },
         Command::Status => match status() {
             Ok(()) => ExitCode::SUCCESS,
             Err(error) => {
@@ -84,6 +92,33 @@ fn fail(result: Result<Infallible, Error>) -> ExitCode {
             ExitCode::from(FAILURE)
         }
     }
+}
+
+/// Installs the status line and the hook in `~/.claude/settings.json`, and
+/// remembers the user's own status line to chain it.
+fn setup_command() -> Result<(), Error> {
+    let home = std::env::var_os("HOME")
+        .filter(|h| !h.is_empty())
+        .ok_or(Error::NoHome)?;
+    let root = ProfilesRoot::from_home(Some(home.clone()))?;
+    let cs_path = std::env::current_exe()
+        .map_err(|e| Error::Settings(format!("cannot find the cs binary: {e}")))?;
+    let path = setup::settings_path(std::path::Path::new(&home));
+    let installed = setup::install(setup::read_settings(&path)?, &cs_path.to_string_lossy())?;
+    if let Some(previous) = installed.previous_statusline.clone() {
+        StateFile::in_root(&root).update(|state| state.chained_statusline = Some(previous))?;
+    }
+    if installed.changed {
+        setup::write_settings(&path, &installed.settings)?;
+        report(&format!(
+            "installed the status line and the rate-limit hook in {}",
+            path.display()
+        ));
+    } else {
+        report("already set up");
+    }
+    // TODO(#13): make the best account active once the Keychain backend exists.
+    Ok(())
 }
 
 /// Prints every account with its usage and which account comes next.

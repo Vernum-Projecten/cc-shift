@@ -115,6 +115,7 @@ A small library with a thin binary: `src/main.rs` only calls `cs::run` in `src/l
 - `status`: the `cs status` table, with reset times shown as time left (`2h15m`), so no time zone handling is needed.
 - `keychain`: the `Logins` trait every Keychain access goes through, so tests use an in-memory store, and the opaque `Login` whose debug output never shows a token.
 - `switch`: the move of section 5 with its recovery.
+- `setup`: puts the status line and the rate-limit hook into `~/.claude/settings.json`, keeping every other setting and chaining the user's own status line.
 - Planned: the macOS Keychain backend of `Logins`, the usage endpoint for parked accounts, and the hook entry point.
 
 The runtime dependencies are `thiserror` for the error type and `serde` with `serde_json` for the state and the status line input; each further dependency is added in the pull request that needs it.
