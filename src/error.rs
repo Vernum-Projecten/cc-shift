@@ -53,9 +53,9 @@ pub enum Error {
         #[source]
         source: serde_json::Error,
     },
-    /// A Keychain slot could not be used.
+    /// A login slot (a Keychain item or a login file) could not be used.
     #[error("cannot use {slot}: {reason}")]
-    Keychain {
+    LoginStore {
         /// The slot, as [`crate::login::Slot`] names it.
         slot: String,
         /// Why, without any token content.
@@ -65,7 +65,7 @@ pub enum Error {
     #[error("'{0}' has no parked login; run 'cc-shift add {0}' and /login")]
     NoParkedLogin(String),
     /// Completion was asked for a shell `cc-shift` has no script for.
-    #[error("no completion for '{0}'; cc-shift completes zsh, the macOS shell")]
+    #[error("no completion for '{0}'; cc-shift completes zsh only")]
     Completion(String),
     /// No profile folder exists for the name.
     #[error("there is no profile '{0}'; 'cc-shift list' shows them")]

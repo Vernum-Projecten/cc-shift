@@ -28,14 +28,14 @@ Commands:
   early on [--at 06:00] [--accounts 2]
                 Start that many windows at that time, Monday to Friday
   early off     Stop the early start
-  remove <name> Delete a profile and its Keychain login
+  remove <name> Delete a profile and its stored login
   completion zsh
                 Print the zsh completion script
   uninstall [--all]
                 Undo setup; --all also removes every profile and its login
   list          Print the profiles
   statusline    Record usage; run by Claude Code as its status line
-  early run     Start the windows now; run by launchd
+  early run     Start the windows now; run by the scheduled job
   hook rate-limit
                 Switch after a usage limit; run by Claude Code as a hook
   version       Print the version (also --version, -V)
@@ -72,7 +72,7 @@ pub enum Command {
     Log(crate::command::log::Options),
     /// Show, turn on or off, or run the early start.
     Early(crate::command::early::Action),
-    /// Delete a profile and its Keychain login.
+    /// Delete a profile and its stored login.
     Remove(OsString),
     /// Print the completion script for a shell.
     Completion(String),

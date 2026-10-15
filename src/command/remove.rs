@@ -66,7 +66,7 @@ pub fn run(raw: &OsStr) -> Result<(), Error> {
         return Err(Error::NoProfile(name.as_str().to_owned()));
     }
     report(&format!(
-        "this deletes the profile '{}' and its Keychain login. Type yes to go on:",
+        "this deletes the profile '{}' and its stored login. Type yes to go on:",
         name.as_str()
     ));
     let mut answer = String::new();
@@ -81,7 +81,7 @@ pub fn run(raw: &OsStr) -> Result<(), Error> {
         report(&format!("removed '{}' and its login", name.as_str()));
     } else {
         report(&format!(
-            "removed '{}'; it had no login in the Keychain",
+            "removed '{}'; it had no stored login",
             name.as_str()
         ));
     }

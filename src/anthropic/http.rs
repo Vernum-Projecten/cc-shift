@@ -6,7 +6,9 @@
 //! command-line argument that `ps` could show. Every request goes through
 //! [`Http`], so tests use a fake.
 
+use std::ffi::OsStr;
 use std::io::Write;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 use crate::error::Error;
@@ -55,7 +57,23 @@ pub trait Http {
     fn send(&self, request: &Request) -> Result<Response, Error>;
 }
 
-/// The system `curl`.
+/// The `curl` macOS ships and most Linux systems install.
+pub const SYSTEM_CURL: &str = "/usr/bin/curl";
+
+/// Returns the `curl` to run: `system` when it exists, otherwise the first
+/// `curl` in the folders of `path` (some Linux systems, such as `NixOS`, have
+/// none in `/usr/bin`); `None` when there is none.
+#[must_use]
+pub fn find_curl(system: &Path, path: Option<&OsStr>) -> Option<PathBuf> {
+    if system.is_file() {
+        return Some(system.to_path_buf());
+    }
+    std::env::split_paths(path?)
+        .map(|folder| folder.join("curl"))
+        .find(|candidate| candidate.is_file())
+}
+
+/// The system `curl`, found by [`find_curl`].
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Curl;
 
@@ -63,7 +81,11 @@ impl Http for Curl {
     fn send(&self, request: &Request) -> Result<Response, Error> {
         let fail =
             |what: String| Error::Http(format!("{} {}: {what}", request.method, request.url));
-        let mut child = Command::new("/usr/bin/curl")
+        let curl = find_curl(Path::new(SYSTEM_CURL), std::env::var_os("PATH").as_deref())
+            .ok_or_else(|| {
+                fail("curl was not found; install it with the system's package manager".to_owned())
+            })?;
+        let mut child = Command::new(curl)
             .args(["--config", "-"])
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -183,5 +205,30 @@ mod tests {
             body: Some("secret".to_owned()),
         };
         assert!(!format!("{request:?}").contains("secret"), "{request:?}");
+    }
+
+    #[test]
+    #[expect(clippy::panic_in_result_fn, reason = "test assertions")]
+    fn the_system_curl_comes_first_then_path() -> Result<(), Box<dyn std::error::Error>> {
+        use super::find_curl;
+        use std::ffi::OsString;
+        use std::fs;
+        let dir = tempfile::TempDir::new()?;
+        let system = dir.path().join("usr-bin-curl");
+        let folder = dir.path().join("bin");
+        fs::create_dir_all(&folder)?;
+        fs::write(folder.join("curl"), "")?;
+        let path = OsString::from(format!("/nowhere:{}", folder.display()));
+        assert_eq!(
+            find_curl(&system, Some(&path)),
+            Some(folder.join("curl")),
+            "no system curl: the one on PATH"
+        );
+        fs::write(&system, "")?;
+        assert_eq!(find_curl(&system, Some(&path)), Some(system.clone()));
+        fs::remove_file(&system)?;
+        assert_eq!(find_curl(&system, Some(&OsString::from("/nowhere"))), None);
+        assert_eq!(find_curl(&system, None), None);
+        Ok(())
     }
 }

@@ -12,9 +12,13 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `.credentials.json` files Claude Code keeps on Linux (mode 0600, replaced
   in one rename so open windows follow with their next message), and the
   early start runs from a systemd user timer.
+- `doctor` checks that `curl` is installed, and `cc-shift` finds `curl` on
+  `PATH` when `/usr/bin/curl` is missing, as on `NixOS`.
 
 ### Changed
 
+- Messages say "stored login" instead of "Keychain login", and the help says
+  the early start is run by the scheduled job, so they read right on Linux.
 - A morning early start that runs more than 3 hours after its set time (a
   machine that woke or started late) starts nothing and says so in
   `cc-shift log`.
