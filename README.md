@@ -183,11 +183,21 @@ Claude Code itself runs `cc-shift statusline` after every reply and `cc-shift ho
 
 - Each account is logged in once, in its own profile folder, and its login stays parked there in the Keychain.
 - Every Claude Code window uses the default `~/.claude`, which holds the active account.
-- After every reply, the status line records the active account's usage. When the 5-hour or the 7-day window reaches 95%, `cc-shift` moves the next account's login into `~/.claude` and copies its account details into `~/.claude.json`. Open windows pick both up, as they do after `/login`.
+- After every reply, the status line records the active account's usage. When the 5-hour window reaches 95% or the 7-day window 99% (both [configurable](#switch-thresholds)), `cc-shift` moves the next account's login into `~/.claude` and copies its account details into `~/.claude.json`. Open windows pick both up, as they do after `/login`.
 - If a turn hits a limit anyway, the rate-limit hook switches at once.
 - In the background, `cc-shift` refreshes the parked logins and reads their usage, so the next choice is made on current numbers.
 
 The full design is in [ARCHITECTURE.md](https://github.com/Vernum-Projecten/cc-shift/blob/main/ARCHITECTURE.md).
+
+## Switch thresholds
+
+`cc-shift` switches when the 5-hour window reaches **95%** or the 7-day window **99%**. The week switches later because its last percent is worth more than a whole 5-hour window, and if a turn hits a limit anyway, the rate-limit hook switches at once. Both can be set from 50 to 100 in `~/.claude-profiles/state.json`:
+
+```json
+"thresholds": { "five_hour": 95, "seven_day": 100 }
+```
+
+A value outside 50 to 100 is ignored and the default is used.
 
 ## Which account is next
 
@@ -196,7 +206,7 @@ Usage left in a window when it resets is lost, and a 5-hour window only starts w
 1. An account whose 5-hour window is already running, the one that resets soonest first.
 2. Then an untouched account, the one whose week resets soonest first, then the one with the most of its week left.
 
-It stays on the active account until it reaches 95%, so it never switches back and forth. You use up one account at a time, and by the time you have used the others, the first one has reset.
+It stays on the active account until it reaches its threshold, so it never switches back and forth. You use up one account at a time, and by the time you have used the others, the first one has reset.
 
 ## Security
 

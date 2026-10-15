@@ -1,8 +1,8 @@
 //! The `cc-shift` part of the Claude Code status line.
 
 use crate::render::{Paint, bar};
+use crate::usage::Thresholds;
 use crate::usage::overview::{Overview, Row};
-use crate::usage::select::SWITCH_THRESHOLD;
 use crate::usage::time_left;
 
 /// Renders the status line for the account the window really uses
@@ -45,7 +45,7 @@ pub fn line(view: &Overview, window: Option<&str>, now: i64, paint: Paint) -> St
             view.free,
             view.rows.len()
         ));
-    } else if shown_full(row, now) {
+    } else if shown_full(row, view.thresholds, now) {
         match &view.first_free {
             Some((first, at)) => parts.push(paint.red(&format!(
                 "all full · {first} free in {}",
@@ -57,13 +57,16 @@ pub fn line(view: &Overview, window: Option<&str>, now: i64, paint: Paint) -> St
     parts.join(" │ ")
 }
 
-/// Returns whether either window of the shown account is full.
-fn shown_full(row: Option<&Row>, now: i64) -> bool {
+/// Returns whether either window of the shown account is full, by its own
+/// threshold.
+fn shown_full(row: Option<&Row>, limits: Thresholds, now: i64) -> bool {
     row.is_some_and(|r| {
-        [r.five_hour, r.seven_day]
-            .into_iter()
-            .flatten()
-            .any(|w| w.used_at(now) >= SWITCH_THRESHOLD)
+        [
+            (r.five_hour, limits.five_hour),
+            (r.seven_day, limits.seven_day),
+        ]
+        .into_iter()
+        .any(|(w, limit)| w.is_some_and(|w| w.used_at(now) >= limit))
     })
 }
 
@@ -71,6 +74,7 @@ fn shown_full(row: Option<&Row>, now: i64) -> bool {
 mod tests {
     use super::line;
     use crate::render::Paint;
+    use crate::usage::Thresholds;
     use crate::usage::Window;
     use crate::usage::overview::{Overview, Row, Status};
 
@@ -104,6 +108,7 @@ mod tests {
             next: next.map(str::to_owned),
             free,
             first_free: Some(("spare".to_owned(), NOW + 540)),
+            thresholds: Thresholds::default(),
         }
     }
 

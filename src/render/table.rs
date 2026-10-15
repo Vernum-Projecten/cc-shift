@@ -104,6 +104,7 @@ fn state(row: &Row, now: i64, paint: Paint) -> String {
 mod tests {
     use super::table;
     use crate::render::Paint;
+    use crate::usage::Thresholds;
     use crate::usage::Window;
     use crate::usage::overview::{Overview, Row, Status};
 
@@ -164,6 +165,7 @@ mod tests {
             next: Some("spare".to_owned()),
             free: 2,
             first_free: Some(("third".to_owned(), NOW + 540)),
+            thresholds: Thresholds::default(),
         };
         assert_eq!(
             table(&view, NOW, Paint::new(false)),
@@ -186,6 +188,7 @@ mod tests {
             next: None,
             free: 0,
             first_free: None,
+            thresholds: Thresholds::default(),
         };
         assert!(
             table(&view, NOW, Paint::new(false))

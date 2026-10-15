@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::Error;
 use crate::store::profile::ProfilesRoot;
-use crate::usage::Window;
+use crate::usage::{Thresholds, Window};
 
 /// Everything `cc-shift` remembers. No field ever holds a token.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -33,6 +33,8 @@ pub struct State {
     pub switched_at: Option<i64>,
     /// Accounts whose refresh Anthropic refused; they need `/login` again.
     pub logged_out: BTreeSet<String>,
+    /// The percentages at which the windows count as full.
+    pub thresholds: Thresholds,
 }
 
 /// The usage of one account as last read.

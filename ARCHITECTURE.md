@@ -50,7 +50,7 @@ A profile name uses ASCII letters, digits, `-` and `_`, starts with a letter or 
 
 ### What `cc-shift` knows per account
 
-For both usage windows Claude Code reports, the 5-hour and the 7-day window: the percentage used and the time it resets. An account is **available** when it is logged in and both windows are below the switch threshold, 95%. A window whose reset time has passed counts as 0%.
+For both usage windows Claude Code reports, the 5-hour and the 7-day window: the percentage used and the time it resets. An account is **available** when it is logged in and each window is below its switch threshold: 95% for the 5-hour window and 99% for the 7-day window by default, each settable from 50 to 100 under `thresholds` in `state.json` (#66). The week switches later because its last percent is worth more than a 5-hour window, and the rate-limit hook catches a turn that hits the limit anyway. A window whose reset time has passed counts as 0%.
 
 ### Where the numbers come from
 
@@ -76,7 +76,7 @@ A running Claude Code session re-reads its login from the Keychain before each r
 The status line reports the usage of the window's last response. Right after a switch that response was still made on the account just left, so a reading cannot be trusted by when it arrives. On 2026-10-15 this made the switches cascade: the old account's numbers were recorded under the new one, which then looked full (#50). So:
 
 - **Readings are matched to accounts.** Every account's windows reset at their own times, so a status line reading belongs to the account whose confirmed reading (from the usage endpoint, with its own token) has the same reset times. A reading that matches no confirmed account goes to the active account only when that account has no confirmed reading yet, and is dropped otherwise.
-- **Before the limit:** when a reading proven to be the active account's reaches 95% in either window, the status line switches to the next account, between two replies.
+- **Before the limit:** when a reading proven to be the active account's reaches the threshold of either window, the status line switches to the next account, between two replies.
 - **At the limit:** Claude Code runs a `StopFailure` hook with matcher `rate_limit` when a turn ends on a usage limit (<https://code.claude.com/docs/en/hooks>). `cc-shift hook rate-limit` records the active account as full and switches at once.
 - **No switch follows another within five minutes,** so a reading or a hook left over from before a switch cannot start a second one.
 - **The account details are put right.** A window can write its old account details back into `~/.claude.json`, so each proven reading of the active account sets them again.

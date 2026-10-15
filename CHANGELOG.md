@@ -6,6 +6,12 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- The switch thresholds are per window and configurable: the 5-hour window
+  switches at 95% and the 7-day window at 99% by default, each settable from
+  50 to 100 under `thresholds` in `~/.claude-profiles/state.json`.
+
 ## [0.0.7] - 2026-10-15
 
 ### Added
