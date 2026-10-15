@@ -5,7 +5,7 @@
 //! half a change. A write goes to a temporary file that replaces
 //! `state.json` in one rename.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{self, File};
 use std::io;
 use std::path::{Path, PathBuf};
@@ -31,6 +31,8 @@ pub struct State {
     pub pending: Option<Pending>,
     /// When `cs` last switched on its own, in Unix seconds.
     pub switched_at: Option<i64>,
+    /// Accounts whose refresh Anthropic refused; they need `/login` again.
+    pub logged_out: BTreeSet<String>,
 }
 
 /// The usage of one account as last read.

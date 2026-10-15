@@ -12,6 +12,7 @@ Commands:
   setup         Install cs in Claude Code once, so switching is automatic
   status        Show every account with its usage and reset times
   use <name>    Make an account active in every Claude Code window now
+  refresh       Refresh parked logins and read their usage now
   list          Print the profiles
   statusline    Record usage; run by Claude Code as its status line
   hook rate-limit
@@ -34,6 +35,8 @@ pub enum Command {
     Use(OsString),
     /// Print every account with its usage.
     Status,
+    /// Refresh parked logins and read parked accounts' usage.
+    Refresh,
     /// A turn ended on a usage limit; run by Claude Code's `StopFailure`
     /// hook.
     HookRateLimit,
@@ -83,6 +86,15 @@ where
             None => Command::Setup,
             Some(extra) => Command::Misuse(format!(
                 "setup takes no arguments, not '{}'",
+                extra.to_string_lossy()
+            )),
+        };
+    }
+    if first == "refresh" {
+        return match args.next() {
+            None => Command::Refresh,
+            Some(extra) => Command::Misuse(format!(
+                "refresh takes no arguments, not '{}'",
                 extra.to_string_lossy()
             )),
         };
