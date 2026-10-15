@@ -6,9 +6,9 @@ use std::io::BufRead;
 
 use crate::claude_code::settings;
 use crate::command::{home, report};
-use crate::early::macos::launchd;
+use crate::early;
 use crate::error::Error;
-use crate::login::macos::keychain::SystemKeychain;
+use crate::login::SystemLogins;
 use crate::login::{Logins, Slot};
 use crate::store::profile::ProfilesRoot;
 use crate::store::state::StateFile;
@@ -47,7 +47,7 @@ pub fn run(all: bool) -> Result<(), Error> {
     } else {
         report("the status line and the hook were not installed");
     }
-    if launchd::remove(&home)? {
+    if early::remove(&home)? {
         if root.path().is_dir() {
             file.update(|s| s.early_start = None)?;
         }
@@ -79,7 +79,7 @@ pub fn run(all: bool) -> Result<(), Error> {
         report("nothing removed");
         return Ok(());
     }
-    let logins = SystemKeychain::for_user(&root)?;
+    let logins = SystemLogins::for_user(&root)?;
     for name in &profiles {
         logins.clear(&Slot::Parked(name.clone()))?;
         let dir = root.path().join(name);

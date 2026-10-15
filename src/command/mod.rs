@@ -28,8 +28,8 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use crate::error::Error;
+use crate::login::SystemLogins;
 use crate::login::account::AccountFiles;
-use crate::login::macos::keychain::SystemKeychain;
 use crate::store::profile::ProfilesRoot;
 use crate::store::state::StateFile;
 use crate::switching::auto::{self, Trigger};
@@ -126,7 +126,7 @@ pub fn home() -> Result<PathBuf, Error> {
 pub fn automatic(trigger: Trigger) -> Result<Option<String>, Error> {
     let home = home()?;
     let root = ProfilesRoot::from_home(Some(home.clone().into_os_string()))?;
-    let logins = SystemKeychain::for_user(&root)?;
+    let logins = SystemLogins::for_user(&root)?;
     let accounts = AccountFiles::new(&home, &root);
     let file = StateFile::in_root(&root);
     let context = auto::Context {

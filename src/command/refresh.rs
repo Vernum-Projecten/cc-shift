@@ -4,7 +4,7 @@ use crate::anthropic::http::Curl;
 use crate::anthropic::parked::{self, Report};
 use crate::command::{report, unix_now};
 use crate::error::Error;
-use crate::login::macos::keychain::SystemKeychain;
+use crate::login::SystemLogins;
 use crate::store::profile::ProfilesRoot;
 use crate::store::state::StateFile;
 
@@ -37,7 +37,7 @@ pub fn run() -> Result<(), Error> {
 /// or the state file.
 pub fn refresh_parked() -> Result<Vec<Report>, Error> {
     let root = ProfilesRoot::from_env()?;
-    let logins = SystemKeychain::for_user(&root)?;
+    let logins = SystemLogins::for_user(&root)?;
     parked::refresh_all(
         &logins,
         &Curl,

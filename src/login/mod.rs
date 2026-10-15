@@ -1,10 +1,12 @@
-//! Where logins live: the Keychain item of `~/.claude` and one parked item
-//! per profile.
+//! Where logins live: the slot of `~/.claude` and one parked slot per profile.
 //!
-//! Every Keychain access goes through [`Logins`], so the switch logic is
-//! tested against an in-memory store and never touches the real Keychain.
+//! On macOS a slot is a Keychain item, on Linux a `.credentials.json` file.
+//! Every access goes through [`Logins`], so the switch logic is tested
+//! against an in-memory store and never touches a real login.
 
 pub mod account;
+#[cfg(target_os = "linux")]
+pub mod linux;
 #[cfg(target_os = "macos")]
 pub mod macos;
 
@@ -12,12 +14,20 @@ use std::fmt;
 
 use crate::error::Error;
 
-/// One Keychain slot that can hold a login.
+/// The login store of this system: the Keychain on macOS.
+#[cfg(target_os = "macos")]
+pub type SystemLogins = macos::keychain::SystemKeychain;
+
+/// The login store of this system: the login files on Linux.
+#[cfg(target_os = "linux")]
+pub type SystemLogins = linux::credentials::CredentialFiles;
+
+/// One slot that can hold a login.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Slot {
-    /// The item of `~/.claude`, which every window uses.
+    /// The slot of `~/.claude`, which every window uses.
     Active,
-    /// The parked item of one profile.
+    /// The parked slot of one profile.
     Parked(String),
 }
 
@@ -44,7 +54,7 @@ impl Login {
         Self(bytes)
     }
 
-    /// Returns the stored bytes, for writing them back to the Keychain.
+    /// Returns the stored bytes, for writing them back to a slot.
     #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
@@ -57,7 +67,7 @@ impl fmt::Debug for Login {
     }
 }
 
-/// Reads, writes and clears logins in their Keychain slots.
+/// Reads, writes and clears logins in their slots.
 pub trait Logins {
     /// Returns the login in `slot`, or `None` when the slot is empty.
     ///

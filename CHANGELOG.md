@@ -6,6 +6,19 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `cc-shift` builds and runs on Linux. Logins are moved between the
+  `.credentials.json` files Claude Code keeps on Linux (mode 0600, replaced
+  in one rename so open windows follow with their next message), and the
+  early start runs from a systemd user timer.
+
+### Changed
+
+- A morning early start that runs more than 3 hours after its set time (a
+  machine that woke or started late) starts nothing and says so in
+  `cc-shift log`.
+
 ## [0.0.9] - 2026-10-15
 
 ### Added

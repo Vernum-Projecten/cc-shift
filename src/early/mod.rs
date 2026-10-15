@@ -7,15 +7,20 @@
 //! short message on a few accounts, picked in the order the selection rule
 //! uses them. It is off until `cc-shift early on`.
 
+#[cfg(target_os = "linux")]
+pub mod linux;
 #[cfg(target_os = "macos")]
 pub mod macos;
 pub mod start;
+
+use std::path::{Path, PathBuf};
 
 use jiff::Timestamp;
 use jiff::civil::{Time, Weekday};
 use jiff::tz::TimeZone;
 use serde::{Deserialize, Serialize};
 
+use crate::error::Error;
 use crate::usage::select::in_order;
 use crate::usage::{Account, Usage};
 
@@ -62,6 +67,61 @@ impl EarlyStart {
     }
 }
 
+/// Installs or replaces the system job that runs `binary early run` at the
+/// set time on workdays, with `path` as its `PATH`.
+///
+/// # Errors
+///
+/// Returns the error of the job's file or of the system scheduler.
+pub fn install(home: &Path, setting: EarlyStart, binary: &Path, path: &str) -> Result<(), Error> {
+    #[cfg(target_os = "macos")]
+    return macos::launchd::install(home, setting, binary, path);
+    #[cfg(target_os = "linux")]
+    return linux::systemd::install(home, setting, binary, path);
+}
+
+/// Removes the system job; returns whether there was one.
+///
+/// # Errors
+///
+/// Returns the error of the job's file or of the system scheduler.
+pub fn remove(home: &Path) -> Result<bool, Error> {
+    #[cfg(target_os = "macos")]
+    return macos::launchd::remove(home);
+    #[cfg(target_os = "linux")]
+    return linux::systemd::remove(home);
+}
+
+/// Returns the file of the system job: the `launchd` agent on macOS, the
+/// systemd timer on Linux.
+#[must_use]
+pub fn job_path(home: &Path) -> PathBuf {
+    #[cfg(target_os = "macos")]
+    return macos::launchd::agent_path(home);
+    #[cfg(target_os = "linux")]
+    return linux::systemd::timer_path(home);
+}
+
+/// Returns whether the system job is installed.
+#[must_use]
+pub fn installed(home: &Path) -> bool {
+    job_path(home).is_file()
+}
+
+/// Returns the empty folder the early start runs `claude` from.
+#[must_use]
+pub fn workdir(home: &Path) -> PathBuf {
+    #[cfg(target_os = "macos")]
+    return home.join("Library/Caches/cc-shift/early-start");
+    #[cfg(target_os = "linux")]
+    {
+        std::env::var_os("XDG_CACHE_HOME")
+            .filter(|v| !v.is_empty())
+            .map_or_else(|| home.join(".cache"), PathBuf::from)
+            .join("cc-shift/early-start")
+    }
+}
+
 /// Parses a time of day written as `HH:MM`, from 00:00 to 23:59.
 #[must_use]
 pub fn parse_time(text: &str) -> Option<(u8, u8)> {
@@ -97,6 +157,29 @@ pub fn next_run(setting: EarlyStart, now: Timestamp, zone: &TimeZone) -> Option<
         let run = date.to_datetime(time).to_zoned(zone.clone()).ok()?;
         (is_workday(date.weekday()) && run.timestamp() > now).then(|| run.timestamp())
     })
+}
+
+/// How long after the set time a run still starts windows, in seconds: a
+/// window started later would reset in the evening.
+pub const LATEST_SECONDS: i64 = 3 * 3_600;
+
+/// Returns whether `now` is more than [`LATEST_SECONDS`] after today's set
+/// time in `zone`, as when a sleeping or switched-off machine catches up.
+#[must_use]
+pub fn too_late(setting: EarlyStart, now: Timestamp, zone: &TimeZone) -> bool {
+    let Ok(time) = Time::new(
+        i8::try_from(setting.hour).unwrap_or(0),
+        i8::try_from(setting.minute).unwrap_or(0),
+        0,
+        0,
+    ) else {
+        return false;
+    };
+    let today = now.to_zoned(zone.clone()).date();
+    today
+        .to_datetime(time)
+        .to_zoned(zone.clone())
+        .is_ok_and(|set| now.as_second() - set.timestamp().as_second() > LATEST_SECONDS)
 }
 
 /// Returns the accounts to start: the first `count` in the selection
@@ -183,6 +266,27 @@ mod tests {
             next_run(setting, at(friday_six), &TimeZone::UTC),
             Some(at(monday_six)),
             "Friday's run is followed by Monday's"
+        );
+    }
+
+    #[test]
+    fn a_run_more_than_three_hours_late_is_too_late() {
+        let setting = EarlyStart::default();
+        let at = |s: i64| Timestamp::from_second(s).unwrap();
+        let six = NOW - 6 * 3_600;
+        assert!(!super::too_late(
+            setting,
+            at(six + 3 * 3_600),
+            &TimeZone::UTC
+        ));
+        assert!(super::too_late(
+            setting,
+            at(six + 3 * 3_600 + 1),
+            &TimeZone::UTC
+        ));
+        assert!(
+            !super::too_late(setting, at(six - 3_600), &TimeZone::UTC),
+            "early is fine"
         );
     }
 

@@ -154,6 +154,9 @@ fn describe(event: &Event, at: i64, zone: &TimeZone, paint: Paint) -> (&'static 
             "early start",
             early_start(started, *wanted, at, zone, paint),
         ),
+        Event::EarlyStartSkipped { reason } => {
+            ("early start", paint.yellow(&format!("skipped · {reason}")))
+        }
         Event::EarlyStartFailed { account, reason } => (
             "early start",
             paint.red(&format!("{account}: not started · {reason}")),

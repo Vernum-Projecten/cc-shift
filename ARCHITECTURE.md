@@ -1,4 +1,4 @@
-# cc-shift: automatic Claude account switching (macOS)
+# cc-shift: automatic Claude account switching (macOS and Linux)
 
 ## 1. Purpose
 
@@ -10,6 +10,8 @@ The accounts are several work accounts, each with a profile of its own. The exam
 
 Claude Code keeps its login in the macOS Keychain, in one item per config folder (<https://code.claude.com/docs/en/authentication#credential-management>). A new session reads that item when it starts. A running session re-reads that item before each request, with a 30-second cache, so it picks up a login written there while it runs; the owner saw a `/login` in one window reach the others (#12), and the Claude Code 2.1.300 binary shows how (#50).
 
+On Linux, Claude Code keeps the login of a config folder in `<folder>/.credentials.json` with mode 0600 and uses no keyring (same page). A running session checks that file's modification time before each request and drops its cached login when the file changed (the 2.1.300 Linux build, #85), so it picks up a switch with its next request. Everything below holds on both systems; where they differ, a "slot" is the Keychain item on macOS and the `.credentials.json` file on Linux.
+
 `cc-shift` builds on that:
 
 ```
@@ -20,7 +22,7 @@ Claude Code keeps its login in the macOS Keychain, in one item per config folder
 
 - Each account is logged in once, in its own profile folder. That login stays parked in the profile's Keychain item.
 - Every window runs with the default `~/.claude`. Its Keychain item holds the active account.
-- A switch moves the next account's parked login into the item of `~/.claude`, and copies that account's details (`oauthAccount` in the profile's `.claude.json`) into `~/.claude.json`. `/login` writes both, and open windows follow only when both change (observed on Claude Code 2.1.300, #24). Every open window continues on the new account within about 30 seconds.
+- A switch moves the next account's parked login into the item of `~/.claude`, and copies that account's details (`oauthAccount` in the profile's `.claude.json`) into `~/.claude.json`. `/login` writes both, and open windows follow only when both change (observed on Claude Code 2.1.300, #24). Every open window continues on the new account, within about 30 seconds on macOS and with its next request on Linux.
 
 A refresh token works once: after a refresh the old one is dead, and presenting a dead copy can revoke the login. So a login is always moved, never copied, and each login has exactly one live copy and one process that refreshes it: Claude Code for the active login, `cc-shift` for the parked ones.
 
@@ -99,7 +101,7 @@ All windows share the active account, so a switch moves all of them, as `/login`
 
 ### Early start
 
-A 5-hour window starts with an account's first message, so a window started at 06:00 resets at 11:00, inside the workday, and gives an extra window that day. `cc-shift early on` turns this on (off by default, #35). A `launchd` agent in `~/Library/LaunchAgents` runs `cc-shift early run` Monday to Friday at the set time (06:00 by default). A Mac that is asleep then runs it on waking; a Mac that is off skips the day, and a run on a Saturday or Sunday does nothing.
+A 5-hour window starts with an account's first message, so a window started at 06:00 resets at 11:00, inside the workday, and gives an extra window that day. `cc-shift early on` turns this on (off by default, #35). A scheduled job runs `cc-shift early run` Monday to Friday at the set time (06:00 by default): a `launchd` agent in `~/Library/LaunchAgents` on macOS, and a systemd user timer with `Persistent=true` on Linux (#86). A Mac that is asleep runs it on waking and a Mac that is off skips the day; a Linux machine that was off runs it at the next boot or login, and one without a systemd user session cannot turn it on. A run on a Saturday or Sunday does nothing, and a run more than 3 hours after the set time starts nothing and says so in the history, because a window started then would reset in the evening.
 
 The run refreshes the parked logins, then holds the refresh lock and starts the first accounts (2 by default) in the order of section 4 whose 5-hour window is not running. Full, out-of-week and logged-out accounts are not in that order, so they are never started. The other accounts stay untouched for later in the day: every extra window spends the week sooner.
 
@@ -115,6 +117,8 @@ Under the lock, in this order:
 2. Write `member2`'s parked login into the item of `~/.claude`, and set `oauthAccount` in `~/.claude.json` to `member2`'s, changing nothing else in that file.
 3. Clear `member2`'s parked item and record `member2` as active in the state.
 
+On Linux each write goes to a new file with mode 0600 in the same folder, which is then renamed over the old one, so a running window sees a new file and no reader ever sees half a login. A login file that is a symbolic link is refused, as Claude Code refuses it.
+
 The state records each step before it runs, so a switch that stops halfway is finished by the next `cc-shift` run, and no login is lost or left with two copies. Steps 1 and 2 are recorded as one step: run again after a stop between them, it saves `~/.claude` once more, so tokens Claude Code refreshed in the meantime are kept, and it skips both when `~/.claude` already holds the next login.
 
 At `cc-shift setup` the login already in `~/.claude` has no profile. It is a separate login from the parked ones, so replacing it breaks nothing; `cc-shift setup` says so before it does.
@@ -129,15 +133,15 @@ A parked login has no Claude Code process to refresh it, so `cc-shift` does. Whe
 |---|---|---|
 | The `cc-shift` binary | `~/.cargo/bin/cc-shift`, or `~/.local/bin/cc-shift` for a prebuilt binary | cargo, or the user |
 | One folder per profile, used for its `/login` | `~/.claude-profiles/<name>/` | cc-shift, Claude Code |
-| Parked logins | Keychain, the item of each profile folder | Claude Code at `/login`; cc-shift on a switch or refresh |
-| The active login | Keychain, `Claude Code-credentials` (the item of `~/.claude`) | Claude Code; cc-shift on a switch |
+| Parked logins | macOS: Keychain, the item of each profile folder. Linux: `~/.claude-profiles/<name>/.credentials.json` | Claude Code at `/login`; cc-shift on a switch or refresh |
+| The active login | macOS: Keychain, `Claude Code-credentials` (the item of `~/.claude`). Linux: `~/.claude/.credentials.json` | Claude Code; cc-shift on a switch |
 | Active account, usage per account, unfinished switch, thresholds, early start setting | `~/.claude-profiles/state.json` | cc-shift |
 | The history | `~/.claude-profiles/history.jsonl`, and `history.1.jsonl` after it rotates at about 1 MB | cc-shift |
 | The locks | `~/.claude-profiles/.lock` (state and switches), `.refresh-lock` (one refresh at a time), `.history-lock` | cc-shift |
 | Token counts read from the transcripts, per file | `~/.claude-profiles/stats-cache.json` | cc-shift stats |
 | Status line and hook | `~/.claude/settings.json` | cc-shift setup |
-| The early start agent, while it is on | `~/Library/LaunchAgents/io.github.vernum-projecten.cc-shift.early-start.plist` | cc-shift early on |
-| The empty working folder of the early start | `~/Library/Caches/cc-shift/early-start/` | cc-shift early run |
+| The early start job, while it is on | macOS: `~/Library/LaunchAgents/io.github.vernum-projecten.cc-shift.early-start.plist`. Linux: `cc-shift-early-start.service` and `.timer` in `~/.config/systemd/user/` (or `$XDG_CONFIG_HOME`) | cc-shift early on |
+| The empty working folder of the early start | macOS: `~/Library/Caches/cc-shift/early-start/`. Linux: `~/.cache/cc-shift/early-start/` (or `$XDG_CACHE_HOME`) | cc-shift early run |
 
 `cc-shift list` treats every folder in `~/.claude-profiles/` as a profile, so the state, the history, the stats cache and the locks are files there. A profile's item is `Claude Code-credentials-` followed by the first 8 hex characters of the SHA-256 of its folder's absolute path, with the macOS user name as the account (observed on Claude Code 2.1.300, #6).
 
@@ -162,8 +166,9 @@ src/
 ├── render/       table and json: cc-shift status; line: the status line;
 │                 log: the history; stats and stats_json: cc-shift stats;
 │                 bars and colour (NO_COLOR is honoured)
-├── early/        mod.rs: the setting, the next run and which accounts to
-│                 start; start: the claude -p run; macos/launchd: the agent
+├── early/        mod.rs: the setting, the next run, which accounts to start
+│                 and the scheduled job; start: the claude -p run;
+│                 macos/launchd: the agent; linux/systemd: the timer
 ├── stats/        transcript: finding the session transcripts and reading
 │                 only the usage fields; cache: stats-cache.json per file
 │                 by size and modification time; summary: one count per
@@ -172,7 +177,7 @@ src/
 ├── login/        mod.rs: Login, Slot and the Logins trait every Keychain
 │                 access goes through; account: oauthAccount in
 │                 .claude.json; macos/keychain: the macOS backend through
-│                 /usr/bin/security
+│                 /usr/bin/security; linux/credentials: the login files
 ├── switching/    transfer: the move of section 5 with its recovery;
 │                 auto: when to switch on its own and where to go
 ├── anthropic/    http: requests through curl with the request on stdin;
@@ -182,7 +187,7 @@ src/
                   launch (exec claude for cc-shift add)
 ```
 
-Code that differs per operating system lives in a `macos/` folder inside its own module, compiled only on that system (`#[cfg(target_os = "macos")]`); everything else is shared. Every import names the module that defines the item; there are no re-exports. A login never appears in debug output, and the Keychain and HTTP are behind traits, so tests use memory and fakes.
+Code that differs per operating system lives in a `macos/` or `linux/` folder inside its own module, compiled only on that system (`#[cfg(target_os = "...")]`); everything else is shared. `login::SystemLogins` and the scheduled-job functions in `early` pick the backend, so the commands name no system. Every import names the module that defines the item; there are no re-exports. A login never appears in debug output, and the Keychain and HTTP are behind traits, so tests use memory and fakes.
 
 The runtime dependencies are `thiserror` for the error type, `serde` with `serde_json` (key order kept) for the JSON files, `sha2` for the Keychain service names, and `jiff` for the reset times and, with its system time zone support, the local days of `cc-shift stats`; each further dependency is added in the pull request that needs it.
 
@@ -200,6 +205,6 @@ These need real accounts, so they are done once by the owner and recorded on the
 
 ## 10. Security
 
-`cc-shift` touches tokens for three reasons only: to move a login on a switch, to refresh a parked login, and to read a parked access token for its usage. Tokens stay in the Keychain, encrypted at rest. `cc-shift` holds them in memory only while it uses them, and never writes them to a file, a log, the terminal or the state. It never refreshes the active login and never keeps two live copies of one login. The owner asked for this on #12.
+`cc-shift` touches tokens for three reasons only: to move a login on a switch, to refresh a parked login, and to read a parked access token for its usage. Tokens stay where Claude Code keeps them: in the Keychain, encrypted at rest, on macOS, and in its login files with mode 0600 on Linux. `cc-shift` holds them in memory only while it uses them, and never writes them to a file, a log, the terminal or the state. It never refreshes the active login and never keeps two live copies of one login. The owner asked for this on #12.
 
-Removing an account means deleting its profile folder and its "Claude Code" Keychain item; deleting only the folder leaves the login in the Keychain. `cc-shift remove <name>` does both.
+Removing an account means deleting its profile folder and, on macOS, its "Claude Code" Keychain item; deleting only the folder leaves the login in the Keychain. On Linux the login file is inside the folder. `cc-shift remove <name>` does both.

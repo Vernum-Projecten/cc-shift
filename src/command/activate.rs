@@ -4,17 +4,26 @@ use std::ffi::OsStr;
 
 use crate::command::{home, report, unix_now};
 use crate::error::Error;
+use crate::login::SystemLogins;
 use crate::login::account::AccountFiles;
-use crate::login::macos::keychain::SystemKeychain;
 use crate::store::history::{self, Event, Reason};
 use crate::store::profile::{ProfileName, ProfilesRoot};
 use crate::store::state::StateFile;
 use crate::switching::transfer::{self, Outcome};
 
+/// When open windows pick up a switch: Claude Code caches the Keychain item
+/// for about 30 seconds on macOS, and checks the login file before each
+/// request on Linux.
+#[cfg(target_os = "macos")]
+const FOLLOW: &str = "within about 30 seconds";
+#[cfg(target_os = "linux")]
+const FOLLOW: &str = "with their next message";
+
 /// Moves an account's parked login into `~/.claude` and says what moved.
 ///
 /// Running Claude Code windows re-read their login before each request, so
-/// they follow within about 30 seconds.
+/// they follow: within about 30 seconds on macOS, where Claude Code caches
+/// the Keychain item, and on their next request on Linux.
 ///
 /// # Errors
 ///
@@ -24,7 +33,7 @@ pub fn run(raw: &OsStr) -> Result<(), Error> {
     let name = ProfileName::parse(raw)?;
     let home = home()?;
     let root = ProfilesRoot::from_home(Some(home.clone().into_os_string()))?;
-    let logins = SystemKeychain::for_user(&root)?;
+    let logins = SystemLogins::for_user(&root)?;
     let accounts = AccountFiles::new(&home, &root);
     let file = StateFile::in_root(&root);
     let outcome = transfer::switch_to(&logins, &accounts, &file, name.as_str())?;
@@ -47,11 +56,11 @@ pub fn run(raw: &OsStr) -> Result<(), Error> {
             report(&format!("'{}' is already active", name.as_str()));
         }
         Outcome::Switched { from: Some(from) } => report(&format!(
-            "'{}' is active; '{from}' is parked. Open Claude Code windows follow within about 30 seconds",
+            "'{}' is active; '{from}' is parked. Open Claude Code windows follow {FOLLOW}",
             name.as_str()
         )),
         Outcome::Switched { from: None } => report(&format!(
-            "'{}' is active; the login that was in ~/.claude belonged to no profile and was replaced. Open Claude Code windows follow within about 30 seconds",
+            "'{}' is active; the login that was in ~/.claude belonged to no profile and was replaced. Open Claude Code windows follow {FOLLOW}",
             name.as_str()
         )),
     }
