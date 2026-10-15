@@ -6,6 +6,7 @@
 
 pub mod json;
 pub mod line;
+pub mod log;
 pub mod table;
 
 /// Paints text with ANSI colours, or leaves it plain.

@@ -31,6 +31,9 @@ pub struct State {
     pub pending: Option<Pending>,
     /// When `cc-shift` last switched on its own, in Unix seconds.
     pub switched_at: Option<i64>,
+    /// Since when no account but the active one has had room, in Unix
+    /// seconds; the history notes the start and the end once each.
+    pub all_full_since: Option<i64>,
     /// Accounts whose refresh Anthropic refused; they need `/login` again.
     pub logged_out: BTreeSet<String>,
     /// The percentages at which the windows count as full.

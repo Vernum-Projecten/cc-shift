@@ -2,10 +2,11 @@
 
 use std::ffi::OsStr;
 
-use crate::command::{home, report};
+use crate::command::{home, report, unix_now};
 use crate::error::Error;
 use crate::login::account::AccountFiles;
 use crate::login::keychain::SystemKeychain;
+use crate::store::history::{self, Event, Reason};
 use crate::store::profile::{ProfileName, ProfilesRoot};
 use crate::store::state::StateFile;
 use crate::switching::transfer::{self, Outcome};
@@ -26,7 +27,22 @@ pub fn run(raw: &OsStr) -> Result<(), Error> {
     let logins = SystemKeychain::for_user(&root)?;
     let accounts = AccountFiles::new(&home, &root);
     let file = StateFile::in_root(&root);
-    match transfer::switch_to(&logins, &accounts, &file, name.as_str())? {
+    let outcome = transfer::switch_to(&logins, &accounts, &file, name.as_str())?;
+    if let Outcome::Switched { from } = &outcome {
+        history::note(
+            &root,
+            Event::Switch {
+                reason: Reason::ByHand,
+                window: None,
+                from: from.clone(),
+                to: name.as_str().to_owned(),
+                from_used: None,
+                to_used: None,
+            },
+            unix_now(),
+        );
+    }
+    match outcome {
         Outcome::AlreadyActive => {
             report(&format!("'{}' is already active", name.as_str()));
         }

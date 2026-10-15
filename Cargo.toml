@@ -19,7 +19,7 @@ publish = true
 targets = ["aarch64-apple-darwin", "x86_64-apple-darwin"]
 
 [dependencies]
-jiff = { version = "0.2.38", default-features = false, features = ["std"] }
+jiff = { version = "0.2.38", default-features = false, features = ["std", "tz-system"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.154", features = ["preserve_order"] }
 sha2 = "0.11.1"

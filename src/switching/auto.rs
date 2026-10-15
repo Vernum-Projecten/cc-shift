@@ -8,11 +8,12 @@
 use crate::error::Error;
 use crate::login::Logins;
 use crate::login::account::AccountFiles;
+use crate::store::history::{self, Event, Reason, WindowKind};
 use crate::store::profile::ProfilesRoot;
 use crate::store::state::{Recorded, StateFile};
 use crate::switching::transfer::{self, Outcome};
-use crate::usage::Window;
 use crate::usage::select::{self, Choice};
+use crate::usage::{Account, Usage, Window};
 
 /// How long after a switch no automatic switch follows.
 ///
@@ -103,11 +104,54 @@ pub fn run<L: Logins>(
     loop {
         let name = match select::next(&view, leaving.as_deref(), now) {
             Choice::Account(account) => account.name.clone(),
-            Choice::NoneAvailable(_) => return Ok(None),
+            Choice::NoneAvailable(first) => {
+                if trigger != Trigger::Setup && state.all_full_since.is_none() {
+                    context.file.update(|s| s.all_full_since = Some(now))?;
+                    if let Some(active) = &leaving {
+                        history::note(
+                            context.root,
+                            Event::AllFull {
+                                staying_on: active.clone(),
+                                first_free: first.map(|(a, _)| a.name.clone()),
+                                free_at: first.map(|(_, at)| at),
+                            },
+                            now,
+                        );
+                    }
+                }
+                return Ok(None);
+            }
         };
         match transfer::switch_to(context.logins, context.accounts, context.file, &name) {
             Ok(Outcome::Switched { .. }) => {
-                context.file.update(|s| s.switched_at = Some(now))?;
+                context.file.update(|s| {
+                    s.switched_at = Some(now);
+                    s.all_full_since = None;
+                })?;
+                if trigger != Trigger::Setup {
+                    let left = view.iter().find(|a| Some(&a.name) == leaving.as_ref());
+                    let (window, from_used) = left.map_or((None, None), |a| full_window(a, now));
+                    let to_used = view
+                        .iter()
+                        .find(|a| a.name == name)
+                        .and_then(|a| a.usage.used_at(now));
+                    history::note(
+                        context.root,
+                        Event::Switch {
+                            reason: if trigger == Trigger::LimitHit {
+                                Reason::LimitHit
+                            } else {
+                                Reason::Threshold
+                            },
+                            window,
+                            from: leaving.clone(),
+                            to: name.clone(),
+                            from_used,
+                            to_used,
+                        },
+                        now,
+                    );
+                }
                 return Ok(Some(name));
             }
             Ok(Outcome::AlreadyActive) => return Ok(None),
@@ -118,6 +162,27 @@ pub fn run<L: Logins>(
             }
             Err(other) => return Err(other),
         }
+    }
+}
+
+/// Returns the window of `account` that reached its threshold and how full it
+/// is, the 5-hour window first.
+fn full_window(account: &Account, now: i64) -> (Option<WindowKind>, Option<f64>) {
+    let Usage::Known {
+        five_hour,
+        seven_day,
+    } = &account.usage
+    else {
+        return (None, None);
+    };
+    let limits = account.thresholds;
+    let used = |w: &Option<Window>| w.map(|w| w.used_at(now));
+    if used(five_hour).is_some_and(|u| u >= limits.five_hour) {
+        (Some(WindowKind::FiveHour), used(five_hour))
+    } else if used(seven_day).is_some_and(|u| u >= limits.seven_day) {
+        (Some(WindowKind::SevenDay), used(seven_day))
+    } else {
+        (None, account.usage.used_at(now))
     }
 }
 

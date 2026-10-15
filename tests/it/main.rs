@@ -6,6 +6,7 @@ mod add;
 mod cli;
 mod hook;
 mod list;
+mod log;
 mod sandbox;
 mod setup;
 mod status;

@@ -63,6 +63,9 @@ pub struct Reading {
     pub account: Option<String>,
     /// Whether a confirmed reading of that account proves it.
     pub proven: bool,
+    /// Whether the input carried usage that matched no account and was
+    /// dropped.
+    pub dropped: bool,
 }
 
 /// Records usage from the status line `input` under the account the window
@@ -93,6 +96,7 @@ pub fn record(input: &[u8], state_file: &StateFile, now: i64) -> Result<Reading,
                 chained,
                 account: None,
                 proven: false,
+                dropped: false,
             };
         };
         let five: Option<Window> = limits.five_hour.map(Window::from);
@@ -113,6 +117,7 @@ pub fn record(input: &[u8], state_file: &StateFile, now: i64) -> Result<Reading,
         }
         Reading {
             chained,
+            dropped: account.is_none(),
             account,
             proven,
         }
