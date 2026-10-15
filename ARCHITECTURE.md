@@ -206,7 +206,7 @@ These need real accounts, so they are done once by the owner and recorded on the
 - After `cc-shift add` for two accounts, Keychain Access shows one "Claude Code" item per profile (#6).
 - With two windows open on `~/.claude`, `cc-shift use` to the other account, then `/status` in both windows shows the new account.
 - The status line of the work accounts receives `rate_limits`.
-- On Linux (#92): `cc-shift add` and `/login` write the profile's `.credentials.json` with mode 0600; two open windows follow `cc-shift use` and an automatic switch with their next message; a window refreshing during a switch loses no login; the early start timer runs, catches up after a power-off and is gone after `cc-shift early off`.
+- On Linux, still to be done with real accounts: `cc-shift add` and `/login` write the profile's `.credentials.json` with mode 0600; two open windows follow `cc-shift use` and an automatic switch with their next message; a window refreshing during a switch loses no login; the early start timer runs, catches up after a power-off and is gone after `cc-shift early off`.
 
 ## 10. Security
 

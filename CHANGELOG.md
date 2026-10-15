@@ -9,12 +9,16 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-15
+
 ### Added
 
 - `cc-shift` builds and runs on Linux. Logins are moved between the
   `.credentials.json` files Claude Code keeps on Linux (mode 0600, replaced
   in one rename so open windows follow with their next message), and the
   early start runs from a systemd user timer.
+- Each release has static Linux binaries for x86_64 and arm64 next to the
+  macOS ones, and CI builds, lints and tests on Linux as well as macOS.
 - `doctor` checks that `curl` is installed, and `cc-shift` finds `curl` on
   `PATH` when `/usr/bin/curl` is missing, as on `NixOS`.
 - A switch holds Claude Code's own refresh lock of `~/.claude` while it
@@ -201,7 +205,8 @@ Claude accounts on macOS on its own, before a usage limit is hit.
 - A token is never a command-line argument: Keychain writes and HTTP
   requests receive it on stdin.
 
-[Unreleased]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.0.9...HEAD
+[Unreleased]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.0.9...v0.1.0
 [0.0.9]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.0.8...v0.0.9
 [0.0.8]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.0.7...v0.0.8
 [0.0.7]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.0.6...v0.0.7
