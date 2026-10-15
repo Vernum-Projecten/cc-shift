@@ -9,7 +9,7 @@ body:
         sets the priority during triage, so you do not need to choose one.
 
         Do not use this form for a security vulnerability. Report those
-        directly to the maintainer, as
+        privately through the Security tab, as
         [SECURITY.md](https://github.com/Vernum-Projecten/cc-shift/blob/main/SECURITY.md) describes.
 
         Never paste a token, a Keychain item, an account email or the content
