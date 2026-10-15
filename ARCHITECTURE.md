@@ -47,7 +47,7 @@ A refresh token works once: after a refresh the old one is dead, and presenting 
 | `cc-shift log` | Shows what `cc-shift` did: switches with their reason, refreshed and logged-out logins, and when all accounts were full and free again; `--since`, `--all`, `--verbose` and `--json`. |
 | `cc-shift remove <name>` | Deletes a profile and its Keychain login, after confirmation; never the active account. |
 | `cc-shift uninstall [--all]` | Undoes `cc-shift setup`; with `--all` also deletes every profile and its login. |
-| `cc-shift completion zsh` | Prints the zsh completion script. |
+| `cc-shift completion zsh\|powershell` | Prints the zsh or PowerShell completion script. |
 | `cc-shift version` | Prints the version; also `--version` and `-V`. |
 | `cc-shift help` | Prints the commands; also `-h` and `--help`. On a terminal it opens with the logo. |
 | `cc-shift early` | Shows the early start: off, or the time, the count and the next run. |
@@ -59,7 +59,7 @@ A refresh token works once: after a refresh the old one is dead, and presenting 
 
 After `cc-shift add` for each account and one `cc-shift setup`, `cc-shift` tracks every account and switches on its own.
 
-A profile name uses ASCII letters, digits, `-` and `_`, starts with a letter or digit, and is not a command word (`add`, `setup`, `status`, `use`, `list`, `statusline`, `hook`, `help`, `remove`, `refresh`, `doctor`, `uninstall`, `completion`, `log`, `version`, `stats`, `early`).
+A profile name uses ASCII letters, digits, `-` and `_`, starts with a letter or digit, and is not a command word (`add`, `setup`, `status`, `use`, `list`, `statusline`, `hook`, `help`, `remove`, `refresh`, `doctor`, `uninstall`, `completion`, `log`, `version`, `stats`, `early`). A new profile may not differ from an existing one only in case, and on Windows a name is not a device name (`con`, `prn`, `aux`, `nul`, `com1` to `com9`, `lpt1` to `lpt9`, in any case; <https://learn.microsoft.com/windows/win32/fileio/naming-a-file>).
 
 ## 4. Automatic switching
 

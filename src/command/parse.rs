@@ -32,8 +32,8 @@ Commands:
                 Start that many windows at that time, Monday to Friday
   early off     Stop the early start
   remove <name> Delete a profile and its stored login
-  completion zsh
-                Print the zsh completion script
+  completion zsh|powershell
+                Print the zsh or PowerShell completion script
   uninstall [--all]
                 Undo setup; --all also removes every profile and its login
   list          Print the profiles
@@ -131,7 +131,7 @@ where
         },
         "completion" => match flags.as_slice() {
             [shell] => Command::Completion((*shell).to_owned()),
-            _ => Command::Misuse("completion takes one shell: zsh".to_owned()),
+            _ => Command::Misuse("completion takes one shell: zsh or powershell".to_owned()),
         },
         "log" => crate::command::log::options(&flags).map_or_else(Command::Misuse, Command::Log),
         "early" => {
@@ -277,6 +277,30 @@ mod tests {
             parse(args(&["use", "a", "b"])),
             Command::Misuse(_)
         ));
+    }
+
+    #[test]
+    fn completion_takes_one_shell() {
+        for shell in ["zsh", "powershell"] {
+            assert_eq!(
+                parse(args(&["completion", shell])),
+                Command::Completion(shell.to_owned()),
+                "{shell}"
+            );
+        }
+        assert_eq!(
+            parse(args(&["completion"])),
+            Command::Misuse("completion takes one shell: zsh or powershell".to_owned())
+        );
+    }
+
+    #[test]
+    fn usage_names_both_completion_shells() {
+        assert!(
+            super::USAGE.contains("completion zsh|powershell"),
+            "{}",
+            super::USAGE
+        );
     }
 
     #[test]

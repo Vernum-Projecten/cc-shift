@@ -22,6 +22,19 @@ pub enum Error {
     /// A profile name that is also a `cc-shift` command.
     #[error("'{0}' is a cc-shift command and cannot be a profile name")]
     ReservedName(String),
+    /// A profile name that Windows reserves for a device, such as `con`.
+    #[error("'{0}' is a device name on Windows and cannot be a profile name")]
+    DeviceName(String),
+    /// A new profile name that differs from an existing profile only in case.
+    #[error(
+        "'{name}' differs from the profile '{existing}' only in case; use 'cc-shift add {existing}' or another name"
+    )]
+    NameCase {
+        /// The name that was asked for.
+        name: String,
+        /// The existing profile with the same name in another case.
+        existing: String,
+    },
     /// The profile folder could not be created.
     #[error("cannot create {}: {source}", path.display())]
     CreateFolder {
@@ -70,7 +83,7 @@ pub enum Error {
     #[error("'{0}' has no parked login; run 'cc-shift add {0}' and /login")]
     NoParkedLogin(String),
     /// Completion was asked for a shell `cc-shift` has no script for.
-    #[error("no completion for '{0}'; cc-shift completes zsh only")]
+    #[error("no completion for '{0}'; cc-shift completes zsh and powershell")]
     Completion(String),
     /// No profile folder exists for the name.
     #[error("there is no profile '{0}'; 'cc-shift list' shows them")]

@@ -34,10 +34,30 @@ pub const RESERVED: [&str; 17] = [
 /// The name of the profiles root inside the home folder.
 const ROOT_NAME: &str = ".claude-profiles";
 
+/// Returns whether Windows reserves `name` for a device: `con`, `prn`, `aux`,
+/// `nul`, `com1` to `com9` or `lpt1` to `lpt9`, in any case.
+///
+/// A folder cannot carry such a name on Windows
+/// (<https://learn.microsoft.com/windows/win32/fileio/naming-a-file>). The
+/// superscript forms that page also lists are not ASCII, so no profile name
+/// can hold them.
+#[must_use]
+pub fn is_windows_device_name(name: &str) -> bool {
+    let lower = name.to_ascii_lowercase();
+    if ["con", "prn", "aux", "nul"].contains(&lower.as_str()) {
+        return true;
+    }
+    let number = lower
+        .strip_prefix("com")
+        .or_else(|| lower.strip_prefix("lpt"));
+    matches!(number.map(str::as_bytes), Some([b'1'..=b'9']))
+}
+
 /// A validated profile name.
 ///
 /// A name uses only ASCII letters, digits, `-` and `_`, starts with a letter
-/// or digit, and is not one of the [`RESERVED`] command words.
+/// or digit, and is not one of the [`RESERVED`] command words. On Windows it
+/// is also not a device name ([`is_windows_device_name`]).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProfileName(String);
 
@@ -47,8 +67,9 @@ impl ProfileName {
     /// # Errors
     ///
     /// Returns [`Error::InvalidName`] for an empty name, a name that is not
-    /// UTF-8, a name with another character or a leading `-` or `_`, and
-    /// [`Error::ReservedName`] for a command word.
+    /// UTF-8, a name with another character or a leading `-` or `_`,
+    /// [`Error::ReservedName`] for a command word, and, on Windows,
+    /// [`Error::DeviceName`] for a device name.
     pub fn parse(raw: &OsStr) -> Result<Self, Error> {
         let Some(name) = raw.to_str() else {
             return Err(Error::InvalidName(raw.to_string_lossy().into_owned()));
@@ -65,6 +86,9 @@ impl ProfileName {
         }
         if RESERVED.contains(&name) {
             return Err(Error::ReservedName(name.to_owned()));
+        }
+        if cfg!(windows) && is_windows_device_name(name) {
+            return Err(Error::DeviceName(name.to_owned()));
         }
         Ok(Self(name.to_owned()))
     }
@@ -153,6 +177,40 @@ impl ProfilesRoot {
         Ok(names)
     }
 
+    /// Checks that `name` is not an existing profile's name in another case,
+    /// unless a profile of exactly that name exists too.
+    ///
+    /// Windows treats names that differ only in case as the same folder
+    /// (<https://learn.microsoft.com/windows/win32/fileio/naming-a-file>:
+    /// "Do not assume case sensitivity"), so `cc-shift` refuses such a name on
+    /// every system, and one profile keeps one spelling wherever it is used.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::NameCase`] when a profile differs from `name` only in
+    /// case, and [`Error::ReadRoot`] when the root cannot be read.
+    pub fn check_case(&self, name: &ProfileName) -> Result<(), Error> {
+        // NOTE: no specification governs this: our own design; a root that is
+        // not a folder holds no profiles, and `create` then reports it.
+        if !self.0.is_dir() {
+            return Ok(());
+        }
+        let names = self.list()?;
+        if names.iter().any(|existing| existing == name.as_str()) {
+            return Ok(());
+        }
+        let twin = names
+            .into_iter()
+            .find(|existing| existing.eq_ignore_ascii_case(name.as_str()));
+        match twin {
+            Some(existing) => Err(Error::NameCase {
+                name: name.as_str().to_owned(),
+                existing,
+            }),
+            None => Ok(()),
+        }
+    }
+
     /// Creates a profile's config folder, and the root, when missing.
     ///
     /// # Errors
@@ -170,10 +228,11 @@ impl ProfilesRoot {
 
 #[cfg(test)]
 mod tests {
-    use super::{ProfileName, ProfilesRoot, RESERVED};
+    use super::{ProfileName, ProfilesRoot, RESERVED, is_windows_device_name};
     use crate::error::Error;
     use std::ffi::OsStr;
     use std::path::Path;
+    use tempfile::TempDir;
 
     fn parse(raw: &str) -> Result<ProfileName, Error> {
         ProfileName::parse(OsStr::new(raw))
@@ -210,6 +269,74 @@ mod tests {
         for name in RESERVED {
             assert!(matches!(parse(name), Err(Error::ReservedName(_))), "{name}");
         }
+    }
+
+    #[test]
+    fn device_names_are_known_in_any_case() {
+        for name in [
+            "con", "CON", "Prn", "aux", "nUl", "com1", "COM9", "lpt1", "Lpt9",
+        ] {
+            assert!(is_windows_device_name(name), "{name}");
+        }
+    }
+
+    #[test]
+    fn other_names_are_no_device_names() {
+        for name in [
+            "console", "com", "com0", "com10", "lpt0", "lpt", "comx", "nul1", "work", "c0n",
+        ] {
+            assert!(!is_windows_device_name(name), "{name}");
+        }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn refuses_a_device_name_on_windows() {
+        for name in ["con", "CON", "Aux", "com1", "LPT9"] {
+            assert!(matches!(parse(name), Err(Error::DeviceName(_))), "{name}");
+        }
+    }
+
+    #[cfg(not(windows))]
+    #[test]
+    fn accepts_a_device_name_elsewhere() {
+        for name in ["con", "aux", "com1"] {
+            assert!(parse(name).is_ok(), "{name}");
+        }
+    }
+
+    #[test]
+    #[expect(clippy::panic_in_result_fn, reason = "test assertions")]
+    fn refuses_a_name_that_differs_only_in_case() -> Result<(), Box<dyn std::error::Error>> {
+        let home = TempDir::new()?;
+        let root = ProfilesRoot::from_home(Some(home.path().into()))?;
+        root.create(&parse("work")?)?;
+        let checked = root.check_case(&parse("Work")?);
+        assert!(
+            matches!(&checked, Err(Error::NameCase { name, existing }) if name == "Work" && existing == "work"),
+            "{checked:?}"
+        );
+        Ok(())
+    }
+
+    #[test]
+    #[expect(clippy::panic_in_result_fn, reason = "test assertions")]
+    fn accepts_the_same_name_and_a_new_name() -> Result<(), Box<dyn std::error::Error>> {
+        let home = TempDir::new()?;
+        let root = ProfilesRoot::from_home(Some(home.path().into()))?;
+        root.create(&parse("work")?)?;
+        assert!(root.check_case(&parse("work")?).is_ok(), "same name");
+        assert!(root.check_case(&parse("home")?).is_ok(), "new name");
+        Ok(())
+    }
+
+    #[test]
+    #[expect(clippy::panic_in_result_fn, reason = "test assertions")]
+    fn accepts_any_name_without_a_root() -> Result<(), Box<dyn std::error::Error>> {
+        let home = TempDir::new()?;
+        let root = ProfilesRoot::from_home(Some(home.path().into()))?;
+        assert!(root.check_case(&parse("Work")?).is_ok(), "no profiles");
+        Ok(())
     }
 
     #[test]

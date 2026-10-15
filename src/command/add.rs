@@ -16,11 +16,13 @@ use crate::store::profile::{ProfileName, ProfilesRoot};
 ///
 /// # Errors
 ///
-/// Returns the error of an invalid name, a missing `HOME`, a folder that
-/// cannot be created, or a `claude` that cannot be started.
+/// Returns the error of an invalid name, a missing `HOME`, a name that
+/// differs from an existing profile only in case, a folder that cannot be
+/// created, or a `claude` that cannot be started.
 pub fn run(raw: &OsStr) -> Result<Infallible, Error> {
     let name = ProfileName::parse(raw)?;
     let root = ProfilesRoot::from_env()?;
+    root.check_case(&name)?;
     let dir = root.create(&name)?;
     report(&format!(
         "profile '{}' is at {}\nRun /login in Claude Code and sign in with the account for this profile, then quit.",

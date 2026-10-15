@@ -19,11 +19,17 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Claude Code, `curl.exe` comes from the Windows system folder, child
   programs start without a console window, and the early start runs from
   Task Scheduler.
+- `cc-shift completion powershell` prints a completion script for Windows
+  PowerShell 5.1 and PowerShell 7, for the commands, the profile names and
+  the flags.
 
 ### Changed
 
 - The error for a missing home folder names `USERPROFILE` on Windows as well
   as `HOME`.
+- `cc-shift add` refuses a name that differs from an existing profile only
+  in case, and on Windows the device names `con`, `prn`, `aux`, `nul`,
+  `com1` to `com9` and `lpt1` to `lpt9`.
 
 ## [0.1.0] - 2026-10-15
 
