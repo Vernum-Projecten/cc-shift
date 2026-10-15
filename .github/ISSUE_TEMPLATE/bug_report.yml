@@ -1,0 +1,65 @@
+name: Bug report
+description: Report a defect in cs.
+type: Bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. The type is already Bug, and a maintainer
+        sets the priority during triage, so you do not need to choose one.
+
+        Do not use this form for a security vulnerability. Report those
+        privately through the Security tab. See
+        [SECURITY.md](https://github.com/Vernum-Projecten/cs/blob/main/SECURITY.md).
+
+        Never paste a token, a Keychain item, an account email or the content
+        of a profile folder into this form.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What goes wrong, in one or two sentences.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The exact commands that trigger the bug.
+      placeholder: |
+        1. Run `cs add claude1`
+        2. Run `cs auto`
+        3. See the output
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead. Include the error output.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: The output of `cs --version`, or the commit SHA you built.
+      placeholder: v0.1.0, or a commit SHA
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: >-
+        Your macOS version and architecture, the output of `claude --version`,
+        and how many profiles you have set up.
+    validations:
+      required: false

@@ -1,0 +1,26 @@
+name: Install the Rust toolchain
+description: >-
+  Install the toolchain rust-toolchain.toml pins, with the components a job
+  asks for. The calling job checks out the repository first: a local action
+  path (./.github/actions/setup-rust) resolves only after checkout, so this
+  action does not check out. The channel is read from rust-toolchain.toml by
+  the wrapped action, so the pin lives in that one file.
+inputs:
+  components:
+    description: Comma-separated toolchain components (rustfmt, clippy), none by default.
+    required: false
+    default: ""
+  cache:
+    description: >-
+      Restore and save the Rust build cache, on by default. A publishing lane
+      passes "false": a cache an untrusted run could poison must never feed a
+      release.
+    required: false
+    default: "true"
+runs:
+  using: composite
+  steps:
+    - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+      with:
+        components: ${{ inputs.components }}
+        cache: ${{ inputs.cache }}

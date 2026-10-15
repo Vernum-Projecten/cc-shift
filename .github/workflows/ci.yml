@@ -1,0 +1,304 @@
+# CI in two tiers.
+#
+#   1. The workflow, shell and guard tier needs no Rust: zizmor over .github,
+#      actionlint over .github/workflows, shellcheck over the tracked shell
+#      programs, and the committed guards under scripts/checks with the
+#      self-tests of the tracker helpers. These keep this very file honest, so
+#      none of them may depend on the Rust toolchain.
+#   2. The Rust tier is gated behind a detection job that looks for a root
+#      Cargo.toml, so a tree without one skips the cargo lanes cleanly.
+#      hashFiles() cannot gate a job at `if:` time, because the runner
+#      workspace is empty before checkout, so a real detection job is the
+#      correct primitive. cs is a macOS tool, so the lanes that compile run on
+#      macos-latest; fmt and cargo-deny compile nothing and run on Linux.
+#
+# The `conclusion` job is the single required status check on main; it is what
+# makes a pipeline of gated jobs enforceable.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  merge_group:
+  workflow_dispatch:
+
+concurrency:
+  # A pull request's runs share one group per ref, and a new commit cancels
+  # the run of the commit it replaces. Every other run gets a group of its
+  # own, so nothing cancels it.
+  group: ${{ github.event_name == 'pull_request' && format('ci-{0}', github.ref) || format('ci-run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# No permissions by default: each job grants its own.
+permissions: {}
+
+jobs:
+  # ---- Tier 1: the checks that need no Rust ---------------------------------
+
+  # zizmor (https://docs.zizmor.sh/) is the static security analysis for GitHub
+  # Actions: every `uses:` pinned to a commit SHA (unpinned-uses), no checkout
+  # persisting credentials (artipacked), and no context value spliced into a
+  # shell (template-injection). The audit path is the whole of .github, so it
+  # also reads dependabot.yml and the composite actions.
+  workflow-audit:
+    name: zizmor
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: taiki-e/install-action@f7e5d7c961414b23f5b25b2da9294395d08513ad # v2.87.26
+        with:
+          tool: zizmor@1.30.1
+      - name: Audit .github
+        # GH_TOKEN enables the online audits, such as impostor-commit, which
+        # verifies that a pinned commit belongs to the repository it names.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: zizmor --min-severity=low .github/
+
+  # actionlint is the correctness half of the pair: `${{ }}` expressions that
+  # cannot evaluate, `needs:` naming a job that does not exist, unknown runner
+  # labels, and shellcheck over every embedded `run:` block.
+  workflow-lint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Lint .github/workflows
+        # The official image, digest-pinned: the README's alternative is
+        # `curl | bash` off main, the unpinned fetch the pinning rule forbids.
+        # SC2016 is excluded, and only it: every occurrence is a printf format
+        # or a jq filter, where single quotes are the correct idiom.
+        run: |
+          docker run --rm \
+            -v "$PWD:/repo" --workdir /repo \
+            -e SHELLCHECK_OPTS='-e SC2016' \
+            rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 \
+            -color
+
+  # shellcheck over every tracked *.sh: the guards, the tracker helpers and
+  # the Claude Code hooks. `--severity=style` is the lowest floor, so every
+  # finding gates. A finding is fixed, or it carries a per-line
+  # `# shellcheck disable=SCnnnn` directive with its reason.
+  shellcheck:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: taiki-e/install-action@f7e5d7c961414b23f5b25b2da9294395d08513ad # v2.87.26
+        with:
+          tool: shellcheck@0.11.0
+      - name: Every tracked shell program is clean at severity=style
+        run: |
+          set -euo pipefail
+          if [ -z "$(git ls-files -- '*.sh')" ]; then
+            echo "no shell files to check"
+            exit 0
+          fi
+          git ls-files -z -- '*.sh' | xargs -0 shellcheck --severity=style
+
+  # The committed guards and the self-tests that prove them. Each is runnable
+  # by hand with the same command.
+  guards:
+    name: guards
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: comment-style
+        run: |
+          set -euo pipefail
+          bash scripts/checks/comment-style.sh --self-test
+          bash scripts/checks/comment-style.sh --all
+      - name: file-length
+        run: |
+          set -euo pipefail
+          bash scripts/checks/file-length.sh --self-test
+          bash scripts/checks/file-length.sh
+      - name: bash-compat
+        run: |
+          set -euo pipefail
+          bash scripts/checks/bash-compat.sh --self-test
+          bash scripts/checks/bash-compat.sh
+      - name: script-modes
+        # Called by its path, so the guard proves its own mode too.
+        run: |
+          set -euo pipefail
+          scripts/checks/script-modes.sh --self-test
+          scripts/checks/script-modes.sh
+      - name: tracker helpers
+        run: |
+          set -euo pipefail
+          bash scripts/gh/fields.sh --self-test
+          bash scripts/gh/labels.sh --self-test
+          bash scripts/gh/rel.sh --self-test
+
+  # ---- Tier 2: the Rust lanes ------------------------------------------------
+
+  detect:
+    name: detect crate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      cargo: ${{ steps.check.outputs.cargo }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: check
+        run: |
+          set -euo pipefail
+          if [ -f Cargo.toml ]; then
+            echo "cargo=true" >> "$GITHUB_OUTPUT"
+            echo "Cargo.toml present: the Rust lanes will run."
+          else
+            echo "cargo=false" >> "$GITHUB_OUTPUT"
+            echo "No root Cargo.toml: the Rust lanes are skipped."
+          fi
+
+  fmt:
+    name: rustfmt
+    needs: detect
+    if: needs.detect.outputs.cargo == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+        with:
+          components: rustfmt
+      - run: cargo fmt --all --check
+
+  clippy:
+    name: clippy
+    needs: detect
+    if: needs.detect.outputs.cargo == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+        with:
+          components: clippy
+      - run: cargo clippy --locked --all-targets --all-features -- -D warnings
+
+  test:
+    name: test
+    needs: detect
+    if: needs.detect.outputs.cargo == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+      - uses: taiki-e/install-action@f7e5d7c961414b23f5b25b2da9294395d08513ad # v2.87.26
+        with:
+          tool: cargo-nextest
+      - run: cargo nextest run --profile ci --locked --all-features --no-tests=pass
+      # nextest does not run doctests, so they get their own compile.
+      - run: cargo test --doc --locked --all-features
+
+  doc:
+    name: rustdoc
+    needs: detect
+    if: needs.detect.outputs.cargo == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      # The [lints.rustdoc] levels apply to every `cargo doc`; -D turns a
+      # broken intra-doc link into a failed build.
+      RUSTDOCFLAGS: -D warnings
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+      - run: cargo doc --locked --no-deps --all-features --document-private-items
+
+  cargo-deny:
+    name: cargo-deny
+    needs: detect
+    if: needs.detect.outputs.cargo == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+      - uses: taiki-e/install-action@f7e5d7c961414b23f5b25b2da9294395d08513ad # v2.87.26
+        with:
+          tool: cargo-deny
+      # Reads the same RustSec advisory database as cargo-audit and adds
+      # yanked, licences, bans and sources, so there is no separate audit job.
+      - run: cargo deny check
+
+  conclusion:
+    name: conclusion
+    needs:
+      - workflow-audit
+      - workflow-lint
+      - shellcheck
+      - guards
+      - detect
+      - fmt
+      - clippy
+      - test
+      - doc
+      - cargo-deny
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Every required job passed or was skipped
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          set -euo pipefail
+          echo "needed job results: ${RESULTS}"
+          case " ${RESULTS} " in
+            *" failure "* | *" cancelled "*)
+              echo "a required job failed or was cancelled"
+              exit 1
+              ;;
+          esac
+          echo "all required jobs passed or were skipped"
