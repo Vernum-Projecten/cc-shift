@@ -6,6 +6,13 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `cc-shift log` shows the history of switches (with their reason), refreshed
+  and logged-out logins, and when all accounts were full and free again,
+  from `~/.claude-profiles/history.jsonl`; `--since`, `--all`, `--verbose`
+  and `--json`.
+
 ### Changed
 
 - The switch thresholds are per window and configurable: the 5-hour window

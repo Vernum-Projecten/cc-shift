@@ -14,6 +14,7 @@ use crate::anthropic::http::Http;
 use crate::anthropic::oauth::{self, Stored};
 use crate::error::Error;
 use crate::login::{Logins, Slot};
+use crate::store::history::{self, Event};
 use crate::store::profile::ProfilesRoot;
 use crate::store::state::StateFile;
 
@@ -55,7 +56,7 @@ pub fn refresh_all(
     };
     let mut reports = Vec::new();
     for name in root.list()? {
-        let refreshed = match refresh_if_due(logins, http, file, &name, now) {
+        let refreshed = match refresh_if_due(logins, http, file, root, &name, now) {
             Ok(refreshed) => refreshed,
             Err(error) => {
                 reports.push(Report {
@@ -66,7 +67,7 @@ pub fn refresh_all(
                 continue;
             }
         };
-        let usage = read_usage_if_stale(logins, http, file, &name, now);
+        let usage = read_usage_if_stale(logins, http, file, root, &name, now);
         reports.push(Report {
             name,
             refreshed,
@@ -101,6 +102,7 @@ fn refresh_if_due(
     logins: &impl Logins,
     http: &impl Http,
     file: &StateFile,
+    root: &ProfilesRoot,
     name: &str,
     now: i64,
 ) -> Result<bool, Error> {
@@ -121,14 +123,30 @@ fn refresh_if_due(
     match oauth::apply_refresh(name, &login, &response, now) {
         Ok(new) => {
             logins.write(&slot, &new)?;
+            history::note(
+                root,
+                Event::Refresh {
+                    account: name.to_owned(),
+                },
+                now,
+            );
             if state.logged_out.remove(name) {
                 locked.save(&state)?;
             }
             Ok(true)
         }
         Err(Error::LoggedOut(who)) => {
-            state.logged_out.insert(who.clone());
+            let first = state.logged_out.insert(who.clone());
             locked.save(&state)?;
+            if first {
+                history::note(
+                    root,
+                    Event::LoggedOut {
+                        account: who.clone(),
+                    },
+                    now,
+                );
+            }
             Err(Error::LoggedOut(who))
         }
         Err(other) => Err(other),
@@ -141,6 +159,7 @@ fn read_usage_if_stale(
     logins: &impl Logins,
     http: &impl Http,
     file: &StateFile,
+    root: &ProfilesRoot,
     name: &str,
     now: i64,
 ) -> Result<bool, Error> {
@@ -172,7 +191,15 @@ fn read_usage_if_stale(
     let recorded = match oauth::parse_usage(name, &response, now) {
         Ok(recorded) => recorded,
         Err(Error::LoggedOut(who)) if !active => {
-            file.update(|s| s.logged_out.insert(who.clone()))?;
+            if file.update(|s| s.logged_out.insert(who.clone()))? {
+                history::note(
+                    root,
+                    Event::LoggedOut {
+                        account: who.clone(),
+                    },
+                    now,
+                );
+            }
             return Err(Error::LoggedOut(who));
         }
         Err(other) => return Err(other),

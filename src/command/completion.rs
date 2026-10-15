@@ -25,6 +25,7 @@ _cc_shift() {
     'refresh:refresh parked logins and read their usage'
     'list:print the profiles'
     'doctor:check the setup'
+    'log:show the history'
     'remove:delete a profile and its login'
     'uninstall:undo setup'
     'completion:print the shell completion'
@@ -38,6 +39,7 @@ _cc_shift() {
     use|remove) compadd -- ${(f)"$(cc-shift list 2>/dev/null)"} ;;
     status) compadd -- --json ;;
     uninstall) compadd -- --all ;;
+    log) compadd -- --since --all --verbose --json ;;
     completion) compadd -- zsh ;;
   esac
 }

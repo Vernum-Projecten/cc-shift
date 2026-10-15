@@ -15,6 +15,8 @@ Commands:
   use <name>    Make an account active in every Claude Code window now
   refresh       Refresh parked logins and read their usage now
   doctor        Check the setup and say what to fix
+  log           Show what cc-shift did: switches, refreshes, full accounts
+                (--since 2h|7d|30d, --all, --verbose, --json)
   remove <name> Delete a profile and its Keychain login
   completion zsh
                 Print the zsh completion script
@@ -49,6 +51,8 @@ pub enum Command {
     Refresh,
     /// Check the setup and say what to fix.
     Doctor,
+    /// Show the history.
+    Log(crate::command::log::Options),
     /// Delete a profile and its Keychain login.
     Remove(OsString),
     /// Print the completion script for a shell.
@@ -105,6 +109,7 @@ where
             [shell] => Command::Completion((*shell).to_owned()),
             _ => Command::Misuse("completion takes one shell: zsh".to_owned()),
         },
+        "log" => crate::command::log::options(&flags).map_or_else(Command::Misuse, Command::Log),
         "hook" => match flags.as_slice() {
             ["rate-limit"] => Command::HookRateLimit,
             _ => Command::Misuse("hook takes one event: rate-limit".to_owned()),

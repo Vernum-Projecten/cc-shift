@@ -2,8 +2,9 @@
 //! automatic.
 
 use crate::claude_code::settings;
-use crate::command::{automatic, home, report};
+use crate::command::{automatic, home, report, unix_now};
 use crate::error::Error;
+use crate::store::history::{self, Event};
 use crate::store::profile::ProfilesRoot;
 use crate::store::state::StateFile;
 use crate::switching::auto::Trigger;
@@ -45,7 +46,17 @@ pub fn run() -> Result<(), Error> {
     if file.read()?.active.is_none() {
         report("the login now in ~/.claude belongs to no profile and is replaced");
     }
-    match automatic(Trigger::Setup)? {
+    let activated = automatic(Trigger::Setup)?;
+    if installed.changed || activated.is_some() {
+        history::note(
+            &root,
+            Event::Setup {
+                active: file.read()?.active,
+            },
+            unix_now(),
+        );
+    }
+    match activated {
         Some(name) => report(&format!(
             "'{name}' is active; switching is automatic from now on"
         )),

@@ -132,7 +132,8 @@ src/
 │                 (add, list, activate for cc-shift use, setup, status, refresh,
 │                 statusline, hook); mod.rs dispatches and holds the helpers
 ├── store/        the files cc-shift owns: profile (names, the profiles folder),
-│                 state (state.json behind the lock, written in one rename)
+│                 state (state.json behind the lock, written in one rename),
+│                 history (history.jsonl, appended under its own lock)
 ├── usage/        mod.rs: the two windows per account, the selection view
 │                 and time left; select: the selection rule; overview:
 │                 every account's state in the order of use

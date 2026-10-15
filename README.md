@@ -140,6 +140,7 @@ From here on you never need to run `cc-shift` while you work.
 | `cc-shift list` | Prints the profile names. |
 | `cc-shift completion zsh` | Prints the zsh completion script ([how to load it](#shell-completion)). |
 | `cc-shift doctor` | Checks the setup (status line and hook, `claude`, every login and account, two profiles on one account, the state) and says how to fix what is wrong. |
+| `cc-shift log` | Shows the history: switches with their reason, refreshes, logged-out accounts and when all were full. |
 | `cc-shift remove <name>` | Deletes a profile and its Keychain login, after you type `yes`. The active account cannot be removed. |
 | `cc-shift uninstall [--all]` | Undoes `cc-shift setup`; with `--all`, also deletes every profile and its Keychain login. |
 | `cc-shift help` | Prints the commands. |
@@ -188,6 +189,26 @@ Claude Code itself runs `cc-shift statusline` after every reply and `cc-shift ho
 - In the background, `cc-shift` refreshes the parked logins and reads their usage, so the next choice is made on current numbers.
 
 The full design is in [ARCHITECTURE.md](https://github.com/Vernum-Projecten/cc-shift/blob/main/ARCHITECTURE.md).
+
+## History
+
+`cc-shift log` shows what `cc-shift` did: every switch with its reason, refreshed and logged-out logins, and when all accounts were full.
+
+```text
+cc-shift history · last 24 hours
+
+  TIME          EVENT        DETAILS
+  today 09:02   setup        work active · status line and hook installed
+  today 11:47   switch       work → spare · 5h at 95% · spare had 10% used
+  today 14:30   switch       spare → extra · limit hit (hook)
+  today 16:40   all full     staying on extra · work frees up in 1h10m
+  today 17:50   free again   work is free again after 1h10m
+  today 18:05   use          work → spare · by hand
+
+  24 hours · 3 switches · all accounts full 1× for 1h10m
+```
+
+`--since 2h`, `7d` or `30d` and `--all` choose the period; `--verbose` adds diagnostic events, such as a status line reading that was recorded under another account; `--json` prints one JSON object per line. The history lives in `~/.claude-profiles/history.jsonl`, rotates at about 1 MB and never holds a token or an email address.
 
 ## Switch thresholds
 

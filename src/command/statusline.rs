@@ -9,6 +9,7 @@ use crate::command::{automatic, home, refresh, unix_now};
 use crate::error::Error;
 use crate::login::account::AccountFiles;
 use crate::render::{self, Paint};
+use crate::store::history::{self, Event, ReadingOutcome};
 use crate::store::profile::ProfilesRoot;
 use crate::store::state::StateFile;
 use crate::switching::auto::Trigger;
@@ -34,6 +35,25 @@ pub fn run() {
     let file = StateFile::in_root(&root);
     let reading = statusline::record(&input, &file, now).unwrap_or_default();
     let active = file.read().ok().and_then(|state| state.active);
+    if reading.dropped {
+        history::note(
+            &root,
+            Event::Reading {
+                account: None,
+                outcome: ReadingOutcome::Dropped,
+            },
+            now,
+        );
+    } else if reading.account.is_some() && reading.account != active {
+        history::note(
+            &root,
+            Event::Reading {
+                account: reading.account.clone(),
+                outcome: ReadingOutcome::Elsewhere,
+            },
+            now,
+        );
+    }
     if reading.proven && reading.account.is_some() && reading.account == active {
         // NOTE: Claude Code 2.1.300 can write a window's old account details
         // back into ~/.claude.json (#50), so they are put right on each run.
@@ -57,6 +77,19 @@ pub fn run() {
             line.extend_from_slice(" │ ".as_bytes());
         }
         let view = overview(&profiles, &state, now);
+        if let (Some(since), Some(next)) = (state.all_full_since, &view.next) {
+            let cleared = file.update(|s| s.all_full_since.take().is_some());
+            if cleared.unwrap_or(false) {
+                history::note(
+                    &root,
+                    Event::FreeAgain {
+                        account: next.clone(),
+                        after_seconds: now - since,
+                    },
+                    now,
+                );
+            }
+        }
         let text = render::line::line(
             &view,
             reading.account.as_deref(),

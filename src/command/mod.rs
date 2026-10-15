@@ -10,6 +10,7 @@ pub mod completion;
 pub mod doctor;
 pub mod hook;
 pub mod list;
+pub mod log;
 pub mod parse;
 pub mod refresh;
 pub mod remove;
@@ -61,6 +62,7 @@ where
         Command::Setup => setup::run(),
         Command::Refresh => refresh::run(),
         Command::Doctor => doctor::run(),
+        Command::Log(options) => log::run(&options),
         Command::Completion(shell) => completion::run(&shell),
         Command::Remove(name) => remove::run(&name),
         Command::Uninstall { all } => uninstall::run(all),
