@@ -6,6 +6,7 @@
 
 pub mod activate;
 pub mod add;
+pub mod doctor;
 pub mod hook;
 pub mod list;
 pub mod parse;
@@ -56,6 +57,7 @@ where
         Command::Use(name) => activate::run(&name),
         Command::Setup => setup::run(),
         Command::Refresh => refresh::run(),
+        Command::Doctor => doctor::run(),
         Command::Status { json } => status::run(json),
         Command::HookRateLimit => {
             hook::run();

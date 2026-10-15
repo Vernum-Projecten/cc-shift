@@ -64,6 +64,9 @@ pub enum Error {
     /// The account to switch to has no parked login.
     #[error("'{0}' has no parked login; run 'cc-shift add {0}' and /login")]
     NoParkedLogin(String),
+    /// `cc-shift doctor` found a check that failed.
+    #[error("doctor found a problem; the lines above say how to fix it")]
+    DoctorFailed,
     /// An HTTP request got no response.
     #[error("{0}")]
     Http(String),

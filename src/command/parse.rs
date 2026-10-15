@@ -14,6 +14,7 @@ Commands:
   status --json The same as JSON, for scripts
   use <name>    Make an account active in every Claude Code window now
   refresh       Refresh parked logins and read their usage now
+  doctor        Check the setup and say what to fix
   list          Print the profiles
   statusline    Record usage; run by Claude Code as its status line
   hook rate-limit
@@ -41,6 +42,8 @@ pub enum Command {
     },
     /// Refresh parked logins and read parked accounts' usage.
     Refresh,
+    /// Check the setup and say what to fix.
+    Doctor,
     /// A turn ended on a usage limit; run by Claude Code's `StopFailure`
     /// hook.
     HookRateLimit,
@@ -90,6 +93,15 @@ where
             None => Command::Setup,
             Some(extra) => Command::Misuse(format!(
                 "setup takes no arguments, not '{}'",
+                extra.to_string_lossy()
+            )),
+        };
+    }
+    if first == "doctor" {
+        return match args.next() {
+            None => Command::Doctor,
+            Some(extra) => Command::Misuse(format!(
+                "doctor takes no arguments, not '{}'",
                 extra.to_string_lossy()
             )),
         };
