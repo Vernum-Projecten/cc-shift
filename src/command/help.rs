@@ -23,24 +23,22 @@ pub fn version_line() -> String {
     format!("cc-shift {VERSION}\n")
 }
 
-/// Returns the help text: the logo with the version and tagline when
-/// `logo` is set, then the usage.
+/// Returns the help text: the logo with the version and tagline under it
+/// when `logo` is set, then the usage.
 #[must_use]
 pub fn help_text(logo: bool, paint: Paint) -> String {
     if !logo {
         return USAGE.to_owned();
     }
     let mut out = String::new();
-    for (i, line) in LOGO.iter().enumerate() {
+    for line in LOGO {
         out.push_str(&paint.cyan(line));
-        if i + 1 == LOGO.len() {
-            out.push_str("   ");
-            out.push_str(&paint.dim(&format!(
-                "{VERSION} · switches Claude Code accounts on its own"
-            )));
-        }
         out.push('\n');
     }
+    out.push_str(&paint.dim(&format!(
+        "{VERSION} · switches Claude Code accounts on its own"
+    )));
+    out.push('\n');
     out.push('\n');
     out.push_str(USAGE);
     out
@@ -78,16 +76,21 @@ mod tests {
     }
 
     #[test]
-    fn terminal_help_opens_with_the_logo_and_version() {
+    fn terminal_help_opens_with_the_logo_and_the_version_under_it() {
         let text = help_text(true, Paint::new(false));
-        assert!(text.starts_with(LOGO[0]), "{text}");
-        assert!(
-            text.contains(&format!(
-                "{}   {VERSION} · switches Claude Code accounts on its own\n",
-                LOGO[4]
-            )),
-            "{text}"
+        let expected = format!(
+            "{}\n{VERSION} · switches Claude Code accounts on its own\n\n{USAGE}",
+            LOGO.join("\n")
         );
-        assert!(text.ends_with(USAGE), "{text}");
+        assert_eq!(text, expected);
+    }
+
+    #[test]
+    fn no_help_line_is_wider_than_the_usage() {
+        let text = help_text(true, Paint::new(false));
+        let usage = USAGE.lines().map(|l| l.chars().count()).max().unwrap();
+        for line in text.lines() {
+            assert!(line.chars().count() <= usage, "{line}");
+        }
     }
 }
