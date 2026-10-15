@@ -206,6 +206,18 @@ cargo deny check
 
 The tests never touch your real Keychain, profiles or accounts: they run against a temporary `HOME`, a stub `claude`, an in-memory Keychain and a fake HTTP client.
 
+### Releasing
+
+A release is one `v*` tag, and [`release.yml`](https://github.com/Vernum-Projecten/cc-shift/blob/main/.github/workflows/release.yml) does the rest:
+
+1. **plan** checks that the tag names the version in `Cargo.toml`, that `publish` is on, and that [`CHANGELOG.md`](https://github.com/Vernum-Projecten/cc-shift/blob/main/CHANGELOG.md) has a section for the version, which becomes the release notes.
+2. **github release** creates the GitHub release as a draft.
+3. **binary** builds `cc-shift` for Apple silicon and Intel Macs, attaches each archive with its SHA-256 file to the draft, and attests its build provenance (`gh attestation verify <archive> --repo Vernum-Projecten/cc-shift`).
+4. **crates.io** publishes through [Trusted Publishing](https://crates.io/docs/trusted-publishing): the workflow's GitHub identity is exchanged for a short-lived crates.io token, so no token is stored anywhere. A version already on crates.io is skipped.
+5. **github release (publish)** publishes the draft once every archive is attached.
+
+The crate's Trusted Publisher entry on crates.io names the repository `Vernum-Projecten/cc-shift`, the workflow `release.yml` and the environment `crates-io`.
+
 ## License
 
 [Apache License 2.0](https://github.com/Vernum-Projecten/cc-shift/blob/main/LICENSE).
