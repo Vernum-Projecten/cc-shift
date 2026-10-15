@@ -29,12 +29,16 @@ fn marks_the_active_account_and_shows_unknown_ones() -> io::Result<()> {
     let out = sandbox.run(&["status"])?;
     assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
     let text = stdout(&out);
-    assert!(text.contains("* member1  40% "), "{text}");
     assert!(
-        text.contains("  member2  unknown: no usage read yet"),
+        text.starts_with("cc-shift · 2 accounts · 2 free now · active member1 · next member2\n"),
         "{text}"
     );
-    assert!(text.ends_with("next: member2\n"), "{text}");
+    assert!(text.contains("▶ member1  ████░░░░░░  40%"), "{text}");
+    assert!(
+        text.contains("member2  not started              not started              next"),
+        "{text}"
+    );
+    assert!(!text.contains("\u{1b}["), "no colour when piped: {text}");
     Ok(())
 }
 

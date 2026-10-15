@@ -61,9 +61,33 @@ pub fn next<'a>(accounts: &'a [Account], leaving: Option<&str>, now: i64) -> Cho
     }
     Choice::NoneAvailable(
         candidates()
-            .filter_map(|a| available_from(a, now).map(|at| (a, at)))
+            .filter_map(|a| full_until(a, now).map(|at| (a, at)))
             .min_by(|(a, at_a), (b, at_b)| at_a.cmp(at_b).then_with(|| a.name.cmp(&b.name))),
     )
+}
+
+/// Returns the available accounts in the order the rule uses them: the
+/// accounts with known usage by [`next`]'s ranking, then the unknown ones by
+/// name.
+#[must_use]
+pub fn in_order(accounts: &[Account], now: i64) -> Vec<&Account> {
+    let mut known: Vec<&Account> = accounts
+        .iter()
+        .filter(|a| {
+            a.logged_in
+                && a.usage
+                    .used_at(now)
+                    .is_some_and(|used| used < SWITCH_THRESHOLD)
+        })
+        .collect();
+    known.sort_by(|a, b| rank(a, b, now));
+    let mut unknown: Vec<&Account> = accounts
+        .iter()
+        .filter(|a| a.logged_in && matches!(a.usage, Usage::Unknown(_)))
+        .collect();
+    unknown.sort_by(|a, b| a.name.cmp(&b.name));
+    known.extend(unknown);
+    known
 }
 
 /// Orders two available accounts: the one whose usage expires first first.
@@ -109,8 +133,10 @@ fn seven_day(account: &Account, now: i64) -> (i64, f64) {
     }
 }
 
-/// Returns when a full account with known usage becomes available again.
-fn available_from(account: &Account, now: i64) -> Option<i64> {
+/// Returns when a full account with known usage becomes available again, or
+/// `None` when no window is full or the usage is unknown.
+#[must_use]
+pub fn full_until(account: &Account, now: i64) -> Option<i64> {
     let Usage::Known {
         five_hour,
         seven_day,

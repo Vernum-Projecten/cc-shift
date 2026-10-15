@@ -15,7 +15,6 @@ use serde::Deserialize;
 use crate::error::Error;
 use crate::store::state::{Recorded, State, StateFile};
 use crate::usage::Window;
-use crate::usage::select::{self, Choice, SWITCH_THRESHOLD};
 
 /// The part of the status line input `cc-shift` reads; every other field is
 /// ignored.
@@ -148,64 +147,6 @@ fn owner(
     Some((active, false))
 }
 
-/// Returns the `cc-shift` part of the status line.
-///
-/// It names the account the window really uses (`window`, else the active
-/// account) with both windows and their time to reset, for example
-/// `member5 · 5h 31% (4h0m) · 7d 26% (5d8h)`. When that account is not the
-/// active one, it says so; when it is full, it names the next account and
-/// how to move to it.
-#[must_use]
-pub fn summary(state: &State, profiles: &[String], window: Option<&str>, now: i64) -> String {
-    let Some(active) = state.active.as_deref() else {
-        return "cc-shift: run cc-shift setup".to_owned();
-    };
-    let shown = window.unwrap_or(active);
-    let recorded = state.usage.get(shown);
-    let part = |label: &str, window: Option<Window>| match window {
-        Some(w) if w.resets_at > now => format!(
-            " · {label} {:.0}% ({})",
-            w.used_percent,
-            crate::usage::time_left(w.resets_at - now)
-        ),
-        Some(_) => format!(" · {label} 0%"),
-        None => String::new(),
-    };
-    let mut line = format!(
-        "{shown}{}{}",
-        part("5h", recorded.and_then(|r| r.five_hour)),
-        part("7d", recorded.and_then(|r| r.seven_day))
-    );
-    if shown != active {
-        line = format!("{line} · moving to {active}");
-        return line;
-    }
-    let full = [
-        recorded.and_then(|r| r.five_hour),
-        recorded.and_then(|r| r.seven_day),
-    ]
-    .into_iter()
-    .flatten()
-    .any(|w| w.used_at(now) >= SWITCH_THRESHOLD);
-    if full {
-        let view = crate::usage::accounts(profiles, state);
-        match select::next(&view, Some(active), now) {
-            Choice::Account(next) => {
-                line = format!("{line} · full: run cc-shift use {}", next.name);
-            }
-            Choice::NoneAvailable(Some((first, at))) => {
-                line = format!(
-                    "{line} · all full: {} frees up in {}",
-                    first.name,
-                    crate::usage::time_left(at - now)
-                );
-            }
-            Choice::NoneAvailable(None) => line.push_str(" · all full"),
-        }
-    }
-    line
-}
-
 /// Runs the user's own status line command with the same input and returns
 /// what it printed; any failure gives an empty line.
 #[must_use]
@@ -234,11 +175,11 @@ pub fn chained(command: &str, input: &[u8]) -> Vec<u8> {
 #[cfg(test)]
 #[expect(clippy::panic_in_result_fn, reason = "test assertions")]
 mod tests {
-    use super::{chained, record, summary};
+    use super::{chained, record};
     use crate::error::Error;
     use crate::store::profile::ProfilesRoot;
+    use crate::store::state::Recorded;
     use crate::store::state::StateFile;
-    use crate::store::state::{Recorded, State};
     use crate::usage::Window;
     use tempfile::TempDir;
 
@@ -317,41 +258,6 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn the_summary_names_the_account_and_both_windows() {
-        let mut state = State {
-            active: Some("member5".to_owned()),
-            ..State::default()
-        };
-        state.usage.insert(
-            "member5".to_owned(),
-            Recorded {
-                five_hour: Some(Window {
-                    used_percent: 31.0,
-                    resets_at: 1000 + 14_400,
-                }),
-                seven_day: Some(Window {
-                    used_percent: 26.4,
-                    resets_at: 1000 + 460_800,
-                }),
-                read_at: Some(1000),
-                confirmed: true,
-            },
-        );
-        assert_eq!(
-            summary(&state, &["member5".to_owned()], None, 1000),
-            "member5 · 5h 31% (4h0m) · 7d 26% (5d8h)"
-        );
-    }
-
-    #[test]
-    fn the_summary_before_setup_says_so() {
-        assert_eq!(
-            summary(&State::default(), &[], None, 0),
-            "cc-shift: run cc-shift setup"
-        );
-    }
-
     /// A confirmed reading of `name` whose 7-day window resets at `seven`.
     fn confirmed(file: &StateFile, name: &str, seven: i64) -> Result<(), Error> {
         file.update(|state| {
@@ -416,40 +322,6 @@ mod tests {
             "recorded, not proven"
         );
         Ok(())
-    }
-
-    #[test]
-    fn the_summary_says_when_the_window_uses_another_account() {
-        let state = State {
-            active: Some("member6".to_owned()),
-            ..State::default()
-        };
-        let line = summary(&state, &["member1".to_owned()], Some("member1"), 0);
-        assert_eq!(line, "member1 · moving to member6");
-    }
-
-    #[test]
-    fn the_summary_names_the_next_account_when_full() {
-        let mut state = State {
-            active: Some("member1".to_owned()),
-            ..State::default()
-        };
-        state.usage.insert(
-            "member1".to_owned(),
-            Recorded {
-                five_hour: Some(Window {
-                    used_percent: 97.0,
-                    resets_at: 2000,
-                }),
-                read_at: Some(1000),
-                ..Recorded::default()
-            },
-        );
-        let profiles = ["member1".to_owned(), "member2".to_owned()];
-        assert_eq!(
-            summary(&state, &profiles, None, 1000),
-            "member1 · 5h 97% (16m) · full: run cc-shift use member2"
-        );
     }
 
     #[test]

@@ -129,7 +129,10 @@ src/
 ├── store/        the files cc-shift owns: profile (names, the profiles folder),
 │                 state (state.json behind the lock, written in one rename)
 ├── usage/        mod.rs: the two windows per account, the selection view
-│                 and time left; select: the selection rule
+│                 and time left; select: the selection rule; overview:
+│                 every account's state in the order of use
+├── render/       the status table and the status line, with bars and
+│                 colour (NO_COLOR is honoured)
 ├── login/        mod.rs: Login, Slot and the Logins trait every Keychain
 │                 access goes through; keychain: the macOS backend through
 │                 /usr/bin/security; account: oauthAccount in .claude.json
