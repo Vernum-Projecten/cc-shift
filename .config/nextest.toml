@@ -1,0 +1,14 @@
+# The nextest configuration (https://nexte.st/docs/configuration/). A test
+# that runs past its slow-timeout period is reported as slow, and one that
+# runs past terminate-after periods is killed and fails the run by name, so
+# a hang never stalls a run (https://nexte.st/docs/features/slow-tests/).
+# No specification governs the limits: our own design.
+
+[profile.default]
+slow-timeout = { period = "30s", terminate-after = 2 }
+
+# The CI lanes select this profile. It runs every test past a failure, so one
+# run reports every broken test.
+[profile.ci]
+slow-timeout = { period = "30s", terminate-after = 2 }
+fail-fast = false
