@@ -94,7 +94,7 @@ Every [release](https://github.com/Vernum-Projecten/cc-shift/releases) has a bin
 The Linux binaries are static, so they run on any distribution. On macOS and Linux, download with `curl`; on a Mac, a browser download is quarantined by macOS:
 
 ```sh
-version=0.1.0
+version=0.1.1
 target=aarch64-apple-darwin    # your target from the table above
 archive=cc-shift-v$version-$target.tar.gz
 

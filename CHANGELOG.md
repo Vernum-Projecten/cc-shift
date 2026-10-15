@@ -9,6 +9,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-15
+
 ### Added
 
 - `cc-shift` builds for Windows. Logins move between the `.credentials.json`
@@ -19,6 +21,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Claude Code, `curl.exe` comes from the Windows system folder, child
   programs start without a console window, and the early start runs from
   Task Scheduler.
+- Each release has `.zip` archives of `cc-shift.exe` for x64 and Arm64
+  Windows, and CI builds, lints and tests on Windows as well.
 - `cc-shift completion powershell` prints a completion script for Windows
   PowerShell 5.1 and PowerShell 7, for the commands, the profile names and
   the flags.
@@ -33,6 +37,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `cc-shift add` refuses a name that differs from an existing profile only
   in case, and on Windows the device names `con`, `prn`, `aux`, `nul`,
   `com1` to `com9` and `lpt1` to `lpt9`.
+- Temporary JSON files and the IDE module file carry the name `cc-shift`
+  instead of the old name `cs`.
 
 ## [0.1.0] - 2026-10-15
 
@@ -230,7 +236,8 @@ Claude accounts on macOS on its own, before a usage limit is hit.
 - A token is never a command-line argument: Keychain writes and HTTP
   requests receive it on stdin.
 
-[Unreleased]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.0.9...v0.1.0
 [0.0.9]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.0.8...v0.0.9
 [0.0.8]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.0.7...v0.0.8
