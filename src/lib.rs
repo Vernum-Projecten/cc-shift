@@ -231,15 +231,25 @@ fn statusline_command() {
         return;
     }
     let now = unix_now();
-    let chained = ProfilesRoot::from_env()
-        .ok()
-        .and_then(|root| statusline::record(&input, &StateFile::in_root(&root), now).ok())
-        .flatten();
+    let Ok(root) = ProfilesRoot::from_env() else {
+        return;
+    };
+    let file = StateFile::in_root(&root);
+    let chained = statusline::record(&input, &file, now).ok().flatten();
     let _switched: Result<Option<String>, Error> = automatic(auto::Trigger::Usage);
-    if let Some(command) = chained {
-        let line = statusline::chained(&command, &input);
-        let _ignored: std::io::Result<()> = std::io::stdout().write_all(&line);
+    let mut line = chained
+        .map(|command| statusline::chained(&command, &input))
+        .unwrap_or_default();
+    while line.last().is_some_and(u8::is_ascii_whitespace) {
+        line.pop();
     }
+    if let Ok(state) = file.read() {
+        if !line.is_empty() {
+            line.extend_from_slice(" │ ".as_bytes());
+        }
+        line.extend_from_slice(statusline::summary(&state, now).as_bytes());
+    }
+    let _ignored: std::io::Result<()> = std::io::stdout().write_all(&line);
 }
 
 /// Creates a profile when missing and starts Claude Code in it.
