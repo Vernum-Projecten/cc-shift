@@ -11,7 +11,10 @@
 //! them, it saves `~/.claude` once more, so tokens Claude Code refreshed in
 //! the meantime are kept. The same step makes `~/.claude.json` name the
 //! next account, which open windows need to follow the switch.
-
+//!
+//! The step holds Claude Code's refresh lock of `~/.claude`, so no window
+//! refreshes the login between the save and the write.
+use crate::claude_code::refresh_lock;
 use crate::error::Error;
 use crate::login::account::AccountFiles;
 use crate::login::{Logins, Slot};
@@ -84,6 +87,7 @@ pub fn finish(
         let parked = Slot::Parked(pending.to.clone());
         match pending.step {
             Step::Move => {
+                let _refresh_lock = refresh_lock::hold(accounts.config_dir(), refresh_lock::WAIT)?;
                 let next = logins
                     .read(&parked)?
                     .ok_or_else(|| Error::NoParkedLogin(pending.to.clone()))?;
@@ -367,6 +371,34 @@ mod tests {
             }
             assert_eq!(file.read()?.pending, None, "stop after {stop_after}");
         }
+        Ok(())
+    }
+
+    #[test]
+    fn a_switch_releases_claude_codes_refresh_lock() -> Result<(), Box<dyn std::error::Error>> {
+        use crate::claude_code::refresh_lock::NAME;
+        let home = TempDir::new()?;
+        fs::create_dir_all(home.path().join(".claude"))?;
+        let (memory, file) = a_active(&home)?;
+        switch_to(&memory, &accounts(&home)?, &file, "b")?;
+        assert!(!home.path().join(".claude").join(NAME).exists());
+        Ok(())
+    }
+
+    #[test]
+    fn a_stale_refresh_lock_does_not_block_a_switch() -> Result<(), Box<dyn std::error::Error>> {
+        use crate::claude_code::refresh_lock::{NAME, STALE};
+        use std::fs::{File, FileTimes};
+        use std::time::{Duration, SystemTime};
+        let home = TempDir::new()?;
+        let lock = home.path().join(".claude").join(NAME);
+        fs::create_dir_all(&lock)?;
+        let old = SystemTime::now() - STALE - Duration::from_secs(5);
+        File::open(&lock)?.set_times(FileTimes::new().set_modified(old))?;
+        let (memory, file) = a_active(&home)?;
+        switch_to(&memory, &accounts(&home)?, &file, "b")?;
+        assert_eq!(memory.content(&Slot::Active).as_deref(), Some("login-b"));
+        assert!(!lock.exists(), "taken over and released");
         Ok(())
     }
 }

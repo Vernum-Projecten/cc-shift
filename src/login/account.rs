@@ -20,6 +20,7 @@ use crate::store::profile::ProfilesRoot;
 #[derive(Debug, Clone)]
 pub struct AccountFiles {
     active: PathBuf,
+    config: PathBuf,
     root: PathBuf,
 }
 
@@ -29,8 +30,15 @@ impl AccountFiles {
     pub fn new(home: &Path, root: &ProfilesRoot) -> Self {
         Self {
             active: home.join(".claude.json"),
+            config: home.join(".claude"),
             root: root.path().to_path_buf(),
         }
+    }
+
+    /// Returns the config folder every window uses, `~/.claude`.
+    #[must_use]
+    pub fn config_dir(&self) -> &Path {
+        &self.config
     }
 
     /// Returns the `oauthAccount` of a profile, written by its `/login`.
