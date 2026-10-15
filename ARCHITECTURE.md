@@ -42,6 +42,7 @@ A refresh token works once: after a refresh the old one is dead, and presenting 
 | `cc-shift uninstall [--all]` | Undoes `cc-shift setup`; with `--all` also deletes every profile and its login. |
 | `cc-shift completion zsh` | Prints the zsh completion script. |
 | `cc-shift version` | Prints the version; also `--version` and `-V`. |
+| `cc-shift help` | Prints the commands; also `-h` and `--help`. On a terminal it opens with the logo. |
 | `cc-shift early` | Shows the early start: off, or the time, the count and the next run. |
 | `cc-shift early on [--at 06:00] [--accounts 2]` | Starts that many accounts' 5-hour windows at that time, Monday to Friday, so they reset during the workday. Off until turned on. |
 | `cc-shift early off` | Stops the early start and removes its `launchd` agent. |
@@ -126,29 +127,31 @@ A parked login has no Claude Code process to refresh it, so `cc-shift` does. Whe
 
 | What | Where | Written by |
 |---|---|---|
-| The `cc-shift` binary | `~/.cargo/bin/cs` | cargo |
+| The `cc-shift` binary | `~/.cargo/bin/cc-shift`, or `~/.local/bin/cc-shift` for a prebuilt binary | cargo, or the user |
 | One folder per profile, used for its `/login` | `~/.claude-profiles/<name>/` | cc-shift, Claude Code |
 | Parked logins | Keychain, the item of each profile folder | Claude Code at `/login`; cc-shift on a switch or refresh |
 | The active login | Keychain, `Claude Code-credentials` (the item of `~/.claude`) | Claude Code; cc-shift on a switch |
-| Active account, usage per account, unfinished switch | `~/.claude-profiles/state.json` | cc-shift |
-| The lock | `~/.claude-profiles/.lock` | cc-shift |
+| Active account, usage per account, unfinished switch, thresholds, early start setting | `~/.claude-profiles/state.json` | cc-shift |
+| The history | `~/.claude-profiles/history.jsonl`, and `history.1.jsonl` after it rotates at about 1 MB | cc-shift |
+| The locks | `~/.claude-profiles/.lock` (state and switches), `.refresh-lock` (one refresh at a time), `.history-lock` | cc-shift |
 | Token counts read from the transcripts, per file | `~/.claude-profiles/stats-cache.json` | cc-shift stats |
 | Status line and hook | `~/.claude/settings.json` | cc-shift setup |
 | The early start agent, while it is on | `~/Library/LaunchAgents/io.github.vernum-projecten.cc-shift.early-start.plist` | cc-shift early on |
 | The empty working folder of the early start | `~/Library/Caches/cc-shift/early-start/` | cc-shift early run |
 
-`cc-shift list` treats every folder in `~/.claude-profiles/` as a profile, so the state and lock are files there. A profile's item is `Claude Code-credentials-` followed by the first 8 hex characters of the SHA-256 of its folder's absolute path, with the macOS user name as the account (observed on Claude Code 2.1.300, #6).
+`cc-shift list` treats every folder in `~/.claude-profiles/` as a profile, so the state, the history, the stats cache and the locks are files there. A profile's item is `Claude Code-credentials-` followed by the first 8 hex characters of the SHA-256 of its folder's absolute path, with the macOS user name as the account (observed on Claude Code 2.1.300, #6).
 
 ## 7. Code
 
-A small library with a thin binary: `src/main.rs` only calls `cs::run` in `src/lib.rs`, so everything is testable from `tests/`. The modules follow the domain, one folder each, with a `mod.rs` that holds the folder's module documentation and the items its files share:
+A small library with a thin binary: `src/main.rs` only calls `cc_shift::run` in `src/lib.rs`, so everything is testable from `tests/`. The modules follow the domain, one folder each, with a `mod.rs` that holds the folder's module documentation and the items its files share:
 
 ```
 src/
 ├── main.rs, lib.rs, error.rs
 ├── command/      the command line: parse, and one file per command
 │                 (add, list, activate for cc-shift use, setup, status, stats,
-│                 log, early, refresh, statusline, hook); mod.rs dispatches and holds the
+│                 log, early, refresh, doctor, remove, uninstall, completion,
+│                 help, statusline, hook); mod.rs dispatches and holds the
 │                 helpers
 ├── store/        the files cc-shift owns: profile (names, the profiles folder),
 │                 state (state.json behind the lock, written in one rename),
@@ -156,8 +159,9 @@ src/
 ├── usage/        mod.rs: the two windows per account, the selection view
 │                 and time left; select: the selection rule; overview:
 │                 every account's state in the order of use
-├── render/       the status table, the status line and the stats tables
-│                 and JSON, with bars and colour (NO_COLOR is honoured)
+├── render/       table and json: cc-shift status; line: the status line;
+│                 log: the history; stats and stats_json: cc-shift stats;
+│                 bars and colour (NO_COLOR is honoured)
 ├── early/        mod.rs: the setting, the next run and which accounts to
 │                 start; launchd: the agent; start: the claude -p run
 ├── stats/        transcript: finding the session transcripts and reading
@@ -197,4 +201,4 @@ These need real accounts, so they are done once by the owner and recorded on the
 
 `cc-shift` touches tokens for three reasons only: to move a login on a switch, to refresh a parked login, and to read a parked access token for its usage. Tokens stay in the Keychain, encrypted at rest. `cc-shift` holds them in memory only while it uses them, and never writes them to a file, a log, the terminal or the state. It never refreshes the active login and never keeps two live copies of one login. The owner asked for this on #12.
 
-Removing an account means deleting its profile folder and its "Claude Code" Keychain item; deleting only the folder leaves the login in the Keychain. A later `cc-shift remove <name>` does both.
+Removing an account means deleting its profile folder and its "Claude Code" Keychain item; deleting only the folder leaves the login in the Keychain. `cc-shift remove <name>` does both.

@@ -21,8 +21,9 @@ was stopped because the design was still open.
   ahead of one.
 - Take the owner's design intuitions seriously and test them against
   evidence; reconcile rather than dismiss.
-- Pure Rust, small, single binary, no background process are standing
-  constraints.
+- Pure Rust, small, single binary, no resident daemon are standing
+  constraints. Short-lived background work the owner approved is fine: the
+  detached `cc-shift refresh` and the early start run by `launchd`.
 - **Pause when asked.** A pause names a boundary: the work up to it finishes
   (merges, cleanup, the report) and nothing new starts until the owner writes
   again.

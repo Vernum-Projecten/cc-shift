@@ -96,12 +96,14 @@ Labels carry what the platform has no field for. Bootstrap them once with
 - **Work kind, on a `Task` only, exactly ONE:** `documentation`, `chore`,
   `refactor`, `perf`, `test`, `ci`. A `Bug` and a `Feature` carry none,
   because the type already names the commit type.
-- **Area:** `profiles` (creating, listing and launching profiles), `usage`
+- **Area:** `profiles` (creating, listing and removing profiles), `usage`
   (reading remaining usage and reset times), `selection` (automatic choice
   and switching), `keychain` (anything that touches login state). Add more as
   the project grows; keep the set small and meaningful.
 - **Workflow:** `security`, `dependencies` (Dependabot), `blocked-upstream`
-  (waits on a Claude Code release or another upstream change).
+  (waits on a Claude Code release or another upstream change), `research`
+  (an investigation whose deliverable is cited evidence and a
+  recommendation).
 
 ## Milestones = releases
 

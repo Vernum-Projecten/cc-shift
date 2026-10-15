@@ -185,7 +185,7 @@ jobs:
           TARGET: ${{ matrix.target }}
         run: cargo build --release --locked --target "$TARGET"
       - id: package
-        name: Package the binary with its README and licence
+        name: Package the binary with its README, licence and notice
         env:
           TARGET: ${{ matrix.target }}
           TAG: ${{ needs.plan.outputs.tag }}
@@ -193,7 +193,7 @@ jobs:
           set -euo pipefail
           name="cc-shift-${TAG}-${TARGET}"
           mkdir -p "dist/$name"
-          cp "target/$TARGET/release/cc-shift" README.md LICENSE "dist/$name/"
+          cp "target/$TARGET/release/cc-shift" README.md LICENSE NOTICE "dist/$name/"
           tar -C dist -czf "dist/$name.tar.gz" "$name"
           (cd dist && shasum -a 256 "$name.tar.gz" > "$name.tar.gz.sha256")
           echo "archive=dist/$name.tar.gz" >> "$GITHUB_OUTPUT"

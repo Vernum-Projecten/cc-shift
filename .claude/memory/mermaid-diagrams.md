@@ -7,8 +7,9 @@ metadata:
 
 The owner likes a design explained with mermaid diagrams as well as text,
 because a picture is faster to check than prose. GitHub renders them. In
-`ARCHITECTURE.md` the obvious candidates are the launch path (`cc-shift <name>` to
-`exec claude`) and automatic selection (read usage, rank, launch, switch).
+`ARCHITECTURE.md` the obvious candidates are the switch (status line
+reading, threshold, moving the login, windows following) and automatic
+selection (read usage, rank, switch).
 
 **Why:** on another of the owner's projects a diagram shipped that did not
 parse (a semicolon in a sequence message ends the statement), and GitHub

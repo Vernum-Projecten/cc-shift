@@ -6,32 +6,39 @@ between several Claude accounts on its own. Every Claude Code window runs on
 `~/.claude-profiles/<name>/`. When the active account nears a usage limit,
 `cc-shift` moves the next account's login into `~/.claude` the way `/login` does,
 and every open window continues on it without a restart. The status line
-records usage and switches at 95%, a rate-limit hook is the fallback, and
-parked logins are refreshed and their usage read in the background.
+records usage and switches at the thresholds (95% of the 5-hour window, 99%
+of the week by default), a rate-limit hook is the fallback, and parked logins
+are refreshed and their usage read in the background.
 
 The design of record is `ARCHITECTURE.md`. Read it before proposing anything
 structural.
 
 ## Status
 
-v0.0.1 to v0.0.3 are built: profiles, usage from the status line and the
-usage endpoint, the selection rule (spend what expires first), moving
-logins with recovery, refreshing parked logins, and automatic switching
-after `cc-shift setup`. The open issue list decides what is built next, and
+Releases up to 0.0.9 are on crates.io and GitHub: profiles, usage from the
+status line and the usage endpoint, the selection rule (spend what expires
+first), moving logins with recovery, refreshing parked logins, automatic
+switching after `cc-shift setup` (proven in real use), configurable
+thresholds, `doctor`, `remove`, `uninstall`, zsh completion, the history and
+`cc-shift log`, `cc-shift stats`, and the early start (off by default).
+v0.1.0 adds Linux support. The open issue list decides what is built next, and
 nothing is built ahead of an issue.
 
 ## Repo map
 
 - `ARCHITECTURE.md`: the design of record; section 7 maps the code.
 - `src/`: one folder per domain (`command`, `store`, `usage`, `login`,
-  `switching`, `anthropic`, `claude_code`), each with a `mod.rs`; `lib.rs`
-  is the crate root and `main.rs` only calls `cs::run`.
+  `switching`, `anthropic`, `claude_code`, `render`, `stats`, `early`), each
+  with a `mod.rs`; `lib.rs` is the crate root, `error.rs` the error type, and
+  `main.rs` only calls `cc_shift::run`.
 - `tests/it/`: integration tests as one test binary, run against a temporary
   `HOME` and a stub `claude` (`.claude/rules/testing.md`).
 - `Cargo.toml`: one crate, edition 2024, the lint set in `[lints]` and the
   size-optimised release profile; `deny.toml`, `clippy.toml`, `rustfmt.toml`
   and `rust-toolchain.toml` beside it.
-- `README.md`, `LICENSE` (Apache License 2.0).
+- `README.md` (for users), `CHANGELOG.md`, `CONTRIBUTING.md` (for
+  contributors, with the release steps), `SECURITY.md`, `LICENSE` (Apache
+  License 2.0) and `NOTICE`.
 - `.claude/`: the working discipline (`rules/`, `hooks/`, `skills/`,
   `agents/`, `memory/`, `settings.json`).
 - `.github/`: issue and pull-request templates, CODEOWNERS, Dependabot and the

@@ -1,4 +1,4 @@
-//! The `cc-shift` binary: a thin entry point over [`cs::run`].
+//! The `cc-shift` binary: a thin entry point over [`cc_shift::run`].
 
 use std::process::ExitCode;
 

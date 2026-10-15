@@ -245,7 +245,7 @@ label security         ee0701 "Security fix or hardening."
 label blocked-upstream 6f42c1 "Waiting on an upstream release (Claude Code, a crate, or a tool)."
 
 echo "== area labels =="
-label profiles  1d76db "Creating, listing and launching profiles."
+label profiles  1d76db "Creating, listing and removing profiles."
 label usage     5319e7 "Reading remaining usage and reset times."
 label selection 0e8a16 "Automatic account selection and switching."
 label keychain  b60205 "Anything that touches login state."

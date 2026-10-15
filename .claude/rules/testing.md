@@ -21,19 +21,19 @@ Test discipline is non-negotiable (a standing hard rule; see `CLAUDE.md`).
 
 - **Runner:** `cargo-nextest` (`cargo nextest run`), not `cargo test`, plus
   `cargo test --doc` for doctests.
-- **Snapshots:** `insta` pins terminal output (`cc-shift list`, `cc-shift status`, error
-  messages). Redact volatile fields (times relative to now) before
-  snapshotting. Review intentional changes with `cargo insta review`; never
-  accept a snapshot change you have not read.
-- **Properties:** `proptest` for the selection invariants (the chosen profile
-  always has the most remaining usage among eligible ones, an exhausted
-  profile is never chosen before its reset time, ties resolve the same way
-  every run) and for profile-name validation.
+- **Screens:** terminal output (`cc-shift status`, `stats`, `log`, the status
+  line, error messages) is pinned with `assert_eq!` against the exact text of
+  the approved screen, rendered at a fixed "now" and without colour. A
+  changed screen is a reviewed diff of that expected text.
+- **Properties:** `proptest` for the selection invariants (the rule spends what
+  expires first, an exhausted account is never chosen before its reset
+  time, ties resolve the same way every run) and for profile-name validation.
 - **A fake home and a fake `claude`.** Integration tests never touch the real
   `~/.claude-profiles/`, the real Keychain, or a real account. Each test runs
   with `HOME` pointed at a temporary directory and a stub `claude` first on
-  `PATH` that records its arguments and environment, so a test asserts what
-  `cc-shift` would have launched.
+  `PATH` that records its arguments and environment. The Keychain and HTTP
+  are behind traits, so a test asserts which login moved where, and what
+  the state, the history and the settings hold afterwards.
 - **Time is injected.** Selection takes "now" as a parameter, so reset-time
   logic is tested at fixed instants, never against the wall clock.
 
@@ -82,12 +82,12 @@ tests import the lib or run the built binary.
 A green suite over a thin set of cases proves almost nothing. The bar is
 coverage of what `ARCHITECTURE.md` defines:
 
-- Every command (`add`, `list`, `auto`, `status`, `<name>`, `help`) and every
-  error path §Error handling names: a missing `HOME`, an invalid or reserved
+- Every command `cc-shift help` lists and every error path `ARCHITECTURE.md`
+  section 8 names: a missing `HOME`, an invalid or reserved
   profile name, a missing profile folder, a folder that cannot be created, and
   `claude` missing from `PATH`, each with its own small, isolated case.
-- Argument pass-through: extra arguments reach `claude` unchanged and in
-  order, and `CLAUDE_CONFIG_DIR` names the right folder.
+- The command line: every flag and every misuse, and `CLAUDE_CONFIG_DIR`
+  naming the right folder wherever `cc-shift` starts `claude`.
 - Selection: every rule of automatic selection, including all profiles
   exhausted, a tie, a reset time that has just passed, and a profile whose
   usage could not be read.
