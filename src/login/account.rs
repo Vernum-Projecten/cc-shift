@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 use serde_json::Value;
 
 use crate::error::Error;
-use crate::profile::ProfilesRoot;
+use crate::store::profile::ProfilesRoot;
 
 /// The `.claude.json` files of `~/.claude` and of every profile.
 #[derive(Debug, Clone)]
@@ -115,7 +115,7 @@ fn missing(path: &Path) -> Error {
 mod tests {
     use super::AccountFiles;
     use crate::error::Error;
-    use crate::profile::ProfilesRoot;
+    use crate::store::profile::ProfilesRoot;
     use std::fs;
     use std::os::unix::fs::PermissionsExt;
     use tempfile::TempDir;

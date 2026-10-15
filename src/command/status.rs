@@ -2,39 +2,38 @@
 //! account comes next.
 
 use std::fmt::Write;
+use std::io::Write as _;
 
-use crate::select::{self, Choice, SWITCH_THRESHOLD};
-use crate::state::{Recorded, State};
-use crate::usage::{Account, Usage, Window};
+use crate::anthropic::parked::Report;
+use crate::command::{refresh, report, unix_now};
+use crate::error::Error;
+use crate::store::profile::ProfilesRoot;
+use crate::store::state::StateFile;
+use crate::usage::select::{self, Choice, SWITCH_THRESHOLD};
+use crate::usage::{Account, Usage, Window, accounts, time_left};
 
-/// Builds the selection view of every profile from the recorded state.
+/// Refreshes the parked accounts, then prints every account with its usage
+/// and which account comes next.
 ///
-/// A profile with no usage read yet is unknown, and a profile whose refresh
-/// was refused is logged out.
-#[must_use]
-pub fn accounts(profiles: &[String], state: &State) -> Vec<Account> {
-    profiles
-        .iter()
-        .map(|name| Account {
-            name: name.clone(),
-            logged_in: !state.logged_out.contains(name),
-            usage: state
-                .usage
-                .get(name)
-                .map_or_else(|| Usage::Unknown("no usage read yet".to_owned()), usage_of),
-        })
-        .collect()
-}
-
-/// Turns a recorded reading into usage; a reading with no time is unknown.
-fn usage_of(recorded: &Recorded) -> Usage {
-    if recorded.read_at.is_none() {
-        return Usage::Unknown("no usage read yet".to_owned());
+/// # Errors
+///
+/// Returns the error of a missing `HOME`, the profiles root or the state
+/// file.
+pub fn run() -> Result<(), Error> {
+    let root = ProfilesRoot::from_env()?;
+    let profiles = root.list()?;
+    if profiles.is_empty() {
+        report("no profiles yet; create one with 'cs add <name>'");
+        return Ok(());
     }
-    Usage::Known {
-        five_hour: recorded.five_hour,
-        seven_day: recorded.seven_day,
-    }
+    // NOTE: no specification governs this: our own design. A refresh that
+    // fails leaves the last numbers, which the table still shows.
+    let _reports: Result<Vec<Report>, Error> = refresh::refresh_parked();
+    let state = StateFile::in_root(&root).read()?;
+    let rows = accounts(&profiles, &state);
+    let text = render(&rows, state.active.as_deref(), unix_now());
+    let _ignored: std::io::Result<()> = std::io::stdout().write_all(text.as_bytes());
+    Ok(())
 }
 
 /// Renders the status table at `now`.
@@ -94,24 +93,7 @@ fn cell(window: Option<Window>, now: i64) -> String {
     if window.resets_at <= now {
         return "0% reset".to_owned();
     }
-    format!("{used:.0}% {}{full}", duration(window.resets_at - now))
-}
-
-/// Formats seconds as the two largest units, for example `2h15m` or `3d4h`.
-pub(crate) fn duration(seconds: i64) -> String {
-    let minutes = seconds.div_euclid(60);
-    let (days, hours, mins) = (
-        minutes.div_euclid(1440),
-        minutes.rem_euclid(1440).div_euclid(60),
-        minutes.rem_euclid(60),
-    );
-    if days > 0 {
-        format!("{days}d{hours}h")
-    } else if hours > 0 {
-        format!("{hours}h{mins}m")
-    } else {
-        format!("{mins}m")
-    }
+    format!("{used:.0}% {}{full}", time_left(window.resets_at - now))
 }
 
 /// The closing line: which account `cs` would switch to next.
@@ -121,7 +103,7 @@ fn next_line(accounts: &[Account], active: Option<&str>, now: i64) -> String {
         Choice::NoneAvailable(Some((account, at))) => format!(
             "no account available; {} frees up in {}\n",
             account.name,
-            duration(at - now)
+            time_left(at - now)
         ),
         Choice::NoneAvailable(None) => "no account available\n".to_owned(),
     }
@@ -129,9 +111,10 @@ fn next_line(accounts: &[Account], active: Option<&str>, now: i64) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{accounts, duration, render};
-    use crate::state::{Recorded, State};
+    use super::render;
+    use crate::store::state::{Recorded, State};
     use crate::usage::{Account, Usage, Window};
+    use crate::usage::{accounts, time_left};
 
     const NOW: i64 = 1_000_000;
 
@@ -200,9 +183,9 @@ mod tests {
 
     #[test]
     fn durations_use_the_two_largest_units() {
-        assert_eq!(duration(59), "0m");
-        assert_eq!(duration(8100), "2h15m");
-        assert_eq!(duration(273_600), "3d4h");
+        assert_eq!(time_left(59), "0m");
+        assert_eq!(time_left(8100), "2h15m");
+        assert_eq!(time_left(273_600), "3d4h");
     }
 
     #[test]

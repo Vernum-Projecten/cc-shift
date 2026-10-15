@@ -109,28 +109,33 @@ A parked login has no Claude Code process to refresh it, so `cs` does. When a pa
 
 ## 7. Code
 
-A small library with a thin binary: `src/main.rs` only calls `cs::run` in `src/lib.rs`, so everything is testable from `tests/`. One module per concern:
+A small library with a thin binary: `src/main.rs` only calls `cs::run` in `src/lib.rs`, so everything is testable from `tests/`. The modules follow the domain, one folder each, with a `mod.rs` that holds the folder's module documentation and the items its files share:
 
-- `cli`: parses the command line.
-- `profile`: names and the profiles folder.
-- `launch`: execs `claude` with a profile's `CLAUDE_CONFIG_DIR`, for `cs add`.
-- `error`: the messages the user sees.
-- `usage`: the two windows per account and how full each is at a given time.
-- `select`: the selection rule, a pure function of the accounts and the current time.
-- `state`: `state.json` behind the lock, written in one rename.
-- `statusline`: records the active account's usage and prints the status line: the user's own line, if any, then the active account with both windows and their time to reset.
-- `status`: the `cs status` table, with reset times shown as time left (`2h15m`), so no time zone handling is needed.
-- `keychain`: the `Logins` trait every Keychain access goes through, so tests use an in-memory store, and the opaque `Login` whose debug output never shows a token.
-- `switch`: the move of section 5 with its recovery.
-- `setup`: puts the status line and the rate-limit hook into `~/.claude/settings.json`, keeping every other setting and chaining the user's own status line.
-- `account`: copies a profile's `oauthAccount` into `~/.claude.json`, keeping every other key and its order.
-- `system_keychain`: the macOS backend of `Logins` through `/usr/bin/security`, the same tool Claude Code's items were made with, so their access rules stay as they are. A login goes in on stdin as hex and every write is read back.
-- `auto`: when to switch on its own (the status line at 95%, the rate-limit hook, `cs setup`) and where to go, skipping a profile with no usable login. A hook within a minute of a switch is taken to belong to the account just left.
-- `http`: requests through the system `curl`, with the whole request on stdin so no token is ever a command-line argument.
-- `oauth`: the refresh and usage calls Claude Code makes, and how their responses map onto a stored login and the state.
-- `parked`: refreshing parked logins (under the lock for the whole request) and reading parked accounts' usage.
+```
+src/
+├── main.rs, lib.rs, error.rs
+├── command/      the command line: parse, and one file per command
+│                 (add, list, activate for cs use, setup, status, refresh,
+│                 statusline, hook); mod.rs dispatches and holds the helpers
+├── store/        the files cs owns: profile (names, the profiles folder),
+│                 state (state.json behind the lock, written in one rename)
+├── usage/        mod.rs: the two windows per account, the selection view
+│                 and time left; select: the selection rule
+├── login/        mod.rs: Login, Slot and the Logins trait every Keychain
+│                 access goes through; keychain: the macOS backend through
+│                 /usr/bin/security; account: oauthAccount in .claude.json
+├── switching/    transfer: the move of section 5 with its recovery;
+│                 auto: when to switch on its own and where to go
+├── anthropic/    http: requests through curl with the request on stdin;
+│                 oauth: the refresh and usage calls; parked: keeping
+│                 parked accounts ready
+└── claude_code/  settings (cs setup), statusline (record and print),
+                  launch (exec claude for cs add)
+```
 
-The runtime dependencies are `thiserror` for the error type and `serde` with `serde_json` for the state and the status line input; each further dependency is added in the pull request that needs it.
+Every import names the module that defines the item; there are no re-exports. A login never appears in debug output, and the Keychain and HTTP are behind traits, so tests use memory and fakes.
+
+The runtime dependencies are `thiserror` for the error type, `serde` with `serde_json` (key order kept) for the JSON files, `sha2` for the Keychain service names, and `jiff` for the reset times; each further dependency is added in the pull request that needs it.
 
 ## 8. Errors
 

@@ -4,15 +4,14 @@
 //! between two replies. The rate-limit hook marks the active account full
 //! and switches at once. `cs setup` makes the best account active.
 
-use crate::account::AccountFiles;
 use crate::error::Error;
-use crate::keychain::Logins;
-use crate::profile::ProfilesRoot;
-use crate::select::{self, Choice, SWITCH_THRESHOLD};
-use crate::state::{Recorded, StateFile};
-use crate::status;
-use crate::switch::{self, Outcome};
+use crate::login::Logins;
+use crate::login::account::AccountFiles;
+use crate::store::profile::ProfilesRoot;
+use crate::store::state::{Recorded, StateFile};
+use crate::switching::transfer::{self, Outcome};
 use crate::usage::Window;
+use crate::usage::select::{self, Choice, SWITCH_THRESHOLD};
 
 /// How long after a switch a rate-limit hook is taken to belong to the
 /// account that was just left, so a second window cannot mark the new
@@ -79,7 +78,7 @@ pub fn run<L: Logins>(
         }
         (Trigger::Usage, Some(active)) => {
             let profiles = context.root.list()?;
-            let view = status::accounts(&profiles, &state);
+            let view = crate::usage::accounts(&profiles, &state);
             let used = view
                 .iter()
                 .find(|a| &a.name == active)
@@ -91,13 +90,13 @@ pub fn run<L: Logins>(
         (Trigger::Setup, None) => {}
     }
     let state = context.file.read()?;
-    let mut view = status::accounts(&context.root.list()?, &state);
+    let mut view = crate::usage::accounts(&context.root.list()?, &state);
     loop {
         let name = match select::next(&view, leaving.as_deref(), now) {
             Choice::Account(account) => account.name.clone(),
             Choice::NoneAvailable(_) => return Ok(None),
         };
-        match switch::switch_to(context.logins, context.accounts, context.file, &name) {
+        match transfer::switch_to(context.logins, context.accounts, context.file, &name) {
             Ok(Outcome::Switched { .. }) => {
                 context.file.update(|s| s.switched_at = Some(now))?;
                 return Ok(Some(name));
@@ -146,11 +145,11 @@ fn mark_full(file: &StateFile, active: &str, now: i64) -> Result<(), Error> {
 #[expect(clippy::panic_in_result_fn, reason = "test assertions")]
 mod tests {
     use super::{Context, Trigger, run};
-    use crate::account::AccountFiles;
     use crate::error::Error;
-    use crate::keychain::{Login, Logins, Slot};
-    use crate::profile::ProfilesRoot;
-    use crate::state::{Recorded, StateFile};
+    use crate::login::account::AccountFiles;
+    use crate::login::{Login, Logins, Slot};
+    use crate::store::profile::ProfilesRoot;
+    use crate::store::state::{Recorded, StateFile};
     use crate::usage::Window;
     use std::cell::RefCell;
     use std::collections::HashMap;

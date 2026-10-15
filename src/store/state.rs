@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::error::Error;
-use crate::profile::ProfilesRoot;
+use crate::store::profile::ProfilesRoot;
 use crate::usage::Window;
 
 /// Everything `cs` remembers. No field ever holds a token.
@@ -198,7 +198,7 @@ fn io_error(path: &Path, source: io::Error) -> Error {
 mod tests {
     use super::{Recorded, State, StateFile};
     use crate::error::Error;
-    use crate::profile::ProfilesRoot;
+    use crate::store::profile::ProfilesRoot;
     use crate::usage::Window;
     use std::fs;
     use tempfile::TempDir;

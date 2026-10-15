@@ -10,12 +10,12 @@
 
 use std::fs::File;
 
+use crate::anthropic::http::Http;
+use crate::anthropic::oauth::{self, Stored};
 use crate::error::Error;
-use crate::http::Http;
-use crate::keychain::{Logins, Slot};
-use crate::oauth::{self, Stored};
-use crate::profile::ProfilesRoot;
-use crate::state::StateFile;
+use crate::login::{Logins, Slot};
+use crate::store::profile::ProfilesRoot;
+use crate::store::state::StateFile;
 
 /// A parked account's usage is read again when it is older than this.
 pub const STALE_SECONDS: i64 = 5 * 60;
@@ -207,11 +207,11 @@ fn state_error(path: &std::path::Path, source: std::io::Error) -> Error {
 #[expect(clippy::panic_in_result_fn, reason = "test assertions")]
 mod tests {
     use super::{STALE_SECONDS, any_stale, refresh_all};
+    use crate::anthropic::http::{Http, Request, Response};
     use crate::error::Error;
-    use crate::http::{Http, Request, Response};
-    use crate::keychain::{Login, Logins, Slot};
-    use crate::profile::ProfilesRoot;
-    use crate::state::{Recorded, StateFile};
+    use crate::login::{Login, Logins, Slot};
+    use crate::store::profile::ProfilesRoot;
+    use crate::store::state::{Recorded, StateFile};
     use serde_json::{Value, json};
     use std::cell::RefCell;
     use std::collections::HashMap;
