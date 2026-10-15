@@ -27,6 +27,8 @@ pub struct State {
     /// The status line command the user had before `cs setup`, run after
     /// `cs statusline` records usage.
     pub chained_statusline: Option<String>,
+    /// A switch that has started and not yet finished.
+    pub pending: Option<Pending>,
 }
 
 /// The usage of one account as last read.
@@ -39,6 +41,30 @@ pub struct Recorded {
     pub seven_day: Option<Window>,
     /// When the numbers were read, in Unix seconds.
     pub read_at: Option<i64>,
+}
+
+/// A switch in progress, saved before each step so the next run can finish
+/// it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Pending {
+    /// The account that was active, if `cs` knew one.
+    pub from: Option<String>,
+    /// The account being made active.
+    pub to: String,
+    /// The step about to run.
+    pub step: Step,
+}
+
+/// The steps of a switch, in order.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Step {
+    /// Save the login of `~/.claude` back to the account that was active,
+    /// then write the next account's parked login into `~/.claude`.
+    Move,
+    /// Clear the next account's parked login and record it as active.
+    ClearParked,
 }
 
 /// The state file and its lock inside the profiles root.
@@ -67,7 +93,7 @@ impl StateFile {
     /// Returns [`Error::State`] when the lock or the file cannot be used,
     /// and [`Error::StateFormat`] when the file does not parse.
     pub fn read(&self) -> Result<State, Error> {
-        self.update(|state| state.clone())
+        self.lock()?.load()
     }
 
     /// Reads the state, applies `change` and writes it back, all under the
@@ -78,44 +104,81 @@ impl StateFile {
     /// Returns [`Error::State`] when the root, the lock or the file cannot
     /// be used, and [`Error::StateFormat`] when the file does not parse.
     pub fn update<T>(&self, change: impl FnOnce(&mut State) -> T) -> Result<T, Error> {
+        let locked = self.lock()?;
+        let mut state = locked.load()?;
+        let before = state.clone();
+        let result = change(&mut state);
+        if state != before {
+            locked.save(&state)?;
+        }
+        Ok(result)
+    }
+
+    /// Takes the lock, which is held until the returned guard is dropped.
+    ///
+    /// A switch holds it across its Keychain steps and saves its progress
+    /// between them.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::State`] when the root or the lock cannot be used.
+    pub fn lock(&self) -> Result<Locked<'_>, Error> {
         fs::create_dir_all(&self.root).map_err(|e| io_error(&self.root, e))?;
-        let lock = File::options()
+        let guard = File::options()
             .create(true)
             .truncate(false)
             .write(true)
             .open(&self.lock)
             .map_err(|e| io_error(&self.lock, e))?;
-        lock.lock().map_err(|e| io_error(&self.lock, e))?;
-        let mut state = self.load()?;
-        let before = state.clone();
-        let result = change(&mut state);
-        if state != before {
-            self.save(&state)?;
-        }
-        Ok(result)
+        guard.lock().map_err(|e| io_error(&self.lock, e))?;
+        Ok(Locked {
+            file: self,
+            _guard: guard,
+        })
     }
+}
 
-    /// Loads the state file; the caller holds the lock.
-    fn load(&self) -> Result<State, Error> {
-        match fs::read(&self.path) {
+/// The state file while this process holds its lock.
+#[derive(Debug)]
+pub struct Locked<'a> {
+    file: &'a StateFile,
+    _guard: File,
+}
+
+impl Locked<'_> {
+    /// Reads the state; a missing file is the empty state.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::State`] when the file cannot be read, and
+    /// [`Error::StateFormat`] when it does not parse.
+    pub fn load(&self) -> Result<State, Error> {
+        let path = &self.file.path;
+        match fs::read(path) {
             Ok(bytes) => serde_json::from_slice(&bytes).map_err(|source| Error::StateFormat {
-                path: self.path.clone(),
+                path: path.clone(),
                 source,
             }),
             Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(State::default()),
-            Err(e) => Err(io_error(&self.path, e)),
+            Err(e) => Err(io_error(path, e)),
         }
     }
 
-    /// Replaces the state file in one rename; the caller holds the lock.
-    fn save(&self, state: &State) -> Result<(), Error> {
-        let temporary = self.path.with_extension("json.tmp");
+    /// Replaces the state file in one rename.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::State`] when the file cannot be written, and
+    /// [`Error::StateFormat`] when the state cannot be encoded.
+    pub fn save(&self, state: &State) -> Result<(), Error> {
+        let path = &self.file.path;
+        let temporary = path.with_extension("json.tmp");
         let text = serde_json::to_vec_pretty(state).map_err(|source| Error::StateFormat {
-            path: self.path.clone(),
+            path: path.clone(),
             source,
         })?;
         fs::write(&temporary, text).map_err(|e| io_error(&temporary, e))?;
-        fs::rename(&temporary, &self.path).map_err(|e| io_error(&self.path, e))
+        fs::rename(&temporary, path).map_err(|e| io_error(path, e))
     }
 }
 
@@ -126,7 +189,6 @@ fn io_error(path: &Path, source: io::Error) -> Error {
         source,
     }
 }
-
 #[cfg(test)]
 #[expect(clippy::panic_in_result_fn, reason = "test assertions")]
 mod tests {
