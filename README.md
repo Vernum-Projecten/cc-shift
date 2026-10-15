@@ -43,6 +43,7 @@ work ▕██████░░░░▏ 60% · 3h33m │ 7d 31% │ next spare
 - [Token statistics](#token-statistics)
 - [How it works](#how-it-works)
 - [Which account is next](#which-account-is-next)
+- [Early start](#early-start)
 - [Security](#security)
 - [Update and uninstall](#update-and-uninstall)
 - [FAQ](#faq)
@@ -144,6 +145,7 @@ From here on you never need to run `cc-shift` while you work.
 | `cc-shift --version` | Prints the version (also `-V` and `cc-shift version`). |
 | `cc-shift doctor` | Checks the setup (status line and hook, `claude`, every login and account, two profiles on one account, the state) and says how to fix what is wrong. |
 | `cc-shift log` | Shows the history: switches with their reason, refreshes, logged-out accounts and when all were full. |
+| `cc-shift early on` | Starts some accounts' 5-hour windows before the workday, Monday to Friday ([early start](#early-start)). `cc-shift early off` stops it; `cc-shift early` shows it. |
 | `cc-shift remove <name>` | Deletes a profile and its Keychain login, after you type `yes`. The active account cannot be removed. |
 | `cc-shift uninstall [--all]` | Undoes `cc-shift setup`; with `--all`, also deletes every profile and its Keychain login. |
 | `cc-shift help` | Prints the commands. |
@@ -274,6 +276,28 @@ Usage left in a window when it resets is lost, and a 5-hour window only starts w
 2. Then an untouched account, the one whose week resets soonest first, then the one with the most of its week left.
 
 It stays on the active account until it reaches its threshold, so it never switches back and forth. You use up one account at a time, and by the time you have used the others, the first one has reset.
+
+## Early start
+
+A 5-hour window starts with an account's first message and resets five hours later. If a window starts at 06:00, it resets at 11:00, during your workday, and you get an extra window that day. `cc-shift` can start a few windows for you each morning. It is off until you turn it on:
+
+```console
+$ cc-shift early on --at 06:00 --accounts 2
+Early start is on: Monday to Friday at 06:00, 2 accounts.
+cc-shift picks the accounts each morning, the ones it would use first.
+Each costs one short Haiku message.
+
+$ cc-shift early
+Early start: on · Monday to Friday at 06:00 · 2 accounts · next Fri 06:00
+
+$ cc-shift early off
+Early start is off.
+```
+
+- **Which accounts:** each morning, the first ones in the order above whose 5-hour window is not running. Full, out-of-week and logged-out accounts are skipped. Start only as many as your workday needs: every extra window spends the week sooner, and the accounts left alone stay fresh for the evening.
+- **How:** a `launchd` agent runs `cc-shift early run` Monday to Friday at the set time. If your Mac is asleep then, it runs when the Mac wakes; if the Mac is off, that day is skipped.
+- **The message:** Claude Code sends it itself, in the account's own profile, on Haiku, with no tools, hooks or MCP servers and no saved session. `cc-shift` touches no token for it.
+- **Where to see it:** `cc-shift log` shows each start and each account that could not be started. `cc-shift status` shows `early start 06:00 · 2 accounts` under the table while it is on.
 
 ## Security
 

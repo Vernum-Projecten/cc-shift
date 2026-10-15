@@ -27,7 +27,7 @@ pub fn log(entries: &[Entry], label: &str, now: i64, zone: &TimeZone, paint: Pai
         out.push('\n');
         for entry in entries {
             let at = entry.seconds().unwrap_or(now);
-            let (name, details) = describe(&entry.event, at, paint);
+            let (name, details) = describe(&entry.event, at, zone, paint);
             // NOTE: no specification governs this: our own design. Writing to
             // a `String` cannot fail.
             let _infallible: std::fmt::Result = writeln!(
@@ -77,7 +77,7 @@ fn clock(at: i64, now: i64, zone: &TimeZone) -> String {
 }
 
 /// The event column and the coloured details of one event.
-fn describe(event: &Event, at: i64, paint: Paint) -> (&'static str, String) {
+fn describe(event: &Event, at: i64, zone: &TimeZone, paint: Paint) -> (&'static str, String) {
     match event {
         Event::Setup { active } => (
             "setup",
@@ -150,6 +150,14 @@ fn describe(event: &Event, at: i64, paint: Paint) -> (&'static str, String) {
                 time_left(*after_seconds)
             )),
         ),
+        Event::EarlyStart { started, wanted } => (
+            "early start",
+            early_start(started, *wanted, at, zone, paint),
+        ),
+        Event::EarlyStartFailed { account, reason } => (
+            "early start",
+            paint.red(&format!("{account}: not started · {reason}")),
+        ),
         Event::Reading { account, outcome } => (
             "reading",
             paint.dim(&match (outcome, account) {
@@ -160,6 +168,24 @@ fn describe(event: &Event, at: i64, paint: Paint) -> (&'static str, String) {
             }),
         ),
     }
+}
+
+/// The details of an early start: the accounts started and when their
+/// windows reset, five hours later.
+fn early_start(started: &[String], wanted: u8, at: i64, zone: &TimeZone, paint: Paint) -> String {
+    if started.is_empty() {
+        return paint.yellow("no account was free to start");
+    }
+    let resets = jiff::Timestamp::from_second(at + 5 * 3_600).map_or_else(
+        |_| "?".to_owned(),
+        |t| t.to_zoned(zone.clone()).strftime("%H:%M").to_string(),
+    );
+    let mut text = format!("{} · windows reset at {resets}", started.join(", "));
+    if started.len() < usize::from(wanted) {
+        let _infallible: std::fmt::Result =
+            write!(text, " · {} of {wanted} started", started.len());
+    }
+    paint.green(&text)
 }
 
 /// The closing line: switches, and how often and long all accounts were
@@ -315,5 +341,41 @@ mod tests {
     fn an_empty_period_says_so() {
         let text = log(&[], "2 hours", NOW, &TimeZone::UTC, Paint::new(false));
         assert!(text.contains("nothing happened in this period"), "{text}");
+    }
+
+    #[test]
+    fn an_early_start_names_the_accounts_and_when_they_reset() {
+        let six = NOW - 12 * HOUR - 30 * 60;
+        let entries = vec![
+            Entry::new(
+                Event::EarlyStartFailed {
+                    account: "extra".to_owned(),
+                    reason: "claude exited with exit status: 1".to_owned(),
+                },
+                six,
+            ),
+            Entry::new(
+                Event::EarlyStart {
+                    started: vec!["work".to_owned()],
+                    wanted: 2,
+                },
+                six,
+            ),
+            Entry::new(
+                Event::EarlyStart {
+                    started: Vec::new(),
+                    wanted: 2,
+                },
+                six + HOUR,
+            ),
+        ];
+        let text = log(&entries, "24 hours", NOW, &TimeZone::UTC, Paint::new(false));
+        for line in [
+            "  today 06:00   early start  extra: not started · claude exited with exit status: 1\n",
+            "  today 06:00   early start  work · windows reset at 11:00 · 1 of 2 started\n",
+            "  today 07:00   early start  no account was free to start\n",
+        ] {
+            assert!(text.contains(line), "{line}\n{text}");
+        }
     }
 }

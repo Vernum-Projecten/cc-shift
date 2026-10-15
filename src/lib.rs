@@ -19,6 +19,7 @@ compile_error!("cc-shift works on macOS only: it keeps logins in the macOS login
 pub mod anthropic;
 pub mod claude_code;
 pub mod command;
+pub mod early;
 pub mod error;
 pub mod login;
 pub mod render;

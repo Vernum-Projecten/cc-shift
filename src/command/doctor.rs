@@ -9,6 +9,7 @@ use std::process::Command;
 
 use crate::claude_code::settings;
 use crate::command::home;
+use crate::early::{EarlyStart, launchd};
 use crate::error::Error;
 use crate::login::account::AccountFiles;
 use crate::login::keychain::SystemKeychain;
@@ -114,6 +115,7 @@ pub fn checks<L: Logins>(setup: &Setup<'_, L>) -> Vec<Check> {
             format!("cc-shift use {}", pending.to),
         ));
     }
+    out.extend(early_check(setup.home, state.early_start.as_ref()));
     let profiles = match setup.root.list() {
         Ok(profiles) => profiles,
         Err(error) => {
@@ -146,6 +148,28 @@ pub fn checks<L: Logins>(setup: &Setup<'_, L>) -> Vec<Check> {
         });
     }
     out
+}
+
+/// Checks that the `launchd` agent exists exactly while the early start is
+/// on; nothing to say while it is off.
+fn early_check(home: &Path, setting: Option<&EarlyStart>) -> Option<Check> {
+    let installed = launchd::agent_path(home).is_file();
+    match (setting, installed) {
+        (Some(setting), true) => Some(Check::ok(format!(
+            "early start is on: {}, {} account(s)",
+            setting.at(),
+            setting.accounts
+        ))),
+        (Some(_), false) => Some(Check::warn(
+            "early start is on, but its launchd agent is missing",
+            "cc-shift early on",
+        )),
+        (None, true) => Some(Check::warn(
+            "the early start is off, but its launchd agent is still installed",
+            "cc-shift early off",
+        )),
+        (None, false) => None,
+    }
 }
 
 /// Checks every profile's login and account, and that no two profiles are
@@ -432,6 +456,35 @@ mod tests {
                 |(level, text)| *level == Level::Warn && text.contains("names another account")
             ),
             "{results:?}"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn the_early_start_agent_must_match_the_setting() -> Result<(), Box<dyn std::error::Error>> {
+        use super::early_check;
+        use crate::early::{EarlyStart, launchd};
+        let home = TempDir::new()?;
+        let on = EarlyStart::default();
+        assert_eq!(
+            early_check(home.path(), None),
+            None,
+            "off and absent: nothing to say"
+        );
+        let missing = early_check(home.path(), Some(&on)).ok_or("a check")?;
+        assert_eq!(
+            (missing.level, missing.fix.as_deref()),
+            (Level::Warn, Some("cc-shift early on"))
+        );
+        let agent = launchd::agent_path(home.path());
+        fs::create_dir_all(agent.parent().ok_or("a folder")?)?;
+        fs::write(&agent, "")?;
+        let installed = early_check(home.path(), Some(&on)).ok_or("a check")?;
+        assert_eq!(installed.level, Level::Ok);
+        let left = early_check(home.path(), None).ok_or("a check")?;
+        assert_eq!(
+            (left.level, left.fix.as_deref()),
+            (Level::Warn, Some("cc-shift early off"))
         );
         Ok(())
     }

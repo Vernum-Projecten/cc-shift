@@ -130,4 +130,7 @@ pub enum Error {
     /// `claude` was found but could not be started.
     #[error("cannot start claude: {0}")]
     Launch(#[source] io::Error),
+    /// The message that starts a 5-hour window failed.
+    #[error("{0}")]
+    EarlyStart(String),
 }

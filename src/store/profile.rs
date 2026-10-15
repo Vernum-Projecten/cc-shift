@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use crate::error::Error;
 
 /// The words `cc-shift` uses as commands, which can never name a profile.
-pub const RESERVED: [&str; 16] = [
+pub const RESERVED: [&str; 17] = [
     "add",
     "setup",
     "status",
@@ -25,6 +25,7 @@ pub const RESERVED: [&str; 16] = [
     "log",
     "version",
     "stats",
+    "early",
 ];
 
 /// The name of the profiles root inside the home folder.

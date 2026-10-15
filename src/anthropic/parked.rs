@@ -211,9 +211,32 @@ fn read_usage_if_stale(
     Ok(true)
 }
 
+/// Waits for a running refresh to end and holds its lock until the returned
+/// file is dropped, so no refresh starts meanwhile.
+///
+/// # Errors
+///
+/// Returns [`Error::State`] when the lock file cannot be opened or locked.
+pub fn hold_refreshes(root: &ProfilesRoot) -> Result<File, Error> {
+    let (lock, path) = run_lock(root)?;
+    lock.lock().map_err(|e| state_error(&path, e))?;
+    Ok(lock)
+}
+
 /// Takes the lock that keeps runs from overlapping; `None` when another run
 /// holds it.
 fn single_run(root: &ProfilesRoot) -> Result<Option<File>, Error> {
+    let (lock, path) = run_lock(root)?;
+    match lock.try_lock() {
+        Ok(()) => Ok(Some(lock)),
+        Err(std::fs::TryLockError::WouldBlock) => Ok(None),
+        Err(std::fs::TryLockError::Error(e)) => Err(state_error(&path, e)),
+    }
+}
+
+/// Opens the lock file that keeps refreshes from overlapping, and returns it
+/// with its path.
+fn run_lock(root: &ProfilesRoot) -> Result<(File, std::path::PathBuf), Error> {
     let path = root.path().join(".refresh-lock");
     std::fs::create_dir_all(root.path()).map_err(|e| state_error(root.path(), e))?;
     let lock = File::options()
@@ -222,11 +245,7 @@ fn single_run(root: &ProfilesRoot) -> Result<Option<File>, Error> {
         .write(true)
         .open(&path)
         .map_err(|e| state_error(&path, e))?;
-    match lock.try_lock() {
-        Ok(()) => Ok(Some(lock)),
-        Err(std::fs::TryLockError::WouldBlock) => Ok(None),
-        Err(std::fs::TryLockError::Error(e)) => Err(state_error(&path, e)),
-    }
+    Ok((lock, path))
 }
 
 fn state_error(path: &std::path::Path, source: std::io::Error) -> Error {

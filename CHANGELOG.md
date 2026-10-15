@@ -6,6 +6,16 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `cc-shift early on [--at 06:00] [--accounts 2]` starts the 5-hour windows of
+  a few accounts each workday morning, so they reset during the workday and
+  give an extra window. A `launchd` agent runs it Monday to Friday; Claude
+  Code sends one short Haiku message per account in the account's profile.
+  Off by default; `cc-shift early off` stops it and `cc-shift early` shows
+  it. `cc-shift log`, `cc-shift status`, `doctor` and `uninstall` know about
+  it, and `early` is no longer a valid profile name.
+
 ### Fixed
 
 - `cc-shift help` prints the version and tagline under the logo, on their

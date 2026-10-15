@@ -6,6 +6,7 @@ use std::io::BufRead;
 
 use crate::claude_code::settings;
 use crate::command::{home, report};
+use crate::early::launchd;
 use crate::error::Error;
 use crate::login::keychain::SystemKeychain;
 use crate::login::{Logins, Slot};
@@ -45,6 +46,12 @@ pub fn run(all: bool) -> Result<(), Error> {
         ));
     } else {
         report("the status line and the hook were not installed");
+    }
+    if launchd::remove(&home)? {
+        if root.path().is_dir() {
+            file.update(|s| s.early_start = None)?;
+        }
+        report("removed the early start");
     }
     if !all {
         report(
