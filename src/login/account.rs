@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The account details Claude Code shows and switches on.
 //!
 //! Next to the Keychain token, Claude Code keeps the signed-in account in

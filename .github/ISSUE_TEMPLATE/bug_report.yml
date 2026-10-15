@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
+
 name: Bug report
 description: Report a defect in cc-shift.
 type: Bug

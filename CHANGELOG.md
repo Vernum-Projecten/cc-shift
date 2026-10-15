@@ -1,3 +1,6 @@
+<!-- SPDX-FileCopyrightText: 2026 Vernum Projecten B.V. -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Changelog
 
 All notable changes to `cc-shift` are recorded here. The format follows
@@ -17,6 +20,9 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A switch holds Claude Code's own refresh lock of `~/.claude` while it
   saves and replaces the active login, so no open window refreshes the login
   at that moment. This makes switching safer on macOS and Linux.
+- Every file carries its copyright and licence as SPDX lines
+  (`SPDX-FileCopyrightText`, `SPDX-License-Identifier: Apache-2.0`), and the
+  repository follows the REUSE 3.3 specification, checked in CI.
 
 ### Changed
 

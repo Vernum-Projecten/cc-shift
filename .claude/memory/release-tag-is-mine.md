@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
 name: release-tag-is-mine
 description: "The session cuts every release end to end (version bump PR, merge, signed tag, push, reading the release run), never handing the tag to the owner"
 metadata:

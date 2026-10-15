@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
 name: pr-auto-merge
 description: "Every pull request gets auto-merge armed the moment it is opened (gh pr merge <n> --auto); clean up local branches after each merge and branch from origin/HEAD; carried from the owner's FerroFED setup (2026-10-15)"
 metadata:

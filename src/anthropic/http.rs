@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! HTTP requests through the system `curl`.
 //!
 //! The whole request, the bearer token and the body included, goes to curl

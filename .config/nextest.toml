@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
+
 # The nextest configuration (https://nexte.st/docs/configuration/). A test
 # that runs past its slow-timeout period is reported as slow, and one that
 # runs past terminate-after periods is killed and fails the run by name, so

@@ -1,3 +1,6 @@
+<!-- SPDX-FileCopyrightText: 2026 Vernum Projecten B.V. -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 ## What changed and why
 
 <!-- Describe the change and the reason for it. Keep it to what a reviewer needs. -->

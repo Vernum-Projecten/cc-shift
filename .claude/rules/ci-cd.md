@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
 paths:
   - ".github/**"
   - "scripts/**"
@@ -17,7 +19,8 @@ carries what CI runs and the rules every workflow keeps.
   (`scripts/checks/comment-style.sh`), the file-length guard
   (`scripts/checks/file-length.sh`), the bash 3.2 guard
   (`scripts/checks/bash-compat.sh`), the file-mode guard
-  (`scripts/checks/script-modes.sh`), and the self-tests of
+  (`scripts/checks/script-modes.sh`), `reuse lint` (every file carries its
+  SPDX copyright and licence lines, REUSE 3.3), and the self-tests of
   `scripts/checks/api-prices.sh` and the `scripts/gh/` helpers. Tier 2 is
   the Rust set below, gated on the root `Cargo.toml` existing; clippy, the
   tests and rustdoc run on both `macos-latest` and `ubuntu-latest`. The

@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
 name: deps-latest-sweep
 description: "At the start of a work session and before a release cut, compare the Cargo.toml pins with their latest crates.io releases and check Claude Code's changelog for changes cc-shift relies on"
 metadata:

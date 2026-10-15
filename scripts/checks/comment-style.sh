@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
+
 # Comment-style guard (RFC 505 and RFC 1574, plus the citation rule of 9).
 #
 # Checks HAND-WRITTEN .rs files (a file carrying the `@generated` marker on

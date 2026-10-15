@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The `cc-shift` part of the Claude Code status line.
 
 use crate::render::{Paint, bar};

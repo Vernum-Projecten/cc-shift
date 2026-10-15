@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Switching on its own: when to leave the active account, and where to go.
 //!
 //! The status line switches when a reading proven to be the active

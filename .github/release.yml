@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
+
 # Configuration for GitHub's auto-generated release notes. Every category maps
 # onto a label the tracker already uses (bootstrapped by scripts/gh/labels.sh);
 # no label is invented here. A feature or a fix carries no label, because the

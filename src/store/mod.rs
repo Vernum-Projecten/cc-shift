@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The files `cc-shift` owns under `~/.claude-profiles/`: the profile folders and
 //! the state with its lock.
 

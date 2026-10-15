@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
 name: git-c-absolute-paths
 description: "A cd inside a compound Bash command does not reliably set the working directory for git in this harness; use git -C <abs path> and absolute paths for every worktree operation; carried from the owner's FerroFED setup (2026-10-15)"
 metadata:

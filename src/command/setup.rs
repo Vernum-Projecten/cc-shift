@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! `cc-shift setup`: installs `cc-shift` in Claude Code once, so switching is
 //! automatic.
 

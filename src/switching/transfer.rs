@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Making an account active by moving its login, never copying it.
 //!
 //! A refresh token works once, so two live copies of one login can get it

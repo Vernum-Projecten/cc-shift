@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Counting the responses of a period per project, model and day.
 
 use std::collections::{BTreeMap, BTreeSet};

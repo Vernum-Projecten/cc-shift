@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The `cc-shift log` screen: the history, oldest first, with a summary.
 
 use std::fmt::Write;

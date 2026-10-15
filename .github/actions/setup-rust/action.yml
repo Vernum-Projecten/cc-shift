@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
+
 name: Install the Rust toolchain
 description: >-
   Install the toolchain rust-toolchain.toml pins, with the components a job

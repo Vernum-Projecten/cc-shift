@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! `cc-shift refresh`: refreshes parked logins and reads parked accounts' usage.
 
 use crate::anthropic::http::Curl;

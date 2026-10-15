@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Token statistics across all accounts, for `cc-shift stats`.
 //!
 //! Claude Code writes a transcript per session under

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
+
 # API price watch. Once a week it compares the model table of Anthropic's
 # pricing page with scripts/checks/api-prices.txt, the snapshot the price
 # table of `cc-shift stats --cost` is tested against. A changed price or a new

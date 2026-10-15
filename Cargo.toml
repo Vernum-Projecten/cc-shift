@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
+
 [package]
 name = "cc-shift"
 version = "0.0.9"
@@ -10,7 +13,7 @@ homepage = "https://github.com/Vernum-Projecten/cc-shift"
 readme = "README.md"
 keywords = ["claude-code", "claude", "macos", "usage-limits", "cli"]
 categories = ["command-line-utilities", "development-tools"]
-include = ["src/**/*.rs", "Cargo.toml", "Cargo.lock", "README.md", "LICENSE", "NOTICE"]
+include = ["src/**/*.rs", "Cargo.toml", "Cargo.lock", "README.md", "LICENSE", "LICENSES/Apache-2.0.txt", "NOTICE", "REUSE.toml"]
 publish = true
 
 # docs.rs builds on Linux; cc-shift builds on macOS only, so its docs are

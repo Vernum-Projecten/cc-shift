@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
+
 # File-length guard: a hand-written Rust file is at most $HARD lines, and a
 # file over $SOFT lines is split into a module folder before it grows further.
 #

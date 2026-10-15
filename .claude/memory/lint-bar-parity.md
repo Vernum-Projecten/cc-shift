@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
 name: lint-bar-parity
 description: "The lint bar is the owner's strict family bar: clippy all and pedantic at deny, the strict restriction set, unwrap/expect/panic denied in application code and allowed in tests only"
 metadata:

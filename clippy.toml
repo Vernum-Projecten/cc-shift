@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
+
 # Clippy configuration (the Clippy book, Configuration). The panicking and
 # stdio lints stay hard in application code and relax inside tests only.
 

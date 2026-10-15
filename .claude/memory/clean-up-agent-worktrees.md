@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
 name: clean-up-agent-worktrees
 description: "Remove a subagent's worktree and its branches as soon as its PR merges and the agent has reported, one at a time, never by looping over .claude/worktrees; carried from the owner's FerroFED setup (2026-10-15)"
 metadata:

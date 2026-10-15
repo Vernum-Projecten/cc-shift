@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The `cc-shift stats` tables.
 //!
 //! Output is the column everything is sorted and shared by. Input, cache

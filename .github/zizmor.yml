@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
+
 # zizmor configuration (https://docs.zizmor.sh/configuration/), discovered at
 # .github/zizmor.yml when the CI lane audits .github/.
 rules:

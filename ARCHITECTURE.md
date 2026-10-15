@@ -1,3 +1,6 @@
+<!-- SPDX-FileCopyrightText: 2026 Vernum Projecten B.V. -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # cc-shift: automatic Claude account switching (macOS and Linux)
 
 ## 1. Purpose

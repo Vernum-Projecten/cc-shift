@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
 name: memory-lives-in-repo
 description: "Session learnings go in the repository's .claude/memory/ (tracked, shared by every session and contributor), never in a per-user directory; owner instruction"
 metadata:

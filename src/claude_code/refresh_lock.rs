@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Claude Code's refresh lock, held while a switch replaces the active login.
 //!
 //! Before it refreshes a login, Claude Code creates the folder

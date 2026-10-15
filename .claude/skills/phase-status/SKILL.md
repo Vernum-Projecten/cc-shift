@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
 name: phase-status
 description: Prints the tracker's open issues (pinned first, with native relationships), the in-flight issue's unchecked acceptance criteria, and a short git status. Use when the user asks "where are we", "what's in flight", or at the start of a work session to orient.
 allowed-tools: Read, Bash

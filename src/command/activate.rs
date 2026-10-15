@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! `cc-shift use <name>`: makes an account the active account of `~/.claude`.
 
 use std::ffi::OsStr;

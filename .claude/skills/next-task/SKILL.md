@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
 name: next-task
 description: Reads the tracker (GitHub Issues), picks the pinned or top open issue (or the issue the user names, skipping blocked ones), and restates it as a concrete in-session work plan naming the files involved. Use when the user asks "what's next" or "what should I work on".
 allowed-tools: Read, Grep, Glob, Bash

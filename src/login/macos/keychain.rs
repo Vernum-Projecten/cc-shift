@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The macOS login keychain, reached through `/usr/bin/security`.
 //!
 //! Claude Code stores each config folder's login as a generic password whose

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
+
 # The release lane. One workflow owns the `v*` tag, and every ordering in it is
 # a `needs` edge:
 #

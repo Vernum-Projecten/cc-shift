@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Starting an account's 5-hour window with one short Claude Code message.
 //!
 //! Claude Code sends the message with the login of the config folder it

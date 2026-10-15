@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
+
 # .claude/hooks/block_dangerous.sh
 #
 # Claude Code PreToolUse hook (matcher: Bash). Blocks destructive commands:

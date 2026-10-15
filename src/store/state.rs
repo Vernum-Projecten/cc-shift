@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The state `cc-shift` keeps between runs, in `~/.claude-profiles/state.json`.
 //!
 //! Every read and write takes the lock file `~/.claude-profiles/.lock`, so

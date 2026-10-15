@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
 name: owner-work-style
 description: How the owner wants work done (evidence before foundational choices, no scaffolding while a design is open, ask when a decision is theirs, pause when asked); carried from the owner's FerroFED setup (2026-10-15)
 metadata:

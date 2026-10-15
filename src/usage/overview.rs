@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! One view of every account, shared by `cc-shift status`, its JSON form and
 //! the status line: each account's state, in the order `cc-shift` uses them.
 

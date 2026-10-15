@@ -1,3 +1,6 @@
+<!-- SPDX-FileCopyrightText: 2026 Vernum Projecten B.V. -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # CLAUDE.md
 
 **cc-shift** is a small Rust command-line tool for macOS that switches Claude Code

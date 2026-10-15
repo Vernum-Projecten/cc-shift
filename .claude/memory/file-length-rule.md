@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
 name: file-length-rule
 description: "A hand-written Rust file is at most 1000 lines and is split into a module folder at 750; owner rule, in force here from the first .rs file"
 metadata:

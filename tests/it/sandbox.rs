@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! A fake home folder and a stub `claude`, so tests never touch the real
 //! profiles, Keychain or account.
 
