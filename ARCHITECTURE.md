@@ -123,7 +123,7 @@ Signing in with the wrong account in a profile is the most likely mistake here. 
 
 ### Creating a profile: `cs add claude1`
 
-1. `cs` checks that the name only contains ASCII letters, digits, `-` or `_`, starts with a letter or digit, and is not a command word (`add`, `list`, `use`, `auto`, `status`, `statusline`, `hook`, `help`, `remove`, `current`, `link`).
+1. `cs` checks that the name only contains ASCII letters, digits, `-` or `_`, starts with a letter or digit, and is not a command word (`add`, `list`, `use`, `auto`, `status`, `statusline`, `hook`, `setup`, `help`, `remove`, `current`, `link`).
 2. It creates `~/.claude-profiles/claude1/` if it does not exist.
 3. It prints a reminder to log in, then launches Claude Code with `CLAUDE_CONFIG_DIR` pointing to that folder.
 4. The user runs `/login` inside Claude Code and completes the browser sign-in (for example with Google).
@@ -202,13 +202,23 @@ A source that is missing, fails or returns an unknown shape makes that account's
 
 If every profile is exhausted, `cs` prints the earliest reset time and which profile it belongs to, and exits with a non-zero code.
 
-### Switching when the active account runs out
+### Fully automatic
 
-Claude Code runs a `StopFailure` hook with matcher `rate_limit` when a turn ends on a usage limit (<https://code.claude.com/docs/en/hooks>). `cs` installs `cs hook rate-limit` there. It marks the active account exhausted with the reset time last recorded from the status line, picks the next account with the rules of `cs auto`, and switches to it under the lock. Every open session continues on the new account: the conversation, its history and the working directory stay as they are, and nobody restarts Claude Code or resumes with `--continue`. Once an account's reset time has passed, it becomes a candidate again.
+After a one-time `cs setup`, the user never runs `cs` while working. `cs setup` installs `cs statusline` and `cs hook rate-limit` in `~/.claude/settings.json` and makes the best account active. From then on every decision happens inside those two calls, which Claude Code makes on its own. `cs use`, `cs auto` and `cs status` stay available to look or to steer, and are never needed.
+
+### Switching before the active account runs out
+
+The status line runs after every assistant message (<https://code.claude.com/docs/en/statusline>). Each run, `cs statusline` records the active account's usage, and when either window passes the switch threshold (95% by default, set in `state.json`), it switches to the next account with the rules of `cs auto`. The switch happens between two replies, so no turn fails on a usage limit. The same run refreshes a parked login whose access token is close to expiry and re-reads a parked account's usage when it is older than a few minutes, so the next choice is made on current numbers. Slow work (a refresh, a usage request) runs in a detached child under the lock, so the status line itself prints at once.
+
+### When a limit is hit anyway
+
+Claude Code runs a `StopFailure` hook with matcher `rate_limit` when a turn ends on a usage limit (<https://code.claude.com/docs/en/hooks>), for example when one long turn uses the last 5%. `cs hook rate-limit` marks the active account exhausted with the reset time last recorded, and switches to the next account at once. The next message the user sends runs on the new account.
+
+Either way, every open session continues on the new account: the conversation, its history and the working directory stay as they are, and nobody restarts Claude Code or resumes with `--continue`. Once an account's reset time has passed, it becomes a candidate again without any action.
 
 ### Several sessions at once
 
-All sessions in `~/.claude` share the active account, so a switch applies to all of them, as `/login` does. When two sessions run out at the same moment, both hooks take the lock in turn; the second sees that the account it ran out on is no longer active and does nothing, so the accounts switch once. Every read and write of `state.json` takes the same lock.
+All sessions in `~/.claude` share the active account, so a switch applies to all of them, as `/login` does. When two sessions decide to switch at the same moment, both take the lock in turn; the second sees that the account it ran out on is no longer active and does nothing, so the accounts switch once. Every read and write of `state.json` takes the same lock.
 
 ### Showing usage: `cs status`
 
