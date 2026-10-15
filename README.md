@@ -150,6 +150,10 @@ scripts/checks/file-length.sh
 
 The tests never touch your real Keychain, profiles or accounts: they run against a temporary `HOME`, a stub `claude`, an in-memory Keychain and a fake HTTP client.
 
+### Releasing
+
+Releases go to [crates.io](https://crates.io/crates/cc-shift) through [Trusted Publishing](https://crates.io/docs/trusted-publishing): a `v*` tag runs [`publish.yml`](.github/workflows/publish.yml), which exchanges the workflow's GitHub identity for a short-lived crates.io token, so no token is stored anywhere. The tag must name the version in `Cargo.toml`, and nothing is published while `Cargo.toml` says `publish = false`.
+
 ## License
 
 [Apache License 2.0](LICENSE).
