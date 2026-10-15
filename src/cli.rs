@@ -11,6 +11,7 @@ Commands:
   add <name>    Create a profile and start Claude Code in it to run /login
   setup         Install cs in Claude Code once, so switching is automatic
   status        Show every account with its usage and reset times
+  use <name>    Make an account active in every Claude Code window now
   list          Print the profiles
   statusline    Record usage; run by Claude Code as its status line
   help          Print this help
@@ -27,6 +28,8 @@ pub enum Command {
     List,
     /// Install the status line and the hook in `~/.claude/settings.json`.
     Setup,
+    /// Make an account the active account of `~/.claude`.
+    Use(OsString),
     /// Print every account with its usage.
     Status,
     /// Record usage from the status line input; run by Claude Code.
@@ -56,6 +59,16 @@ where
             (None, _) => Command::Misuse("add needs a profile name".to_owned()),
             (Some(_), Some(extra)) => Command::Misuse(format!(
                 "add takes one profile name, not '{}'",
+                extra.to_string_lossy()
+            )),
+        };
+    }
+    if first == "use" {
+        return match (args.next(), args.next()) {
+            (Some(name), None) => Command::Use(name),
+            (None, _) => Command::Misuse("use needs a profile name".to_owned()),
+            (Some(_), Some(extra)) => Command::Misuse(format!(
+                "use takes one profile name, not '{}'",
                 extra.to_string_lossy()
             )),
         };
@@ -142,6 +155,19 @@ mod tests {
     fn add_with_two_names_is_misuse() {
         assert!(matches!(
             parse(args(&["add", "a", "b"])),
+            Command::Misuse(_)
+        ));
+    }
+
+    #[test]
+    fn use_takes_one_name() {
+        assert_eq!(
+            parse(args(&["use", "claude1"])),
+            Command::Use(OsString::from("claude1"))
+        );
+        assert!(matches!(parse(args(&["use"])), Command::Misuse(_)));
+        assert!(matches!(
+            parse(args(&["use", "a", "b"])),
             Command::Misuse(_)
         ));
     }

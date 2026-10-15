@@ -15,6 +15,7 @@ pub mod state;
 pub mod status;
 pub mod statusline;
 pub mod switch;
+pub mod system_keychain;
 pub mod usage;
 
 use std::convert::Infallible;
@@ -62,6 +63,13 @@ where
             }
         },
         Command::Add(name) => fail(add(&name)),
+        Command::Use(name) => match use_command(&name) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(error) => {
+                report(&error.to_string());
+                ExitCode::from(FAILURE)
+            }
+        },
         Command::Setup => match setup_command() {
             Ok(()) => ExitCode::SUCCESS,
             Err(error) => {
@@ -92,6 +100,28 @@ fn fail(result: Result<Infallible, Error>) -> ExitCode {
             ExitCode::from(FAILURE)
         }
     }
+}
+
+/// Moves an account's parked login into `~/.claude`, so every window
+/// continues on it.
+fn use_command(raw: &OsStr) -> Result<(), Error> {
+    let name = ProfileName::parse(raw)?;
+    let root = ProfilesRoot::from_env()?;
+    let logins = system_keychain::SystemKeychain::for_user(&root)?;
+    match switch::switch_to(&logins, &StateFile::in_root(&root), name.as_str())? {
+        switch::Outcome::AlreadyActive => {
+            report(&format!("'{}' is already active", name.as_str()));
+        }
+        switch::Outcome::Switched { from: Some(from) } => report(&format!(
+            "'{}' is active; '{from}' is parked",
+            name.as_str()
+        )),
+        switch::Outcome::Switched { from: None } => report(&format!(
+            "'{}' is active; the login that was in ~/.claude belonged to no profile and was replaced",
+            name.as_str()
+        )),
+    }
+    Ok(())
 }
 
 /// Installs the status line and the hook in `~/.claude/settings.json`, and

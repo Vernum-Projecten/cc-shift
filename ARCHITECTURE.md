@@ -98,7 +98,7 @@ A parked login has no Claude Code process to refresh it, so `cs` does. When a pa
 | The lock | `~/.claude-profiles/.lock` | cs |
 | Status line and hook | `~/.claude/settings.json` | cs setup |
 
-`cs list` treats every folder in `~/.claude-profiles/` as a profile, so the state and lock are files there. The exact Keychain item name of a profile folder is recorded on #6.
+`cs list` treats every folder in `~/.claude-profiles/` as a profile, so the state and lock are files there. A profile's item is `Claude Code-credentials-` followed by the first 8 hex characters of the SHA-256 of its folder's absolute path, with the macOS user name as the account (observed on Claude Code 2.1.300, #6).
 
 ## 7. Code
 
@@ -116,7 +116,8 @@ A small library with a thin binary: `src/main.rs` only calls `cs::run` in `src/l
 - `keychain`: the `Logins` trait every Keychain access goes through, so tests use an in-memory store, and the opaque `Login` whose debug output never shows a token.
 - `switch`: the move of section 5 with its recovery.
 - `setup`: puts the status line and the rate-limit hook into `~/.claude/settings.json`, keeping every other setting and chaining the user's own status line.
-- Planned: the macOS Keychain backend of `Logins`, the usage endpoint for parked accounts, and the hook entry point.
+- `system_keychain`: the macOS backend of `Logins` through `/usr/bin/security`, the same tool Claude Code's items were made with, so their access rules stay as they are. A login goes in on stdin as hex and every write is read back.
+- Planned: the usage endpoint for parked accounts, the refresh of parked logins, and the hook entry point.
 
 The runtime dependencies are `thiserror` for the error type and `serde` with `serde_json` for the state and the status line input; each further dependency is added in the pull request that needs it.
 
