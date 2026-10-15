@@ -53,7 +53,6 @@ where
             }
         },
         Command::Add(name) => fail(add(&name)),
-        Command::Launch { name, args } => fail(launch(&name, &args)),
     }
 }
 
@@ -78,7 +77,7 @@ fn add(raw: &OsStr) -> Result<Infallible, Error> {
         name.as_str(),
         dir.display()
     ));
-    launch::exec_claude(&dir, &[])
+    launch::exec_claude(&dir)
 }
 
 /// Prints every profile name on its own line, or how to create the first.
@@ -97,17 +96,6 @@ fn list() -> Result<(), Error> {
         }
     }
     Ok(())
-}
-
-/// Starts Claude Code with an existing profile.
-fn launch(raw: &OsStr, args: &[OsString]) -> Result<Infallible, Error> {
-    let name = ProfileName::parse(raw)?;
-    let root = ProfilesRoot::from_env()?;
-    let dir = root.profile_dir(&name);
-    if !dir.is_dir() {
-        return Err(Error::NoProfile(name.as_str().to_owned()));
-    }
-    launch::exec_claude(&dir, args)
 }
 
 /// Writes one `cs:` message to stderr.

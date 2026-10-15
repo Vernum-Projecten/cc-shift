@@ -4,6 +4,5 @@
 
 mod add;
 mod cli;
-mod launch;
 mod list;
 mod sandbox;

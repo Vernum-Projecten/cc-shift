@@ -5,16 +5,12 @@ use std::ffi::OsString;
 /// The usage text printed by `cs help` and after a command line `cs` does
 /// not understand.
 pub const USAGE: &str = "\
-Usage: cs <name> [claude arguments...]
-       cs <command>
+Usage: cs <command>
 
 Commands:
   add <name>    Create a profile and start Claude Code in it to run /login
   list          Print the profiles
   help          Print this help
-
-cs <name> starts Claude Code with that profile; every argument after the
-name goes to claude unchanged.
 ";
 
 /// A parsed `cs` command line.
@@ -26,13 +22,6 @@ pub enum Command {
     Add(OsString),
     /// Print the profiles.
     List,
-    /// Start Claude Code with a profile, passing the rest of the arguments.
-    Launch {
-        /// The profile name as typed.
-        name: OsString,
-        /// The arguments for `claude`, unchanged and in order.
-        args: Vec<OsString>,
-    },
     /// A command line `cs` does not understand, with the reason.
     Misuse(String),
 }
@@ -71,13 +60,12 @@ where
             )),
         };
     }
-    if first.as_encoded_bytes().starts_with(b"-") {
-        return Command::Misuse(format!("unknown option '{}'", first.to_string_lossy()));
-    }
-    Command::Launch {
-        name: first,
-        args: args.collect(),
-    }
+    let kind = if first.as_encoded_bytes().starts_with(b"-") {
+        "option"
+    } else {
+        "command"
+    };
+    Command::Misuse(format!("unknown {kind} '{}'", first.to_string_lossy()))
 }
 
 #[cfg(test)]
@@ -129,13 +117,10 @@ mod tests {
     }
 
     #[test]
-    fn other_word_launches_with_the_rest() {
+    fn other_word_is_unknown_command() {
         assert_eq!(
-            parse(args(&["member1", "--continue", "-p", "hi"])),
-            Command::Launch {
-                name: OsString::from("member1"),
-                args: args(&["--continue", "-p", "hi"]),
-            }
+            parse(args(&["member1"])),
+            Command::Misuse("unknown command 'member1'".to_owned())
         );
     }
 
