@@ -18,6 +18,13 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Colour (green, yellow, red by how full) on a terminal and in the status
   line, off when `NO_COLOR` is set.
 
+### Added
+
+- `cc-shift status --json` prints the same overview as JSON for scripts:
+  the active and next account, how many are free, and per account its
+  state, both windows with RFC 3339 reset times and seconds left, and
+  whether its numbers are confirmed.
+
 ## [0.0.5] - 2026-10-15
 
 ### Fixed

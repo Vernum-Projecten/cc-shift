@@ -65,3 +65,29 @@ fn reports_a_damaged_state_file() -> io::Result<()> {
     assert!(stderr(&out).contains("is damaged"), "{}", stderr(&out));
     Ok(())
 }
+
+#[test]
+fn prints_json_with_the_same_overview() -> io::Result<()> {
+    let sandbox = Sandbox::new()?;
+    for name in ["member1", "member2"] {
+        fs::create_dir_all(sandbox.root().join(name))?;
+    }
+    fs::write(
+        sandbox.root().join("state.json"),
+        r#"{"active": "member1", "usage": {"member1": {
+            "five_hour": {"used_percent": 40.0, "resets_at": 4102444800},
+            "read_at": 1, "confirmed": true}}}"#,
+    )?;
+    let out = sandbox.run(&["status", "--json"])?;
+    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    let value: serde_json::Value = serde_json::from_slice(&out.stdout).map_err(io::Error::other)?;
+    assert_eq!(value["active"], "member1");
+    assert_eq!(value["next"], "member2");
+    assert_eq!(value["accounts"][0]["state"], "active");
+    assert_eq!(
+        value["accounts"][0]["five_hour"]["resets_at"],
+        "2100-01-01T00:00:00Z"
+    );
+    assert_eq!(value["accounts"][1]["state"], "next");
+    Ok(())
+}
