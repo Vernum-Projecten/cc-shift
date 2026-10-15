@@ -199,8 +199,8 @@ mod tests {
     #[test]
     fn a_folder_service_is_the_short_sha256_of_its_path() {
         assert_eq!(
-            service_of("/Users/someone/.claude-profiles/claude1"),
-            "Claude Code-credentials-93f6eaf7"
+            service_of("/Users/someone/.claude-profiles/member1"),
+            "Claude Code-credentials-eda4a6f4"
         );
     }
 

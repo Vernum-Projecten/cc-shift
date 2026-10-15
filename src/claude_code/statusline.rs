@@ -79,7 +79,7 @@ pub fn record(input: &[u8], state_file: &StateFile, now: i64) -> Result<Option<S
 
 /// Returns the `cs` part of the status line: the active account and both
 /// windows with the time to reset, for example
-/// `claude5 · 5h 31% (4h0m) · 7d 26% (5d8h)`.
+/// `member5 · 5h 31% (4h0m) · 7d 26% (5d8h)`.
 #[must_use]
 pub fn summary(state: &State, now: i64) -> String {
     let Some(active) = &state.active else {
@@ -149,7 +149,7 @@ mod tests {
     fn with_active(home: &TempDir) -> Result<StateFile, Error> {
         let root = ProfilesRoot::from_home(Some(home.path().into()))?;
         let file = StateFile::in_root(&root);
-        file.update(|state| state.active = Some("claude1".to_owned()))?;
+        file.update(|state| state.active = Some("member1".to_owned()))?;
         Ok(file)
     }
 
@@ -159,7 +159,7 @@ mod tests {
         let file = with_active(&home)?;
         record(INPUT.as_bytes(), &file, 1500)?;
         let state = file.read()?;
-        let recorded = state.usage.get("claude1").ok_or("nothing recorded")?;
+        let recorded = state.usage.get("member1").ok_or("nothing recorded")?;
         assert_eq!(
             recorded.five_hour,
             Some(Window {
@@ -187,7 +187,7 @@ mod tests {
             r#"{"rate_limits": {"five_hour": {"used_percentage": 30.0, "resets_at": 2000}}}"#;
         record(later.as_bytes(), &file, 1600)?;
         let state = file.read()?;
-        let recorded = state.usage.get("claude1").ok_or("nothing recorded")?;
+        let recorded = state.usage.get("member1").ok_or("nothing recorded")?;
         assert_eq!(recorded.five_hour.map(|w| w.used_percent), Some(30.0));
         assert_eq!(recorded.seven_day.map(|w| w.used_percent), Some(41.2));
         Ok(())
@@ -216,11 +216,11 @@ mod tests {
     #[test]
     fn the_summary_names_the_account_and_both_windows() {
         let mut state = State {
-            active: Some("claude5".to_owned()),
+            active: Some("member5".to_owned()),
             ..State::default()
         };
         state.usage.insert(
-            "claude5".to_owned(),
+            "member5".to_owned(),
             Recorded {
                 five_hour: Some(Window {
                     used_percent: 31.0,
@@ -235,7 +235,7 @@ mod tests {
         );
         assert_eq!(
             summary(&state, 1000),
-            "claude5 · 5h 31% (4h0m) · 7d 26% (5d8h)"
+            "member5 · 5h 31% (4h0m) · 7d 26% (5d8h)"
         );
     }
 

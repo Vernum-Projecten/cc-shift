@@ -34,11 +34,11 @@ fn write_state(sandbox: &Sandbox, json: &str) -> io::Result<()> {
 #[test]
 fn records_the_active_accounts_usage() -> io::Result<()> {
     let sandbox = Sandbox::new()?;
-    write_state(&sandbox, r#"{"active": "claude1"}"#)?;
+    write_state(&sandbox, r#"{"active": "member1"}"#)?;
     let out = run(&sandbox, INPUT, true)?;
     assert_eq!(out.status.code(), Some(0), "exit code");
     let state = fs::read_to_string(sandbox.root().join("state.json"))?;
-    assert!(state.contains("\"claude1\""), "{state}");
+    assert!(state.contains("\"member1\""), "{state}");
     assert!(state.contains("12.5"), "{state}");
     Ok(())
 }
@@ -48,13 +48,13 @@ fn prints_the_chained_status_line() -> io::Result<()> {
     let sandbox = Sandbox::new()?;
     write_state(
         &sandbox,
-        r#"{"active": "claude1", "chained_statusline": "printf 'my line'"}"#,
+        r#"{"active": "member1", "chained_statusline": "printf 'my line'"}"#,
     )?;
     let out = run(&sandbox, INPUT, true)?;
     assert_eq!(out.status.code(), Some(0), "exit code");
     let text = String::from_utf8_lossy(&out.stdout);
     assert!(
-        text.starts_with("my line │ claude1 · 5h 12% ("),
+        text.starts_with("my line │ member1 · 5h 12% ("),
         "the user's line, then the cs part: {text}"
     );
     Ok(())
@@ -63,10 +63,10 @@ fn prints_the_chained_status_line() -> io::Result<()> {
 #[test]
 fn shows_the_active_account_without_a_chained_line() -> io::Result<()> {
     let sandbox = Sandbox::new()?;
-    write_state(&sandbox, r#"{"active": "claude1"}"#)?;
+    write_state(&sandbox, r#"{"active": "member1"}"#)?;
     let out = run(&sandbox, INPUT, true)?;
     let text = String::from_utf8_lossy(&out.stdout);
-    assert!(text.starts_with("claude1 · 5h 12% ("), "{text}");
+    assert!(text.starts_with("member1 · 5h 12% ("), "{text}");
     Ok(())
 }
 

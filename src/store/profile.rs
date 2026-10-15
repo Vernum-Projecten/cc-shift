@@ -161,7 +161,7 @@ mod tests {
 
     #[test]
     fn accepts_letters_digits_dash_underscore() {
-        for name in ["voorzitter", "claude1", "a-b", "a_b", "7"] {
+        for name in ["primary", "member1", "a-b", "a_b", "7"] {
             assert!(parse(name).is_ok(), "{name}");
         }
     }

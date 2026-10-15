@@ -2,9 +2,9 @@
 
 ## 1. Purpose
 
-`cs` lets one person use several Claude accounts with Claude Code without ever thinking about usage limits. Every Claude Code window (RustRover, a terminal) keeps running as normal. When the account in use gets close to its limit, `cs` moves the windows to the account with the most usage left, the same way `/login` does: no restart, no lost conversation.
+`cs` lets one person use several Claude accounts with Claude Code without ever thinking about usage limits. Every Claude Code window (RustRover, a terminal) keeps running as normal. When the account in use gets close to its limit, `cs` moves the windows to the next account, the same way `/login` does: no restart, no lost conversation.
 
-The accounts are the owner's seven work accounts: `voorzitter`, `claude1`, `claude2`, `claude3`, `claude5`, `claude6` and `claude7`. Each has a profile of the same name.
+The accounts are several work accounts, each with a profile of its own. The examples below use invented profile names.
 
 ## 2. How it works
 
@@ -13,8 +13,8 @@ Claude Code keeps its login in the macOS Keychain, in one item per config folder
 `cs` builds on that:
 
 ```
-~/.claude-profiles/claude1   parked login of claude1
-~/.claude-profiles/claude2   parked login of claude2
+~/.claude-profiles/member1   parked login of member1
+~/.claude-profiles/member2   parked login of member2
 ~/.claude                    the active account, used by every window
 ```
 
@@ -77,13 +77,13 @@ All windows share the active account, so a switch moves all of them, as `/login`
 
 ## 5. Logins and tokens
 
-### A switch: `cs use claude2`
+### A switch: `cs use member2`
 
 Under the lock, in this order:
 
 1. Save the login now in the item of `~/.claude` back to the parked item of the account that was active. Claude Code may have refreshed it, so this keeps the live tokens.
-2. Write `claude2`'s parked login into the item of `~/.claude`, and set `oauthAccount` in `~/.claude.json` to `claude2`'s, changing nothing else in that file.
-3. Clear `claude2`'s parked item and record `claude2` as active in the state.
+2. Write `member2`'s parked login into the item of `~/.claude`, and set `oauthAccount` in `~/.claude.json` to `member2`'s, changing nothing else in that file.
+3. Clear `member2`'s parked item and record `member2` as active in the state.
 
 The state records each step before it runs, so a switch that stops halfway is finished by the next `cs` run, and no login is lost or left with two copies. Steps 1 and 2 are recorded as one step: run again after a stop between them, it saves `~/.claude` once more, so tokens Claude Code refreshed in the meantime are kept, and it skips both when `~/.claude` already holds the next login.
 

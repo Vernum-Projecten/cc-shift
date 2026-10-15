@@ -164,8 +164,8 @@ mod tests {
     #[test]
     fn add_takes_one_name() {
         assert_eq!(
-            parse(args(&["add", "claude1"])),
-            Command::Add(OsString::from("claude1"))
+            parse(args(&["add", "member1"])),
+            Command::Add(OsString::from("member1"))
         );
     }
 
@@ -185,8 +185,8 @@ mod tests {
     #[test]
     fn use_takes_one_name() {
         assert_eq!(
-            parse(args(&["use", "claude1"])),
-            Command::Use(OsString::from("claude1"))
+            parse(args(&["use", "member1"])),
+            Command::Use(OsString::from("member1"))
         );
         assert!(matches!(parse(args(&["use"])), Command::Misuse(_)));
         assert!(matches!(
@@ -204,8 +204,8 @@ mod tests {
     #[test]
     fn other_word_is_unknown_command() {
         assert_eq!(
-            parse(args(&["claude1"])),
-            Command::Misuse("unknown command 'claude1'".to_owned())
+            parse(args(&["member1"])),
+            Command::Misuse("unknown command 'member1'".to_owned())
         );
     }
 

@@ -137,35 +137,35 @@ mod tests {
 
     #[test]
     fn renders_every_account_and_the_next_one() {
-        let mut out = known("claude3", 0.0, 60, 0.0, 60);
+        let mut out = known("member3", 0.0, 60, 0.0, 60);
         out.logged_in = false;
         let rows = [
-            known("claude1", 23.4, 8100, 41.0, 273_600),
-            known("claude2", 97.0, 600, 10.0, 90_000),
+            known("member1", 23.4, 8100, 41.0, 273_600),
+            known("member2", 97.0, 600, 10.0, 90_000),
             out,
             Account {
-                name: "claude5".to_owned(),
+                name: "member5".to_owned(),
                 logged_in: true,
                 usage: Usage::Unknown("no usage read yet".to_owned()),
             },
         ];
         assert_eq!(
-            render(&rows, Some("claude1"), NOW),
+            render(&rows, Some("member1"), NOW),
             "  ACCOUNT  5-HOUR            7-DAY\n\
-             * claude1  23% 2h15m         41% 3d4h\n\
-             \x20 claude2  97% 10m full      10% 1d1h\n\
-             \x20 claude3  logged out; run cs add again\n\
-             \x20 claude5  unknown: no usage read yet\n\
+             * member1  23% 2h15m         41% 3d4h\n\
+             \x20 member2  97% 10m full      10% 1d1h\n\
+             \x20 member3  logged out; run cs add again\n\
+             \x20 member5  unknown: no usage read yet\n\
              \n\
-             next: claude5\n"
+             next: member5\n"
         );
     }
 
     #[test]
     fn says_when_the_first_account_frees_up() {
-        let rows = [known("claude1", 99.0, 3600, 0.0, 60)];
+        let rows = [known("member1", 99.0, 3600, 0.0, 60)];
         assert!(
-            render(&rows, None, NOW).ends_with("no account available; claude1 frees up in 1h0m\n"),
+            render(&rows, None, NOW).ends_with("no account available; member1 frees up in 1h0m\n"),
             "{}",
             render(&rows, None, NOW)
         );
@@ -173,7 +173,7 @@ mod tests {
 
     #[test]
     fn a_reset_window_shows_as_reset() {
-        let rows = [known("claude1", 80.0, -5, 10.0, 60)];
+        let rows = [known("member1", 80.0, -5, 10.0, 60)];
         assert!(
             render(&rows, None, NOW).contains("0% reset"),
             "{}",
@@ -193,8 +193,8 @@ mod tests {
         let mut state = State::default();
         state
             .usage
-            .insert("claude1".to_owned(), Recorded::default());
-        let rows = accounts(&["claude1".to_owned(), "claude2".to_owned()], &state);
+            .insert("member1".to_owned(), Recorded::default());
+        let rows = accounts(&["member1".to_owned(), "member2".to_owned()], &state);
         assert!(rows.iter().all(|a| matches!(a.usage, Usage::Unknown(_))));
     }
 }
