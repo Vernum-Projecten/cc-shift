@@ -10,6 +10,7 @@ Usage: cs <command>
 Commands:
   add <name>    Create a profile and start Claude Code in it to run /login
   list          Print the profiles
+  statusline    Record usage; run by Claude Code as its status line
   help          Print this help
 ";
 
@@ -22,6 +23,8 @@ pub enum Command {
     Add(OsString),
     /// Print the profiles.
     List,
+    /// Record usage from the status line input; run by Claude Code.
+    Statusline,
     /// A command line `cs` does not understand, with the reason.
     Misuse(String),
 }
@@ -47,6 +50,15 @@ where
             (None, _) => Command::Misuse("add needs a profile name".to_owned()),
             (Some(_), Some(extra)) => Command::Misuse(format!(
                 "add takes one profile name, not '{}'",
+                extra.to_string_lossy()
+            )),
+        };
+    }
+    if first == "statusline" {
+        return match args.next() {
+            None => Command::Statusline,
+            Some(extra) => Command::Misuse(format!(
+                "statusline takes no arguments, not '{}'",
                 extra.to_string_lossy()
             )),
         };

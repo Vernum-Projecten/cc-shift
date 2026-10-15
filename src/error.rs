@@ -35,6 +35,24 @@ pub enum Error {
         #[source]
         source: io::Error,
     },
+    /// The state file or its lock cannot be used.
+    #[error("cannot use {}: {source}", path.display())]
+    State {
+        /// The file or folder `cs` tried to use.
+        path: PathBuf,
+        /// The underlying I/O error.
+        #[source]
+        source: io::Error,
+    },
+    /// The state file does not parse.
+    #[error("{} is damaged: {source}", path.display())]
+    StateFormat {
+        /// The state file.
+        path: PathBuf,
+        /// The parse error.
+        #[source]
+        source: serde_json::Error,
+    },
     /// No `claude` binary on `PATH`.
     #[error("claude was not found on PATH; install Claude Code first")]
     ClaudeNotFound,

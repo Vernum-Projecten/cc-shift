@@ -5,7 +5,7 @@
 //! (<https://code.claude.com/docs/en/statusline>).
 
 /// One usage window: how much of it is used, and when it resets.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Window {
     /// The percentage used, from 0 to 100.
     pub used_percent: f64,
