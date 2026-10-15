@@ -2,9 +2,9 @@
 
 ## 1. Purpose
 
-`cs` lets one person use several Claude accounts with Claude Code without ever thinking about usage limits. Every Claude Code window (RustRover, a terminal) keeps running as normal. When the account in use gets close to its limit, `cs` moves the windows to the account with the most usage left, the same way `/login` does: no restart, no lost conversation.
+`cs` lets one person use several Claude accounts with Claude Code without ever thinking about usage limits. Every Claude Code window (RustRover, a terminal) keeps running as normal. When the account in use gets close to its limit, `cs` moves the windows to the next account, the same way `/login` does: no restart, no lost conversation.
 
-The accounts are the owner's seven work accounts: `primary`, `member1`, `member2`, `member3`, `member5`, `member6` and `member7`. Each has a profile of the same name.
+The accounts are several work accounts, each with a profile of its own. The examples below use invented profile names.
 
 ## 2. How it works
 
