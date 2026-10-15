@@ -33,6 +33,9 @@ allow = [
   # unicode-ident (through thiserror's derive): a permissive licence with
   # notice terms like MIT, OSI approved.
   "Unicode-3.0",
+  # foldhash (through indexmap, for serde_json's preserve_order): a
+  # permissive licence, OSI approved.
+  "Zlib",
 ]
 confidence-threshold = 0.9
 exceptions = []

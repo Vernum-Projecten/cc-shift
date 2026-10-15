@@ -9,8 +9,10 @@
 //!
 //! The save and the write are one step. Run again after a stop between
 //! them, it saves `~/.claude` once more, so tokens Claude Code refreshed in
-//! the meantime are kept.
+//! the meantime are kept. The same step makes `~/.claude.json` name the
+//! next account, which open windows need to follow the switch.
 
+use crate::account::AccountFiles;
 use crate::error::Error;
 use crate::keychain::{Logins, Slot};
 use crate::state::{Locked, Pending, State, StateFile, Step};
@@ -35,19 +37,26 @@ pub enum Outcome {
 ///
 /// # Errors
 ///
-/// Returns [`Error::NoParkedLogin`] before anything moves when `to` has no
-/// parked login, and the state or Keychain error of a step that fails; the
-/// recorded step lets the next switch finish the move.
-pub fn switch_to(logins: &impl Logins, file: &StateFile, to: &str) -> Result<Outcome, Error> {
+/// Returns [`Error::NoParkedLogin`] or [`Error::Account`] before anything
+/// moves when `to` has no parked login or no signed-in account, and the
+/// error of a step that fails; the recorded step lets the next switch
+/// finish the move.
+pub fn switch_to(
+    logins: &impl Logins,
+    accounts: &AccountFiles,
+    file: &StateFile,
+    to: &str,
+) -> Result<Outcome, Error> {
     let locked = file.lock()?;
     let mut state = locked.load()?;
-    finish(logins, &locked, &mut state)?;
+    finish(logins, accounts, &locked, &mut state)?;
     if state.active.as_deref() == Some(to) {
         return Ok(Outcome::AlreadyActive);
     }
     if logins.read(&Slot::Parked(to.to_owned()))?.is_none() {
         return Err(Error::NoParkedLogin(to.to_owned()));
     }
+    accounts.of_profile(to)?;
     let from = state.active.clone();
     state.pending = Some(Pending {
         from: from.clone(),
@@ -55,7 +64,7 @@ pub fn switch_to(logins: &impl Logins, file: &StateFile, to: &str) -> Result<Out
         step: Step::Move,
     });
     locked.save(&state)?;
-    finish(logins, &locked, &mut state)?;
+    finish(logins, accounts, &locked, &mut state)?;
     Ok(Outcome::Switched { from })
 }
 
@@ -64,8 +73,13 @@ pub fn switch_to(logins: &impl Logins, file: &StateFile, to: &str) -> Result<Out
 ///
 /// # Errors
 ///
-/// Returns the state or Keychain error of the step that failed.
-pub fn finish(logins: &impl Logins, locked: &Locked<'_>, state: &mut State) -> Result<(), Error> {
+/// Returns the state, Keychain or account error of the step that failed.
+pub fn finish(
+    logins: &impl Logins,
+    accounts: &AccountFiles,
+    locked: &Locked<'_>,
+    state: &mut State,
+) -> Result<(), Error> {
     while let Some(pending) = state.pending.clone() {
         let parked = Slot::Parked(pending.to.clone());
         match pending.step {
@@ -80,6 +94,7 @@ pub fn finish(logins: &impl Logins, locked: &Locked<'_>, state: &mut State) -> R
                     }
                     logins.write(&Slot::Active, &next)?;
                 }
+                accounts.activate(&pending.to)?;
                 advance(locked, state, Step::ClearParked)?;
             }
             Step::ClearParked => {
@@ -105,13 +120,39 @@ fn advance(locked: &Locked<'_>, state: &mut State, step: Step) -> Result<(), Err
 #[expect(clippy::panic_in_result_fn, reason = "test assertions")]
 mod tests {
     use super::{Outcome, switch_to};
+    use crate::account::AccountFiles;
     use crate::error::Error;
     use crate::keychain::{Login, Logins, Slot};
     use crate::profile::ProfilesRoot;
     use crate::state::StateFile;
     use std::cell::{Cell, RefCell};
     use std::collections::HashMap;
+    use std::fs;
     use tempfile::TempDir;
+
+    /// Account files with a signed-in `.claude.json` for profiles `a` and `b`.
+    fn accounts(home: &TempDir) -> Result<AccountFiles, Box<dyn std::error::Error>> {
+        for name in ["a", "b"] {
+            let dir = home.path().join(".claude-profiles").join(name);
+            fs::create_dir_all(&dir)?;
+            fs::write(
+                dir.join(".claude.json"),
+                format!(r#"{{"oauthAccount": {{"emailAddress": "{name}@example.org"}}}}"#),
+            )?;
+        }
+        let root = ProfilesRoot::from_home(Some(home.path().into()))?;
+        Ok(AccountFiles::new(home.path(), &root))
+    }
+
+    /// Returns the email `~/.claude.json` names.
+    fn active_email(home: &TempDir) -> Result<String, Box<dyn std::error::Error>> {
+        let value: serde_json::Value =
+            serde_json::from_slice(&fs::read(home.path().join(".claude.json"))?)?;
+        Ok(value["oauthAccount"]["emailAddress"]
+            .as_str()
+            .unwrap_or_default()
+            .to_owned())
+    }
 
     /// An in-memory Keychain that can fail every call after the first `n`,
     /// to stop a switch at any point.
@@ -204,7 +245,7 @@ mod tests {
     fn moves_both_logins() -> Result<(), Box<dyn std::error::Error>> {
         let home = TempDir::new()?;
         let (memory, file) = a_active(&home)?;
-        let outcome = switch_to(&memory, &file, "b")?;
+        let outcome = switch_to(&memory, &accounts(&home)?, &file, "b")?;
         assert_eq!(
             outcome,
             Outcome::Switched {
@@ -214,6 +255,7 @@ mod tests {
         assert_eq!(memory.content(&Slot::Active).as_deref(), Some("login-b"));
         assert_eq!(memory.content(&parked("a")).as_deref(), Some("login-a"));
         assert_eq!(memory.content(&parked("b")), None);
+        assert_eq!(active_email(&home)?, "b@example.org");
         let state = file.read()?;
         assert_eq!(state.active.as_deref(), Some("b"));
         assert_eq!(state.pending, None);
@@ -228,7 +270,7 @@ mod tests {
             &Slot::Active,
             &Login::from_bytes(b"login-a-refreshed".to_vec()),
         )?;
-        switch_to(&memory, &file, "b")?;
+        switch_to(&memory, &accounts(&home)?, &file, "b")?;
         assert_eq!(
             memory.content(&parked("a")).as_deref(),
             Some("login-a-refreshed")
@@ -240,7 +282,10 @@ mod tests {
     fn switching_to_the_active_account_does_nothing() -> Result<(), Box<dyn std::error::Error>> {
         let home = TempDir::new()?;
         let (memory, file) = a_active(&home)?;
-        assert_eq!(switch_to(&memory, &file, "a")?, Outcome::AlreadyActive);
+        assert_eq!(
+            switch_to(&memory, &accounts(&home)?, &file, "a")?,
+            Outcome::AlreadyActive
+        );
         assert_eq!(memory.content(&Slot::Active).as_deref(), Some("login-a"));
         Ok(())
     }
@@ -249,7 +294,7 @@ mod tests {
     fn an_account_without_a_parked_login_moves_nothing() -> Result<(), Box<dyn std::error::Error>> {
         let home = TempDir::new()?;
         let (memory, file) = a_active(&home)?;
-        let result = switch_to(&memory, &file, "c");
+        let result = switch_to(&memory, &accounts(&home)?, &file, "c");
         assert!(matches!(result, Err(Error::NoParkedLogin(_))), "{result:?}");
         assert_eq!(memory.content(&Slot::Active).as_deref(), Some("login-a"));
         assert_eq!(file.read()?.pending, None);
@@ -262,7 +307,7 @@ mod tests {
         let memory = Memory::with(&[(Slot::Active, "login-x"), (parked("b"), "login-b")]);
         let file = state_file(&home)?;
         assert_eq!(
-            switch_to(&memory, &file, "b")?,
+            switch_to(&memory, &accounts(&home)?, &file, "b")?,
             Outcome::Switched { from: None }
         );
         assert_eq!(memory.content(&Slot::Active).as_deref(), Some("login-b"));
@@ -277,13 +322,16 @@ mod tests {
         // Stops after the old login is saved and before the new one is
         // written: the pre-check read, two reads, and the save.
         memory.calls_left.set(Some(4));
-        assert!(switch_to(&memory, &file, "b").is_err(), "the switch stops");
+        assert!(
+            switch_to(&memory, &accounts(&home)?, &file, "b").is_err(),
+            "the switch stops"
+        );
         memory.calls_left.set(None);
         memory.write(
             &Slot::Active,
             &Login::from_bytes(b"login-a-refreshed".to_vec()),
         )?;
-        switch_to(&memory, &file, "b")?;
+        switch_to(&memory, &accounts(&home)?, &file, "b")?;
         assert_eq!(
             memory.content(&parked("a")).as_deref(),
             Some("login-a-refreshed")
@@ -299,9 +347,9 @@ mod tests {
             let home = TempDir::new()?;
             let (memory, file) = a_active(&home)?;
             memory.calls_left.set(Some(stop_after));
-            let first = switch_to(&memory, &file, "b");
+            let first = switch_to(&memory, &accounts(&home)?, &file, "b");
             memory.calls_left.set(None);
-            let second = switch_to(&memory, &file, "b")?;
+            let second = switch_to(&memory, &accounts(&home)?, &file, "b")?;
             if first.is_ok() {
                 assert_eq!(second, Outcome::AlreadyActive, "stop after {stop_after}");
             }
