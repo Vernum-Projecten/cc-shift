@@ -10,8 +10,13 @@ homepage = "https://github.com/Vernum-Projecten/cc-shift"
 readme = "README.md"
 keywords = ["claude-code", "claude", "macos", "usage-limits", "cli"]
 categories = ["command-line-utilities", "development-tools"]
-include = ["src/**/*.rs", "Cargo.toml", "Cargo.lock", "README.md", "LICENSE", "ARCHITECTURE.md"]
+include = ["src/**/*.rs", "Cargo.toml", "Cargo.lock", "README.md", "LICENSE"]
 publish = true
+
+# docs.rs builds on Linux; cc-shift builds on macOS only, so its docs are
+# built for the two macOS targets.
+[package.metadata.docs.rs]
+targets = ["aarch64-apple-darwin", "x86_64-apple-darwin"]
 
 [dependencies]
 jiff = { version = "0.2.38", default-features = false, features = ["std"] }
