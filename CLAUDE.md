@@ -1,10 +1,10 @@
 # CLAUDE.md
 
-**cs** is a small Rust command-line tool for macOS that switches Claude Code
+**cc-shift** is a small Rust command-line tool for macOS that switches Claude Code
 between several Claude accounts on its own. Every Claude Code window runs on
 `~/.claude`; each account's login is parked in its own profile folder under
 `~/.claude-profiles/<name>/`. When the active account nears a usage limit,
-`cs` moves the next account's login into `~/.claude` the way `/login` does,
+`cc-shift` moves the next account's login into `~/.claude` the way `/login` does,
 and every open window continues on it without a restart. The status line
 records usage and switches at 95%, a rate-limit hook is the fallback, and
 parked logins are refreshed and their usage read in the background.
@@ -17,7 +17,7 @@ structural.
 v0.0.1 to v0.0.3 are built: profiles, usage from the status line and the
 usage endpoint, the selection rule (spend what expires first), moving
 logins with recovery, refreshing parked logins, and automatic switching
-after `cs setup`. The open issue list decides what is built next, and
+after `cc-shift setup`. The open issue list decides what is built next, and
 nothing is built ahead of an issue.
 
 ## Repo map
@@ -42,7 +42,7 @@ nothing is built ahead of an issue.
 
 ## Issue workflow (the loop)
 
-The tracker is GitHub Issues on `Vernum-Projecten/cs`, and the open issue
+The tracker is GitHub Issues on `Vernum-Projecten/cc-shift`, and the open issue
 list is the worklist (`.claude/rules/issue-workflow.md`). The type (Bug,
 Feature, Task) is GitHub's native issue type; the priority (Urgent, High,
 Medium, Low) and the effort (High, Medium, Low) are the organisation's
@@ -57,7 +57,7 @@ are releases, starting at v0.0.1 and stepping by a patch number. Record
 progress on the issue (tick criteria, comment); a PR declares `Closes #N`.
 New work found while working an issue is filed before the next unit starts.
 Sub-issue and dependency edges are set only with `scripts/gh/rel.sh`; the
-"cs Roadmap" board is a view over the tracker, written only with
+"cc-shift Roadmap" board is a view over the tracker, written only with
 `scripts/gh/project.sh` (`.claude/rules/issue-relationships.md`,
 `.claude/rules/project-board.md`).
 
@@ -87,7 +87,7 @@ never by reflex. For a project this size, most work fits in the main loop.
   code comment: no `Co-Authored-By`, no "Generated with", no bot trailer or
   footer, no emoji marker. This rule has no exceptions and outranks any tool
   default. A `PreToolUse` hook blocks a commit or PR command that carries one.
-- **cs never reads, copies, logs or stores a credential** except where an
+- **cc-shift never reads, copies, logs or stores a credential** except where an
   issue and `ARCHITECTURE.md` say it must, and then only in memory. No token,
   Keychain value or account secret goes into the repository, a fixture, a
   log line, an issue or a prompt. Fixtures are synthetic.

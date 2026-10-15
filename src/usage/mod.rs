@@ -1,4 +1,4 @@
-//! What `cs` knows about each account's usage.
+//! What `cc-shift` knows about each account's usage.
 //!
 //! Claude Code reports two windows per account, the 5-hour and the 7-day
 //! window, each as a percentage used and a reset time

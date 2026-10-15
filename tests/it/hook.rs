@@ -1,4 +1,4 @@
-//! `cs hook rate-limit`: never blocks a Claude Code turn.
+//! `cc-shift hook rate-limit`: never blocks a Claude Code turn.
 
 use std::io::{self, Write};
 use std::process::Stdio;
@@ -6,7 +6,7 @@ use std::process::Stdio;
 use crate::sandbox::Sandbox;
 
 fn hook(sandbox: &Sandbox, home: bool) -> io::Result<std::process::Output> {
-    let mut command = sandbox.cs();
+    let mut command = sandbox.cc_shift();
     if !home {
         command.env_remove("HOME");
     }

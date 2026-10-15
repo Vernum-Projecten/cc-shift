@@ -1,4 +1,4 @@
-//! `cs statusline`: run by Claude Code as its status line after every
+//! `cc-shift statusline`: run by Claude Code as its status line after every
 //! reply.
 
 use std::io::{Read, Write};
@@ -15,7 +15,7 @@ use crate::switching::auto::Trigger;
 /// active account is full, starts a background refresh when parked numbers
 /// are stale, and prints the status line.
 ///
-/// It never fails: a `cs` problem must not break the status line of a
+/// It never fails: a `cc-shift` problem must not break the status line of a
 /// Claude Code window.
 pub fn run() {
     let mut input = Vec::new();

@@ -1,4 +1,4 @@
-//! The `cs` commands: parsing the command line and running each command.
+//! The `cc-shift` commands: parsing the command line and running each command.
 //!
 //! Every command has its own module. This module dispatches to them and
 //! holds what they share: how a message reaches the user, the current time,
@@ -30,7 +30,7 @@ use parse::Command;
 /// The exit code for a command that failed.
 const FAILURE: u8 = 1;
 
-/// The exit code for a command line that `cs` does not understand.
+/// The exit code for a command line that `cc-shift` does not understand.
 const USAGE_ERROR: u8 = 2;
 
 /// Parses the arguments, runs the command and returns the exit code.
@@ -75,11 +75,11 @@ where
     }
 }
 
-/// Writes one `cs:` message to stderr.
+/// Writes one `cc-shift:` message to stderr.
 pub fn report(message: &str) {
     // NOTE: no specification governs this: our own design. If stderr itself
     // is closed there is nowhere left to report, so the write error is dropped.
-    let _ignored: std::io::Result<()> = writeln!(std::io::stderr().lock(), "cs: {message}");
+    let _ignored: std::io::Result<()> = writeln!(std::io::stderr().lock(), "cc-shift: {message}");
 }
 
 /// Returns the current time in Unix seconds.

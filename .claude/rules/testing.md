@@ -13,15 +13,15 @@ Test discipline is non-negotiable (a standing hard rule; see `CLAUDE.md`).
 - **Never** edit a test to route around a runtime bug it exposes. If a test
   fails and the fix is unclear, leave it failing and record a
   `// TODO(#NNNN):` naming its issue; do not touch the test to make it green.
-- A test asserts the documented behaviour (`ARCHITECTURE.md` for `cs` itself,
-  Claude Code's documentation for what `cs` relies on), never whatever the
+- A test asserts the documented behaviour (`ARCHITECTURE.md` for `cc-shift` itself,
+  Claude Code's documentation for what `cc-shift` relies on), never whatever the
   current code happens to do.
 
 ## Tooling
 
 - **Runner:** `cargo-nextest` (`cargo nextest run`), not `cargo test`, plus
   `cargo test --doc` for doctests.
-- **Snapshots:** `insta` pins terminal output (`cs list`, `cs status`, error
+- **Snapshots:** `insta` pins terminal output (`cc-shift list`, `cc-shift status`, error
   messages). Redact volatile fields (times relative to now) before
   snapshotting. Review intentional changes with `cargo insta review`; never
   accept a snapshot change you have not read.
@@ -33,7 +33,7 @@ Test discipline is non-negotiable (a standing hard rule; see `CLAUDE.md`).
   `~/.claude-profiles/`, the real Keychain, or a real account. Each test runs
   with `HOME` pointed at a temporary directory and a stub `claude` first on
   `PATH` that records its arguments and environment, so a test asserts what
-  `cs` would have launched.
+  `cc-shift` would have launched.
 - **Time is injected.** Selection takes "now" as a parameter, so reset-time
   logic is tested at fixed instants, never against the wall clock.
 
@@ -53,7 +53,7 @@ inefficient", <https://doc.rust-lang.org/cargo/reference/cargo-targets.html>).
 Shared helpers live in a plain module under `tests/it/`.
 
 **A binary-only crate is untestable by construction** (Book ch11.3): its
-`main.rs` cannot be imported from `tests/`. `cs` therefore keeps a thin
+`main.rs` cannot be imported from `tests/`. `cc-shift` therefore keeps a thin
 `main.rs` over a testable `lib.rs` run path (Book ch12.3), and its integration
 tests import the lib or run the built binary.
 

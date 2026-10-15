@@ -4,21 +4,21 @@ paths: ["**/*.rs"]
 
 # Rust style: idiomatic application code
 
-Applies to every hand-written `.rs` file in the repository. `cs` is one small
+Applies to every hand-written `.rs` file in the repository. `cc-shift` is one small
 binary crate at the repository root; `ARCHITECTURE.md` is its design. Claude
 Code's own documented behaviour (`CLAUDE_CONFIG_DIR`, the login and Keychain
-handling) is the authority for anything `cs` relies on; behaviour that no
+handling) is the authority for anything `cc-shift` relies on; behaviour that no
 documentation states is verified by hand and recorded on the issue.
 
 ## Build idiomatic, compiling, tested code
 
 - **Use proper crates; do not hand-roll** what the ecosystem provides
-  (argument parsing, JSON, time). Keep the dependency set small: `cs` is a thin
+  (argument parsing, JSON, time). Keep the dependency set small: `cc-shift` is a thin
   launcher, and every dependency has to earn its place in the PR that adds it.
   Verify each version against crates.io or docs.rs at the moment it is added,
   never from memory.
 - **The crate compiles, is clippy-clean, and is tested before you move on.**
-- **Never touch credentials.** `cs` never reads, writes, copies or refreshes a
+- **Never touch credentials.** `cc-shift` never reads, writes, copies or refreshes a
   token or a Keychain item unless an issue the owner accepted says so, and
   then only through the documented API that issue names.
 
@@ -149,7 +149,7 @@ table.
   `impl Trait` must NOT capture one, say so with precise capturing (`use<…>`).
 - **`Future` and `IntoFuture` are in the prelude:** a collision with a local
   trait method is resolved with fully-qualified syntax, never an import rename.
-- **`std::env::set_var` and `remove_var` are `unsafe` in edition 2024.** `cs`
+- **`std::env::set_var` and `remove_var` are `unsafe` in edition 2024.** `cc-shift`
   never calls them: it sets `CLAUDE_CONFIG_DIR` on the child with
   `Command::env`, which is safe, and then `exec`s.
 - The other `unsafe_*` 2024 items are moot under `unsafe_code = "forbid"`.
@@ -181,6 +181,6 @@ wrong line). Reach for:
 
 - Do not special-case one profile by name in the code. Every profile is
   handled the same way; a difference between accounts is data, never a branch.
-- Do not grow `cs` into a wrapper process that stays running around `claude`.
+- Do not grow `cc-shift` into a wrapper process that stays running around `claude`.
   The launcher `exec`s; anything that must watch a session is designed in
   `ARCHITECTURE.md` first.

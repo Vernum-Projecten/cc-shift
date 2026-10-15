@@ -1,4 +1,4 @@
-//! The state `cs` keeps between runs, in `~/.claude-profiles/state.json`.
+//! The state `cc-shift` keeps between runs, in `~/.claude-profiles/state.json`.
 //!
 //! Every read and write takes the lock file `~/.claude-profiles/.lock`, so
 //! the status line of several windows, the hook and the commands never see
@@ -16,20 +16,20 @@ use crate::error::Error;
 use crate::store::profile::ProfilesRoot;
 use crate::usage::Window;
 
-/// Everything `cs` remembers. No field ever holds a token.
+/// Everything `cc-shift` remembers. No field ever holds a token.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct State {
-    /// The account whose login is in `~/.claude`, once `cs` has set one.
+    /// The account whose login is in `~/.claude`, once `cc-shift` has set one.
     pub active: Option<String>,
     /// The last usage read per account, by profile name.
     pub usage: BTreeMap<String, Recorded>,
-    /// The status line command the user had before `cs setup`, run after
-    /// `cs statusline` records usage.
+    /// The status line command the user had before `cc-shift setup`, run after
+    /// `cc-shift statusline` records usage.
     pub chained_statusline: Option<String>,
     /// A switch that has started and not yet finished.
     pub pending: Option<Pending>,
-    /// When `cs` last switched on its own, in Unix seconds.
+    /// When `cc-shift` last switched on its own, in Unix seconds.
     pub switched_at: Option<i64>,
     /// Accounts whose refresh Anthropic refused; they need `/login` again.
     pub logged_out: BTreeSet<String>,
@@ -52,7 +52,7 @@ pub struct Recorded {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Pending {
-    /// The account that was active, if `cs` knew one.
+    /// The account that was active, if `cc-shift` knew one.
     pub from: Option<String>,
     /// The account being made active.
     pub to: String,

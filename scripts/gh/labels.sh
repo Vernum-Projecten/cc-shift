@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# scripts/gh/labels.sh: bootstrap the cs issue-label taxonomy.
+# scripts/gh/labels.sh: bootstrap the cc-shift issue-label taxonomy.
 #
 # Creates (idempotently) the labels the tracker workflow assumes:
 #   * the WORK-KIND labels a Task carries to pick its commit type

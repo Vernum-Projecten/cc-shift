@@ -4,7 +4,7 @@ use std::cmp::Ordering;
 
 use crate::usage::{Account, Usage};
 
-/// The percentage at which a window counts as full and `cs` switches away.
+/// The percentage at which a window counts as full and `cc-shift` switches away.
 pub const SWITCH_THRESHOLD: f64 = 95.0;
 
 /// The outcome of the selection rule.

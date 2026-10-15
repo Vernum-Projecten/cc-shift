@@ -4,7 +4,7 @@
 //! Anthropic does not document these. The values below are the ones the
 //! Claude Code 2.1.300 binary uses (recorded on #25 and #9), so they can
 //! change with any Claude Code update; a response in another form makes the
-//! account's usage unknown, never a failure of `cs` as a whole.
+//! account's usage unknown, never a failure of `cc-shift` as a whole.
 
 use serde_json::{Value, json};
 
@@ -29,7 +29,7 @@ const OAUTH_BETA: &str = "anthropic-beta: oauth-2025-04-20";
 /// A refresh is due this many seconds before the access token expires.
 pub const REFRESH_MARGIN_SECONDS: i64 = 10 * 60;
 
-/// The fields of a stored login `cs` uses. Its debug output shows no token.
+/// The fields of a stored login `cc-shift` uses. Its debug output shows no token.
 #[derive(Clone, PartialEq, Eq)]
 pub struct Stored {
     access_token: String,
@@ -48,7 +48,7 @@ impl std::fmt::Debug for Stored {
 }
 
 impl Stored {
-    /// Reads the fields `cs` uses from a stored login, the JSON object
+    /// Reads the fields `cc-shift` uses from a stored login, the JSON object
     /// `claudeAiOauth`.
     ///
     /// # Errors

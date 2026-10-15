@@ -1,4 +1,4 @@
-//! `cs setup`: installs the status line and the hook, keeping the rest.
+//! `cc-shift setup`: installs the status line and the hook, keeping the rest.
 
 use std::fs;
 use std::io;

@@ -4,7 +4,7 @@ The tracker is GitHub Issues (`issue-workflow.md`); milestones are the
 release spine; the native issue type and the organisation's `Priority` and
 `Effort` issue fields carry type, priority and effort; labels carry work kind
 and domain; native edges carry decomposition and sequencing
-(`issue-relationships.md`). The **"cs Roadmap"
+(`issue-relationships.md`). The **"cc-shift Roadmap"
 Project** (a GitHub Project v2 under the `Vernum-Projecten` organization) exists for one
 reason: **an overview:** everyone with access to the repository can see what is planned, in progress,
 and shipped, without reading the raw issue list. It is a **VIEW over the
@@ -15,13 +15,13 @@ and may not carry) and the canonical commands (the one sanctioned write path is
 ## Creating the board
 
 **The board is created once, by the account owner's token.** It is a GitHub
-Project (v2) titled **"cs Roadmap"** under the
+Project (v2) titled **"cc-shift Roadmap"** under the
 `Vernum-Projecten` organization, with the built-in single-select `Status` field carrying
 exactly `Todo` / `In Progress` / `Done`, plus a Date field named `Target date`
-for the roadmap layout, linked to the `cs` repository; the working
+for the roadmap layout, linked to the `cc-shift` repository; the working
 clone needs the `project` token scope (`gh auth refresh -s project`). Until
 it exists, every `scripts/gh/project.sh`
-command fails loud with "no project titled 'cs Roadmap'". The board
+command fails loud with "no project titled 'cc-shift Roadmap'". The board
 configuration intent (fields, views, automations) is at the bottom of this file.
 
 ## The one-datum rule

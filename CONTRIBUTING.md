@@ -1,4 +1,4 @@
-# Contributing to cs
+# Contributing to cc-shift
 
 The design of record is [`ARCHITECTURE.md`](ARCHITECTURE.md), the build is
 tracked on the issues of this repository, and the working discipline is
@@ -72,7 +72,7 @@ synthetic.
 
 ## Licence
 
-cs is licensed under the Apache License 2.0 ([`LICENSE`](LICENSE)). A
+cc-shift is licensed under the Apache License 2.0 ([`LICENSE`](LICENSE)). A
 contribution is licensed under the same terms (section 5 of the licence).
 
 ## Security

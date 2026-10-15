@@ -24,7 +24,7 @@ records, and it does not decide the work is done on your behalf.
    labels).
 2. **Verify every `## Acceptance criteria` checkbox is ticked.** If any remain
    `- [ ]`, stop and list them. Do not tick a criterion yourself to proceed; a
-   tick must reflect real, verified state ("`cs auto` picks the profile with
+   tick must reflect real, verified state ("`cc-shift auto` picks the profile with
    the most usage" means a test or a hand run showed it). Tick verified boxes
    in the issue body via `gh issue edit <n> --body-file`.
 3. **Relationships check** (`scripts/gh/rel.sh tree <n>`;
@@ -33,7 +33,7 @@ records, and it does not decide the work is done on your behalf.
    first. Closing this issue auto-unblocks anything it was `blocking`, which is
    expected; note any dependents that become workable so the handoff comment
    can point at them.
-4. **Design check:** if the work changed how `cs` behaves, confirm
+4. **Design check:** if the work changed how `cc-shift` behaves, confirm
    `ARCHITECTURE.md` says so in the same PR. A doc that describes the old
    behaviour is an unmet exit criterion.
 5. **Gate check:** confirm the gates that apply actually ran and passed: the

@@ -5,7 +5,7 @@ metadata:
   type: project
 ---
 
-`cs` tracks the kind and urgency of its work with the native issue type
+`cc-shift` tracks the kind and urgency of its work with the native issue type
 (`Bug`, `Feature`, `Task`), the organisation's `Priority` field (`Urgent`,
 `High`, `Medium`, `Low`) and its `Effort` field (`High`, `Medium`, `Low`).
 The `Vernum-Projecten` organisation carries all three (read on 2026-10-15).
