@@ -1,3 +1,6 @@
+<!-- SPDX-FileCopyrightText: 2026 Vernum Projecten B.V. -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Contributing to cc-shift
 
 The design of record is [`ARCHITECTURE.md`](ARCHITECTURE.md), the build is
@@ -22,6 +25,7 @@ scripts/checks/comment-style.sh --all
 scripts/checks/file-length.sh
 scripts/checks/bash-compat.sh
 scripts/checks/script-modes.sh
+reuse lint
 bash scripts/checks/api-prices.sh --self-test
 bash scripts/gh/fields.sh --self-test
 bash scripts/gh/labels.sh --self-test
@@ -29,9 +33,19 @@ bash scripts/gh/rel.sh --self-test
 ```
 
 These are the tier-1 jobs `ci.yml` runs, with the same flags, so a local pass
-means a CI pass. On macOS, `brew install shellcheck actionlint zizmor`
+means a CI pass. On macOS, `brew install shellcheck actionlint zizmor reuse`
 installs the tools. The `conclusion` job aggregates every job and is the
 single required check on `main`.
+
+Every file starts with its copyright and licence, in its own comment syntax:
+
+```
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+```
+
+A file that cannot hold a comment (JSON, a data file the guards read) gets an
+entry in `REUSE.toml` instead. `reuse lint` fails CI for a file with neither.
 
 The Rust gates mirror CI:
 

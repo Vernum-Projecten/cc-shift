@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! `cc-shift status --json`: the overview as JSON, for scripts and widgets.
 //!
 //! The shape is part of the public interface: a change to it is a changelog

@@ -1,3 +1,6 @@
+<!-- SPDX-FileCopyrightText: 2026 Vernum Projecten B.V. -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Issue relationships (GitHub native sub-issues + dependencies)
 
 The tracker is GitHub Issues (`issue-workflow.md`). GitHub exposes

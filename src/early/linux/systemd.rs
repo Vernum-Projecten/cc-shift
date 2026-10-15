@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The systemd user timer that runs `cc-shift early run` each workday.
 //!
 //! A user unit lives in `$XDG_CONFIG_HOME/systemd/user` (`~/.config` by

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The `launchd` agent that runs `cc-shift early run` each workday.
 //!
 //! A user agent lives in `~/Library/LaunchAgents` and runs while the user is

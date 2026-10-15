@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
 name: native-issue-types-and-priority
 description: "Type, priority and effort are GitHub's native issue type and the Vernum-Projecten Priority and Effort issue fields, set with scripts/gh/fields.sh, never labels; carried from the owner's FerroFED setup (2026-10-15)"
 metadata:

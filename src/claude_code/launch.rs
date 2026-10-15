@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Starting Claude Code with a profile's config folder.
 
 use std::convert::Infallible;

@@ -1,3 +1,6 @@
+<!-- SPDX-FileCopyrightText: 2026 Vernum Projecten B.V. -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Issue workflow (the tracker loop)
 
 **The tracker is GitHub Issues on `Vernum-Projecten/cc-shift`: the open issue list

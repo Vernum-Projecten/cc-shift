@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
+
 # .claude/hooks/session_start_issues.sh
 #
 # Claude Code SessionStart hook: prints the open GitHub issue list (the

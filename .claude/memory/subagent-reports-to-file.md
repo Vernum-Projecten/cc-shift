@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
 name: subagent-reports-to-file
 description: "A subagent's long report is written to a scratchpad file by the agent itself, because a truncated result is lost and a finished agent cannot be resumed; carried from the owner's FerroFED setup (2026-10-15)"
 metadata:

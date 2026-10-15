@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! `cc-shift uninstall`: undoes `cc-shift setup`, and with `--all` also
 //! removes every profile.
 

@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
 name: auto-merge-follow-ups
 description: "Never push a follow-up commit to a PR that has auto-merge armed unless it is still BLOCKED; a slice of work silently missed main that way on another of the owner's projects"
 metadata:

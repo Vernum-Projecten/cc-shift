@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! What `cc-shift` knows about each account's usage.
 //!
 //! Claude Code reports two windows per account, the 5-hour and the 7-day

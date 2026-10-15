@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! `cc-shift log`: the history, as a screen and as JSON lines.
 
 use std::fs;

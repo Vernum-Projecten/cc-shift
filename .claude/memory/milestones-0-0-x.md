@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
 name: milestones-0-0-x
 description: "Release milestones start at v0.0.1 and step by 0.0.x, never a v0.1.0 opener; owner family rule carried from the FerroFED setup (2026-10-15)"
 metadata:

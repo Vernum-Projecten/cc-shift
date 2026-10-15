@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
+
 # The script mode guard: every shell program the repository runs is committed
 # executable (no specification governs this: our own design). A program
 # committed as mode 100644 runs from a checkout only as `bash script.sh`, and

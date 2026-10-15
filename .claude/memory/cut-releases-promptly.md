@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
 name: cut-releases-promptly
 description: "Cut a release the moment its milestone's code work is done; move an owner-side or upstream-blocked straggler to the next milestone instead of holding the cut"
 metadata:

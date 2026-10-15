@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
+
 # The bash 3.2 guard: every shell program of the repository runs under the
 # bash macOS ships, 3.2, or says which bash it needs and stops with a clear
 # message (no specification governs this: our own design). CI runs bash 5,

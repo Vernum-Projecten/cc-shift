@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! How `cc-shift` shows usage: the `cc-shift status` table, the status line
 //! and the `cc-shift stats` tables, with bars and colour.
 //!

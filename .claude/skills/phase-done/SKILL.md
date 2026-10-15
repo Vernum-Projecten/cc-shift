@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
 name: phase-done
 description: Closes a tracker issue by verifying the work is genuinely done (acceptance criteria, gates, docs), writing the close narrative into the PR description, ensuring the PR declares `Closes #N`, and posting the handoff comment. Use when the user says a work item is complete or asks to close it out.
 allowed-tools: Read, Edit, Grep, Glob, Bash

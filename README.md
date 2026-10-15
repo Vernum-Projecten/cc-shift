@@ -1,3 +1,6 @@
+<!-- SPDX-FileCopyrightText: 2026 Vernum Projecten B.V. -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # cc-shift
 
 [![crates.io](https://img.shields.io/crates/v/cc-shift?logo=rust)](https://crates.io/crates/cc-shift)

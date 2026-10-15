@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The history of what `cc-shift` did, in `~/.claude-profiles/history.jsonl`.
 //!
 //! One JSON object per line, appended under its own lock so several windows

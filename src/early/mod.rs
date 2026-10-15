@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Early start: starting some accounts' 5-hour windows before the workday.
 //!
 //! A 5-hour window starts with an account's first message and resets five

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Where logins live: the slot of `~/.claude` and one parked slot per profile.
 //!
 //! On macOS a slot is a Keychain item, on Linux a `.credentials.json` file.

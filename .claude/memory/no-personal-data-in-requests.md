@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
 name: no-personal-data-in-requests
 description: "No worker sends the owner's email address or any personal contact to an external service, including a crates.io or API User-Agent header; use a neutral agent string"
 metadata:

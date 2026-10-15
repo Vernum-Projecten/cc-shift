@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
+
 # scripts/gh/fields.sh: the issue type, the Priority and the Effort field, by
 # issue number.
 #

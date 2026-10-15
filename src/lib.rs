@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! `cc-shift` switches Claude Code between several accounts automatically.
 //!
 //! Each account has a profile folder under `~/.claude-profiles/` that holds

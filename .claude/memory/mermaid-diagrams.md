@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
 name: mermaid-diagrams
 description: "ARCHITECTURE.md may carry mermaid diagrams; render every fence with mermaid-cli before a pull request, and keep semicolons out of sequence messages"
 metadata:

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Runs the built `cc-shift` binary and checks its exit codes and output.
 
 use std::process::Command;

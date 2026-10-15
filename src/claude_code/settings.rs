@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! `cc-shift setup`: installs the status line and the rate-limit hook in
 //! `~/.claude/settings.json`.
 //!

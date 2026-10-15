@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The `cc-shift` commands: parsing the command line and running each command.
 //!
 //! Every command has its own module. This module dispatches to them and

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Claude Code's session transcripts: where they are and what `cc-shift`
 //! reads from them.
 //!

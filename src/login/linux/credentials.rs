@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The Linux login files: `.credentials.json` in each config folder.
 //!
 //! On Linux, Claude Code keeps a config folder's login in

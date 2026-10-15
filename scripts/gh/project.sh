@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
+
 # scripts/gh/project.sh: the deterministic GitHub Projects (v2) board helper.
 #
 # WHY THIS EXISTS: the roadmap board is a GitHub Project (v2), and its

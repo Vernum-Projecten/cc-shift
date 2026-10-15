@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The statistics cache, `~/.claude-profiles/stats-cache.json`.
 //!
 //! It keeps the responses read from each transcript with the size and the

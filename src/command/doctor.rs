@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! `cc-shift doctor`: checks that everything `cc-shift` needs is in place and
 //! says what to fix.
 

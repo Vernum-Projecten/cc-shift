@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! `cc-shift completion zsh`: prints the zsh completion script.
 //!
 //! zsh is the default shell on macOS. The script completes the commands, the

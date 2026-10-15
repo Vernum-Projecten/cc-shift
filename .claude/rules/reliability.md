@@ -1,3 +1,6 @@
+<!-- SPDX-FileCopyrightText: 2026 Vernum Projecten B.V. -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Reliability and safety hard rules
 
 `cc-shift` decides which account every Claude Code window uses and moves its

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! `cc-shift remove <name>`: deletes a profile and its Keychain login.
 
 use std::ffi::OsStr;

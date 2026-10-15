@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! Profile names and the profiles root, `~/.claude-profiles/`.
 
 use std::ffi::{OsStr, OsString};

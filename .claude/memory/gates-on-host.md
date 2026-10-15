@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
 name: gates-on-host
 description: "Every gate, tests included, runs on the host CLI in the working copy, never in a container; a first test run can stall on macOS Gatekeeper"
 metadata:

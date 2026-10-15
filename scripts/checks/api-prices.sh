@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
+
 # API price watch: compares the model table of Anthropic's pricing page with
 # scripts/checks/api-prices.txt, the snapshot the price table in
 # src/stats/price.rs is tested against (no specification governs this: our

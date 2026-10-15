@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! `cc-shift hook rate-limit`: run by Claude Code's `StopFailure` hook when a
 //! turn ends on a usage limit.
 

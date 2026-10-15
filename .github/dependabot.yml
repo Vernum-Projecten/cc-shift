@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
+
 # .github/dependabot.yml: automated dependency updates.
 #
 # Two ecosystems. `github-actions` bumps the SHA-pinned actions the workflows

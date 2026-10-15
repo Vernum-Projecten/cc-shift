@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
+
 # CI in two tiers.
 #
 #   1. The workflow, shell and guard tier needs no Rust: zizmor over .github,
@@ -127,6 +130,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # Every file carries its copyright and licence (REUSE 3.3); a new file
+      # without the two SPDX lines or a REUSE.toml entry fails here.
+      - name: reuse lint
+        uses: fsfe/reuse-action@676e2d560c9a403aa252096d99fcab3e1132b0f5 # v6.0.0
       - name: comment-style
         run: |
           set -euo pipefail

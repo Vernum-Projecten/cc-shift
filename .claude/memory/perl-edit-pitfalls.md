@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
 name: perl-edit-pitfalls
 description: "Editing with perl from Bash: heredoc-quoted literals, never q{} or s{}{} around text with braces; read the current text right before matching, since rustfmt reflows it; a stale rmeta after fast edits needs cargo clean"
 metadata:

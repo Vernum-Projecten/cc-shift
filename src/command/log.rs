@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! `cc-shift log`: the history of switches, refreshes and full accounts.
 
 use std::io::{IsTerminal, Write};

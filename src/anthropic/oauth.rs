@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+// SPDX-License-Identifier: Apache-2.0
+
 //! The OAuth calls Claude Code makes for a login: refreshing it and asking
 //! for its usage.
 //!

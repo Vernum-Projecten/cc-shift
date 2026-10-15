@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+
+# SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
+# SPDX-License-Identifier: Apache-2.0
+
 # scripts/gh/rel.sh: the deterministic GitHub issue-relationship helper.
 #
 # WHY THIS EXISTS: `gh` has NO native subcommand for sub-issues or issue
