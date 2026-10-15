@@ -53,6 +53,17 @@ pub enum Error {
         #[source]
         source: serde_json::Error,
     },
+    /// A Keychain slot could not be used.
+    #[error("cannot use {slot}: {reason}")]
+    Keychain {
+        /// The slot, as [`crate::keychain::Slot`] names it.
+        slot: String,
+        /// Why, without any token content.
+        reason: String,
+    },
+    /// The account to switch to has no parked login.
+    #[error("'{0}' has no parked login; run 'cs add {0}' and /login")]
+    NoParkedLogin(String),
     /// No `claude` binary on `PATH`.
     #[error("claude was not found on PATH; install Claude Code first")]
     ClaudeNotFound,

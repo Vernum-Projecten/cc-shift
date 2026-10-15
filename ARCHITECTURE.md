@@ -78,7 +78,7 @@ Under the lock, in this order:
 2. Write `claude2`'s parked login into the item of `~/.claude`.
 3. Clear `claude2`'s parked item and record `claude2` as active in the state.
 
-The state records each step before it runs, so a switch that stops halfway is finished by the next `cs` run, and no login is lost or left with two copies.
+The state records each step before it runs, so a switch that stops halfway is finished by the next `cs` run, and no login is lost or left with two copies. Steps 1 and 2 are recorded as one step: run again after a stop between them, it saves `~/.claude` once more, so tokens Claude Code refreshed in the meantime are kept, and it skips both when `~/.claude` already holds the next login.
 
 At `cs setup` the login already in `~/.claude` has no profile. It is a separate login from the parked ones, so replacing it breaks nothing; `cs setup` says so before it does.
 
@@ -113,7 +113,9 @@ A small library with a thin binary: `src/main.rs` only calls `cs::run` in `src/l
 - `state`: `state.json` behind the lock, written in one rename.
 - `statusline`: records the active account's usage and runs the user's own status line.
 - `status`: the `cs status` table, with reset times shown as time left (`2h15m`), so no time zone handling is needed.
-- Planned: the Keychain behind a small trait (so tests never touch the real one), the usage endpoint for parked accounts, and the hook entry point.
+- `keychain`: the `Logins` trait every Keychain access goes through, so tests use an in-memory store, and the opaque `Login` whose debug output never shows a token.
+- `switch`: the move of section 5 with its recovery.
+- Planned: the macOS Keychain backend of `Logins`, the usage endpoint for parked accounts, and the hook entry point.
 
 The runtime dependencies are `thiserror` for the error type and `serde` with `serde_json` for the state and the status line input; each further dependency is added in the pull request that needs it.
 
