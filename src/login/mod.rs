@@ -4,6 +4,9 @@
 //! Every Keychain access goes through [`Logins`], so the switch logic is
 //! tested against an in-memory store and never touches the real Keychain.
 
+pub mod account;
+pub mod keychain;
+
 use std::fmt;
 
 use crate::error::Error;

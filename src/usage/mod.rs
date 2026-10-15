@@ -4,6 +4,10 @@
 //! window, each as a percentage used and a reset time
 //! (<https://code.claude.com/docs/en/statusline>).
 
+pub mod select;
+
+use crate::store::state::{Recorded, State};
+
 /// One usage window: how much of it is used, and when it resets.
 #[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Window {
@@ -79,4 +83,53 @@ pub struct Account {
     pub logged_in: bool,
     /// The account's usage as last read.
     pub usage: Usage,
+}
+
+/// Builds the selection view of every profile from the recorded state.
+///
+/// A profile with no usage read yet is unknown, and a profile whose refresh
+/// was refused is logged out.
+#[must_use]
+pub fn accounts(profiles: &[String], state: &State) -> Vec<Account> {
+    profiles
+        .iter()
+        .map(|name| Account {
+            name: name.clone(),
+            logged_in: !state.logged_out.contains(name),
+            usage: state
+                .usage
+                .get(name)
+                .map_or_else(|| Usage::Unknown("no usage read yet".to_owned()), usage_of),
+        })
+        .collect()
+}
+
+/// Turns a recorded reading into usage; a reading with no time is unknown.
+fn usage_of(recorded: &Recorded) -> Usage {
+    if recorded.read_at.is_none() {
+        return Usage::Unknown("no usage read yet".to_owned());
+    }
+    Usage::Known {
+        five_hour: recorded.five_hour,
+        seven_day: recorded.seven_day,
+    }
+}
+
+/// Formats a number of seconds as the two largest units, for example `2h15m`
+/// or `3d4h`.
+#[must_use]
+pub fn time_left(seconds: i64) -> String {
+    let minutes = seconds.div_euclid(60);
+    let (days, hours, mins) = (
+        minutes.div_euclid(1440),
+        minutes.rem_euclid(1440).div_euclid(60),
+        minutes.rem_euclid(60),
+    );
+    if days > 0 {
+        format!("{days}d{hours}h")
+    } else if hours > 0 {
+        format!("{hours}h{mins}m")
+    } else {
+        format!("{mins}m")
+    }
 }

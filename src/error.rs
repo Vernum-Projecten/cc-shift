@@ -56,7 +56,7 @@ pub enum Error {
     /// A Keychain slot could not be used.
     #[error("cannot use {slot}: {reason}")]
     Keychain {
-        /// The slot, as [`crate::keychain::Slot`] names it.
+        /// The slot, as [`crate::login::Slot`] names it.
         slot: String,
         /// Why, without any token content.
         reason: String,

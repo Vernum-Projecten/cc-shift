@@ -15,8 +15,8 @@ use std::process::{Command, Output, Stdio};
 use sha2::{Digest, Sha256};
 
 use crate::error::Error;
-use crate::keychain::{Login, Logins, Slot};
-use crate::profile::ProfilesRoot;
+use crate::login::{Login, Logins, Slot};
+use crate::store::profile::ProfilesRoot;
 
 /// The service of the item of `~/.claude`.
 const ACTIVE_SERVICE: &str = "Claude Code-credentials";
@@ -194,7 +194,7 @@ impl Logins for SystemKeychain {
 #[cfg(test)]
 mod tests {
     use super::{add_command, service_of};
-    use crate::keychain::Login;
+    use crate::login::Login;
 
     #[test]
     fn a_folder_service_is_the_short_sha256_of_its_path() {
