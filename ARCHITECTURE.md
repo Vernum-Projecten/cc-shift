@@ -16,7 +16,9 @@ All profiles are work accounts. There are seven of them, and each profile has th
 | claude6 | `cs claude6` |
 | claude7 | `cs claude7` |
 
-The tool does not store, read, copy or refresh any tokens itself. It only tells Claude Code which configuration folder to use. Claude Code remains fully responsible for logging in, storing credentials and refreshing them.
+There are two ways to use the accounts. `cs <name>` starts a separate Claude Code with that profile's own config folder. More often, every window (RustRover and a plain `claude`) runs with the default `~/.claude`, and `cs` changes which account that folder is logged in to, the same way `/login` does. Every open session then continues on the new account without a restart.
+
+Claude Code stays responsible for logging in and for refreshing the active account's tokens. `cs` moves an account's login between its profile and `~/.claude` when it switches accounts, refreshes the logins parked in the profiles, and reads a parked login to ask for that account's usage (sections 6, 7 and 10).
 
 ## 2. Scope
 
@@ -24,7 +26,7 @@ The tool does not store, read, copy or refresh any tokens itself. It only tells 
 
 The tool creates profiles, lists them, and launches Claude Code with the selected profile. It passes any extra arguments straight through to Claude Code, so `cs claude1 --continue` behaves exactly like `claude --continue` would for that account.
 
-The tool can also choose the account automatically. For every profile it knows the remaining usage, the time at which that usage resets, and the other information it needs to decide. With `cs auto` it starts Claude Code with the profile that has the most usage left, and it switches to another profile when the current one runs out (see section 7).
+The tool also manages the active account of `~/.claude`. `cs use <name>` makes an account active. For every profile `cs` knows the remaining usage, the time at which that usage resets, and whether it is logged in. `cs auto` makes the account with the most usage left active, and when the active account runs out, `cs` switches to the next one inside the running sessions (see section 7).
 
 ### Out of scope
 
@@ -41,6 +43,18 @@ cs claude1  ──►  CLAUDE_CONFIG_DIR=~/.claude-profiles/claude1  claude
 ```
 
 On Unix systems the launcher uses `exec`, which replaces the `cs` process with the `claude` process. Claude Code gets the terminal directly, signals such as Ctrl+C behave normally, and no wrapper process stays running in the background.
+
+### The active account
+
+Claude Code keys its Keychain login to the config folder, and a running session picks up a login written into its folder's item. On Claude Code 2.1.300 a `/login` in one window also applies to the other windows already running with that folder (observed by the owner, #12). `cs` uses this for `~/.claude`:
+
+```
+~/.claude-profiles/claude1   parked login of claude1
+~/.claude-profiles/claude2   parked login of claude2
+~/.claude                    the active account, used by every window
+```
+
+Switching means moving the next account's parked login into the item of `~/.claude`. Nothing restarts: the conversation, its history and the working directory stay as they are.
 
 ## 4. Components
 
@@ -59,8 +73,10 @@ After `cargo install --path .` the binary is placed at `~/.cargo/bin/cs`.
 | The `cs` binary | `~/.cargo/bin/cs` | cargo |
 | Profiles root | `~/.claude-profiles/` | cs |
 | One profile's config, history, projects | `~/.claude-profiles/<name>/` | Claude Code |
-| OAuth access and refresh tokens | macOS Keychain (login keychain) | Claude Code |
-| Default, non-profile Claude Code config | `~/.claude/` and `~/.claude.json` | Claude Code |
+| OAuth access and refresh tokens | macOS Keychain (login keychain), one item per config folder | Claude Code; `cs` moves them on a switch |
+| The shared config of every window, logged in to the active account | `~/.claude/` and `~/.claude.json` | Claude Code |
+| The active account, exhausted accounts with reset times, last known usage | `~/.claude-profiles/state.json` | cs |
+| The lock every switch and state write takes | `~/.claude-profiles/.lock` | cs |
 
 The layout with all seven profiles:
 
@@ -83,9 +99,9 @@ Each folder has the same internal structure as `voorzitter/`.
 
 ### Credentials and the Keychain
 
-On macOS, Claude Code does not keep tokens in a plain file. It stores them in the login Keychain as a generic password item whose name starts with "Claude Code". Recent versions of Claude Code create a separate Keychain item for each `CLAUDE_CONFIG_DIR`, which is what keeps the profiles' logins apart. This behaviour depends on the Claude Code version, so it should be verified once after setup (see section 9).
+On macOS, Claude Code does not keep tokens in a plain file. It stores them in the login Keychain as a generic password item whose name starts with "Claude Code"; the item of the default `~/.claude` is `Claude Code-credentials`. With `CLAUDE_CONFIG_DIR` set, Claude Code keys the item to that folder, which keeps the profiles' logins apart (<https://code.claude.com/docs/en/authentication#credential-management>). The exact item name for a profile folder is recorded on #6 once two profiles are logged in.
 
-Because the tokens live in the Keychain, they are encrypted at rest and protected by your macOS login. `cs` never touches them, which also means there is nothing sensitive in the `cs` binary or its folder.
+A refresh token works once: when Claude Code refreshes, the old one stops working, and presenting a stale copy can revoke the login. So `cs` never copies a login. A switch moves it, and at any moment each login has exactly one live copy, either parked in its profile's item or active in the item of `~/.claude`. The tokens stay in the Keychain, encrypted at rest; `cs` holds them in memory only while it moves them, and never writes them to a file or a log.
 
 ## 6. How it works step by step
 
@@ -107,7 +123,7 @@ Signing in with the wrong account in a profile is the most likely mistake here. 
 
 ### Creating a profile: `cs add claude1`
 
-1. `cs` checks that the name only contains ASCII letters, digits, `-` or `_`, starts with a letter or digit, and is not a command word (`add`, `list`, `auto`, `status`, `help`, `remove`, `current`, `link`).
+1. `cs` checks that the name only contains ASCII letters, digits, `-` or `_`, starts with a letter or digit, and is not a command word (`add`, `list`, `use`, `auto`, `status`, `statusline`, `hook`, `setup`, `help`, `remove`, `current`, `link`).
 2. It creates `~/.claude-profiles/claude1/` if it does not exist.
 3. It prints a reminder to log in, then launches Claude Code with `CLAUDE_CONFIG_DIR` pointing to that folder.
 4. The user runs `/login` inside Claude Code and completes the browser sign-in (for example with Google).
@@ -116,8 +132,19 @@ Signing in with the wrong account in a profile is the most likely mistake here. 
 ### Using a profile: `cs claude1 [args...]`
 
 1. `cs` checks that `~/.claude-profiles/claude1/` exists, and prints a helpful error if it does not.
-2. It sets `CLAUDE_CONFIG_DIR` and execs `claude` with any remaining arguments.
-3. Claude Code finds the stored login for that profile and starts without asking to sign in.
+2. When `claude1` is the active account, its login is in `~/.claude`, not in the profile, so `cs` says so and points to a plain `claude` instead.
+3. Otherwise it sets `CLAUDE_CONFIG_DIR` and execs `claude` with any remaining arguments.
+4. Claude Code finds the stored login for that profile and starts without asking to sign in.
+
+### Making an account active: `cs use claude2`
+
+Under the lock, in this order:
+
+1. `cs` reads the login now in the item of `~/.claude` and writes it back to the parked item of the account that was active. Claude Code may have refreshed it since the last switch, so this saves the current tokens.
+2. It writes `claude2`'s parked login into the item of `~/.claude`.
+3. It clears `claude2`'s parked item and records `claude2` as active in `state.json`.
+
+Every window running with `~/.claude` continues on `claude2`. If `cs` stops halfway, `state.json` and the order of the steps tell the next run which step to finish, so no login is lost or left with two copies.
 
 ### Listing profiles: `cs list`
 
@@ -125,7 +152,9 @@ Signing in with the wrong account in a profile is the most likely mistake here. 
 
 ### Token refresh
 
-The access token is short-lived and the refresh token is long-lived. Every time Claude Code runs and finds an expired access token, it uses the refresh token to get a new one and updates the Keychain item. Nothing in `cs` is involved. In practice this means a profile stays logged in as long as it is used now and then and the refresh token has not been revoked, for example by logging out or changing the account password. If a profile is ever logged out, running `cs <name>` and `/login` again fixes it.
+The access token is short-lived and the refresh token is long-lived. Every time Claude Code runs and finds an expired access token, it uses the refresh token to get a new one and updates the Keychain item of the folder it runs in. That is how the active account in `~/.claude` stays fresh, and `cs` never refreshes it: two processes refreshing one login would each spend the single-use refresh token the other still holds.
+
+A parked login has no Claude Code process to refresh it, so `cs` does. Before it uses a parked login (to read usage, or to make it active) and whenever its access token is close to expiry, `cs` takes the lock, sends the refresh token to Anthropic's OAuth token endpoint, and writes the new access and refresh tokens back to the same parked item at once. Only a parked login is ever refreshed by `cs`, so each login still has one live copy and one process that refreshes it. A refresh that the endpoint refuses (a revoked or expired refresh token) marks the profile logged out; running `cs add <name>` and `/login` again fixes it. The token endpoint is not documented by Anthropic, so a refresh that fails for another reason leaves the parked item as it was and marks the profile's usage "unknown".
 
 ### Sharing settings between profiles
 
@@ -139,7 +168,7 @@ for p in voorzitter claude1 claude2 claude3 claude5 claude6 claude7; do
 done
 ```
 
-Session history in `projects/` should stay per profile, so it is not symlinked.
+Session history in `projects/` is not symlinked. The sessions that switch accounts all run in `~/.claude`, so their history is already in one place.
 
 ## 7. Automatic account selection
 
@@ -154,22 +183,46 @@ For each profile `cs` keeps track of:
 | Whether the profile is currently exhausted | Skipping it until its reset time has passed |
 | Whether the profile is logged in | Skipping profiles that need `/login` first |
 
-### Choosing a profile: `cs auto [args...]`
+### Where usage comes from
+
+Two sources, decided on #8:
+
+- **The active account:** Claude Code passes `rate_limits` to the status line command, with `five_hour` and `seven_day` windows, each a `used_percentage` and a `resets_at` time (<https://code.claude.com/docs/en/statusline>). `cs` installs `cs statusline` as the status line of `~/.claude`, chained in front of any status line the user already has, and it records those numbers in `state.json`. No token is read. The docs say `rate_limits` is sent for Pro and Max accounts after the first response of a session.
+- **Every parked account:** `cs` reads that account's access token from its parked item, read-only, and asks Anthropic's usage endpoint (`GET https://api.anthropic.com/api/oauth/usage`) for the same two windows. The endpoint is not documented and has changed its response shape before, so `cs` accepts both known shapes.
+- **Logged in or not:** `claude auth status --json` with the profile's `CLAUDE_CONFIG_DIR`.
+
+A source that is missing, fails or returns an unknown shape makes that account's usage "unknown". `cs status` shows why, and `cs auto` ranks it after every account with known usage. No command fails as a whole because one account could not be read.
+
+### Choosing an account: `cs auto`
 
 1. `cs` refreshes the usage information for every profile.
 2. Profiles that are logged out, or exhausted with a reset time still in the future, are skipped.
 3. Of the remaining profiles, the one with the most usage left is chosen. On a tie, the profile whose window resets soonest wins, so usage that would otherwise expire unused is spent first.
-4. `cs` prints which profile it picked and how much usage it has left, then starts Claude Code with that profile exactly as `cs <name>` would.
+4. `cs` prints which account it picked and how much usage it has left, and makes it active exactly as `cs use <name>` would.
 
 If every profile is exhausted, `cs` prints the earliest reset time and which profile it belongs to, and exits with a non-zero code.
 
-### Switching when a profile runs out
+### Fully automatic
 
-When the active profile runs out of usage, `cs` marks it as exhausted together with its reset time and picks the next best profile using the same rules. The switch happens inside the running Claude Code session, the same way `/login` changes the account of a session: the conversation, its history and the working directory stay as they are, and the user does not restart Claude Code or resume with `--continue`. Once a profile's reset time has passed, it becomes a candidate again automatically.
+After a one-time `cs setup`, the user never runs `cs` while working. `cs setup` installs `cs statusline` and `cs hook rate-limit` in `~/.claude/settings.json` and makes the best account active. From then on every decision happens inside those two calls, which Claude Code makes on its own. `cs use`, `cs auto` and `cs status` stay available to look or to steer, and are never needed.
+
+### Switching before the active account runs out
+
+The status line runs after every assistant message (<https://code.claude.com/docs/en/statusline>). Each run, `cs statusline` records the active account's usage, and when either window passes the switch threshold (95% by default, set in `state.json`), it switches to the next account with the rules of `cs auto`. The switch happens between two replies, so no turn fails on a usage limit. The same run refreshes a parked login whose access token is close to expiry and re-reads a parked account's usage when it is older than a few minutes, so the next choice is made on current numbers. Slow work (a refresh, a usage request) runs in a detached child under the lock, so the status line itself prints at once.
+
+### When a limit is hit anyway
+
+Claude Code runs a `StopFailure` hook with matcher `rate_limit` when a turn ends on a usage limit (<https://code.claude.com/docs/en/hooks>), for example when one long turn uses the last 5%. `cs hook rate-limit` marks the active account exhausted with the reset time last recorded, and switches to the next account at once. The next message the user sends runs on the new account.
+
+Either way, every open session continues on the new account: the conversation, its history and the working directory stay as they are, and nobody restarts Claude Code or resumes with `--continue`. Once an account's reset time has passed, it becomes a candidate again without any action.
+
+### Several sessions at once
+
+All sessions in `~/.claude` share the active account, so a switch applies to all of them, as `/login` does. When two sessions decide to switch at the same moment, both take the lock in turn; the second sees that the account it ran out on is no longer active and does nothing, so the accounts switch once. Every read and write of `state.json` takes the same lock.
 
 ### Showing usage: `cs status`
 
-`cs status` prints a table with every profile, its remaining usage and its reset time, so the user can see at a glance which accounts are available.
+`cs status` prints a table with every profile, its remaining usage and its reset time, and marks the active account, so the user can see at a glance which accounts are available.
 
 ## 8. Error handling
 
@@ -181,9 +234,11 @@ Do this check after the first two profiles, before setting up all seven, so a pr
 
 If the second login replaced the first, the installed Claude Code version still uses one shared Keychain item. Updating Claude Code is the first fix to try.
 
+Before `cs use` is trusted with real logins, check one switch by hand: with two windows open on `~/.claude`, run `cs use` to the other account, and run `/status` in both windows. Both should show the new account.
+
 ## 10. Security notes
 
-`cs` never reads or writes credentials, so it cannot leak them. The profile folders contain session history and project data, which may include code or conversation content, so they should be treated like the normal `~/.claude` folder. Removing a profile means deleting its folder and also deleting its "Claude Code" item in Keychain Access; deleting only the folder leaves the login in the Keychain.
+`cs` touches credentials for three purposes only: it moves a login between a profile's Keychain item and the item of `~/.claude` on a switch, it refreshes a parked login, and it reads a parked account's access token to ask for that account's usage. It never refreshes the active login in `~/.claude`, never keeps two live copies of a login, and never writes a token to a file, a log, the terminal or `state.json`. The owner asked for this on #12 and for the refresh of parked logins afterwards, so that `cs` does what `/login` does and keeps every account ready. The profile folders contain session history and project data, which may include code or conversation content, so they should be treated like the normal `~/.claude` folder. Removing a profile means deleting its folder and also deleting its "Claude Code" item in Keychain Access; deleting only the folder leaves the login in the Keychain.
 
 ## 11. Possible later additions
 
