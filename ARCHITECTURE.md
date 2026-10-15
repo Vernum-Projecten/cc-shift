@@ -18,7 +18,7 @@ All profiles are work accounts. There are seven of them, and each profile has th
 
 There are two ways to use the accounts. `cs <name>` starts a separate Claude Code with that profile's own config folder. More often, every window (RustRover and a plain `claude`) runs with the default `~/.claude`, and `cs` changes which account that folder is logged in to, the same way `/login` does. Every open session then continues on the new account without a restart.
 
-Claude Code stays responsible for logging in and for refreshing tokens. `cs` only moves an account's login between its profile and `~/.claude` when it switches accounts, and reads a stored login to ask for that account's usage (sections 7 and 10).
+Claude Code stays responsible for logging in and for refreshing the active account's tokens. `cs` moves an account's login between its profile and `~/.claude` when it switches accounts, refreshes the logins parked in the profiles, and reads a parked login to ask for that account's usage (sections 6, 7 and 10).
 
 ## 2. Scope
 
@@ -152,7 +152,9 @@ Every window running with `~/.claude` continues on `claude2`. If `cs` stops half
 
 ### Token refresh
 
-The access token is short-lived and the refresh token is long-lived. Every time Claude Code runs and finds an expired access token, it uses the refresh token to get a new one and updates the Keychain item of the folder it runs in. `cs` never refreshes a token. A parked login is not refreshed while it is parked, so it stays usable as long as its refresh token is not revoked, for example by logging out or changing the account password. If a profile is ever logged out, running `cs add <name>` and `/login` again fixes it.
+The access token is short-lived and the refresh token is long-lived. Every time Claude Code runs and finds an expired access token, it uses the refresh token to get a new one and updates the Keychain item of the folder it runs in. That is how the active account in `~/.claude` stays fresh, and `cs` never refreshes it: two processes refreshing one login would each spend the single-use refresh token the other still holds.
+
+A parked login has no Claude Code process to refresh it, so `cs` does. Before it uses a parked login (to read usage, or to make it active) and whenever its access token is close to expiry, `cs` takes the lock, sends the refresh token to Anthropic's OAuth token endpoint, and writes the new access and refresh tokens back to the same parked item at once. Only a parked login is ever refreshed by `cs`, so each login still has one live copy and one process that refreshes it. A refresh that the endpoint refuses (a revoked or expired refresh token) marks the profile logged out; running `cs add <name>` and `/login` again fixes it. The token endpoint is not documented by Anthropic, so a refresh that fails for another reason leaves the parked item as it was and marks the profile's usage "unknown".
 
 ### Sharing settings between profiles
 
@@ -226,7 +228,7 @@ Before `cs use` is trusted with real logins, check one switch by hand: with two 
 
 ## 10. Security notes
 
-`cs` touches credentials for two purposes only: it moves a login between a profile's Keychain item and the item of `~/.claude` on a switch, and it reads a parked account's access token to ask for that account's usage. It never refreshes a token, never keeps two live copies of a login, and never writes a token to a file, a log, the terminal or `state.json`. The owner asked for this on #12, so that `cs` does what `/login` does. The profile folders contain session history and project data, which may include code or conversation content, so they should be treated like the normal `~/.claude` folder. Removing a profile means deleting its folder and also deleting its "Claude Code" item in Keychain Access; deleting only the folder leaves the login in the Keychain.
+`cs` touches credentials for three purposes only: it moves a login between a profile's Keychain item and the item of `~/.claude` on a switch, it refreshes a parked login, and it reads a parked account's access token to ask for that account's usage. It never refreshes the active login in `~/.claude`, never keeps two live copies of a login, and never writes a token to a file, a log, the terminal or `state.json`. The owner asked for this on #12 and for the refresh of parked logins afterwards, so that `cs` does what `/login` does and keeps every account ready. The profile folders contain session history and project data, which may include code or conversation content, so they should be treated like the normal `~/.claude` folder. Removing a profile means deleting its folder and also deleting its "Claude Code" item in Keychain Access; deleting only the folder leaves the login in the Keychain.
 
 ## 11. Possible later additions
 
