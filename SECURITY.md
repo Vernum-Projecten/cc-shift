@@ -7,9 +7,9 @@ release, never as a back-port.
 
 ## Reporting a vulnerability
 
-Report a vulnerability privately through GitHub Security Advisories:
-<https://github.com/Vernum-Projecten/cs/security/advisories/new>. Do not open
-a public issue, pull request or discussion for a security problem.
+The repository is private, so GitHub's private vulnerability reporting is not
+available. Report a vulnerability directly to the maintainer, @rubentalstra,
+and do not open an issue, pull request or discussion for it.
 
 Include the version or commit, the steps to reproduce, and what an attacker
 gains. Never include a real token, a Keychain item, an account email or the

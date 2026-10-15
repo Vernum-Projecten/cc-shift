@@ -1,7 +1,7 @@
 blank_issues_enabled: false
 contact_links:
   - name: Report a security vulnerability
-    url: https://github.com/Vernum-Projecten/cs/security/advisories/new
+    url: https://github.com/Vernum-Projecten/cs/blob/main/SECURITY.md
     about: >-
-      Report a vulnerability privately through GitHub Security Advisories. Do not
-      open a public issue for a security problem. See SECURITY.md.
+      Report a vulnerability directly to the maintainer, as SECURITY.md
+      describes. Do not open an issue for a security problem.
