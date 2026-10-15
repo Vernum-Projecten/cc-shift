@@ -208,4 +208,4 @@ The tests never touch your real Keychain, profiles or accounts: they run against
 
 ## License
 
-[Apache License 2.0](https://github.com/Vernum-Projecten/cc-shift/blob/main/LICENSE).
+[Apache License 2.0](https://github.com/Vernum-Projecten/cc-shift/blob/main/LICENSE). Copyright 2026 Vernum-Projecten; see [NOTICE](https://github.com/Vernum-Projecten/cc-shift/blob/main/NOTICE).
