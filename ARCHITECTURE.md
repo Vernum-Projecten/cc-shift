@@ -62,7 +62,7 @@ Among the available accounts, the one with the most usage left in its fuller win
 - **Before the limit:** each `cs statusline` run records the active account's numbers. When a window reaches 95%, it switches to the next account. The switch falls between two replies, so no turn fails.
 - **At the limit:** Claude Code runs a `StopFailure` hook with matcher `rate_limit` when a turn ends on a usage limit (<https://code.claude.com/docs/en/hooks>). `cs hook rate-limit` records the active account as full and switches at once. The next message runs on the new account.
 
-The status line prints at once. Slow work (refreshing a parked login, asking for a parked account's usage when its numbers are more than five minutes old) runs in a detached `cs` process, so the next choice is made on current numbers.
+The status line prints at once. A switch is a few local Keychain calls and runs in the status line itself. Slow work (refreshing a parked login, asking for a parked account's usage when its numbers are more than five minutes old) runs in a detached `cs` process, so the next choice is made on current numbers.
 
 ### Several windows
 
@@ -118,7 +118,8 @@ A small library with a thin binary: `src/main.rs` only calls `cs::run` in `src/l
 - `setup`: puts the status line and the rate-limit hook into `~/.claude/settings.json`, keeping every other setting and chaining the user's own status line.
 - `account`: copies a profile's `oauthAccount` into `~/.claude.json`, keeping every other key and its order.
 - `system_keychain`: the macOS backend of `Logins` through `/usr/bin/security`, the same tool Claude Code's items were made with, so their access rules stay as they are. A login goes in on stdin as hex and every write is read back.
-- Planned: the usage endpoint for parked accounts, the refresh of parked logins, and the hook entry point.
+- `auto`: when to switch on its own (the status line at 95%, the rate-limit hook, `cs setup`) and where to go, skipping a profile with no usable login. A hook within a minute of a switch is taken to belong to the account just left.
+- Planned: the usage endpoint for parked accounts and the refresh of parked logins.
 
 The runtime dependencies are `thiserror` for the error type and `serde` with `serde_json` for the state and the status line input; each further dependency is added in the pull request that needs it.
 
