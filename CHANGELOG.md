@@ -23,6 +23,9 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Every file carries its copyright holder and its licence (`Apache-2.0`) as
   SPDX lines, and the repository follows the REUSE 3.3 specification,
   checked in CI.
+- The README, the crates.io description and keywords, docs.rs and the
+  GitHub repository describe macOS and Linux, with a `platform: macOS | Linux`
+  badge.
 
 ### Changed
 

@@ -6,20 +6,24 @@ name = "cc-shift"
 version = "0.0.9"
 edition = "2024"
 rust-version = "1.98"
-description = "Switches Claude Code between several Claude accounts on macOS on its own, before a usage limit is hit."
+description = "Switches Claude Code between several Claude accounts on its own, before a usage limit is hit. For macOS and Linux."
 license = "Apache-2.0"
 repository = "https://github.com/Vernum-Projecten/cc-shift"
 homepage = "https://github.com/Vernum-Projecten/cc-shift"
 readme = "README.md"
-keywords = ["claude-code", "claude", "macos", "usage-limits", "cli"]
+keywords = ["claude-code", "claude", "usage-limits", "macos", "linux"]
 categories = ["command-line-utilities", "development-tools"]
 include = ["src/**/*.rs", "Cargo.toml", "Cargo.lock", "README.md", "LICENSE", "LICENSES/Apache-2.0.txt", "NOTICE", "REUSE.toml"]
 publish = true
 
-# docs.rs builds on Linux; cc-shift builds on macOS only, so its docs are
-# built for the two macOS targets.
+# docs.rs builds the docs for both macOS targets and for Linux, so the
+# per-system modules of each appear.
 [package.metadata.docs.rs]
-targets = ["aarch64-apple-darwin", "x86_64-apple-darwin"]
+targets = [
+    "aarch64-apple-darwin",
+    "x86_64-apple-darwin",
+    "x86_64-unknown-linux-gnu",
+]
 
 [dependencies]
 jiff = { version = "0.2.38", default-features = false, features = ["std", "tz-system", "tzdb-zoneinfo"] }
