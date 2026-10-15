@@ -64,6 +64,9 @@ pub enum Error {
     /// The account to switch to has no parked login.
     #[error("'{0}' has no parked login; run 'cc-shift add {0}' and /login")]
     NoParkedLogin(String),
+    /// Completion was asked for a shell `cc-shift` has no script for.
+    #[error("no completion for '{0}'; cc-shift completes zsh, the macOS shell")]
+    Completion(String),
     /// No profile folder exists for the name.
     #[error("there is no profile '{0}'; 'cc-shift list' shows them")]
     NoProfile(String),

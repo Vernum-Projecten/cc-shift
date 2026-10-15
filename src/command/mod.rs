@@ -6,6 +6,7 @@
 
 pub mod activate;
 pub mod add;
+pub mod completion;
 pub mod doctor;
 pub mod hook;
 pub mod list;
@@ -60,6 +61,7 @@ where
         Command::Setup => setup::run(),
         Command::Refresh => refresh::run(),
         Command::Doctor => doctor::run(),
+        Command::Completion(shell) => completion::run(&shell),
         Command::Remove(name) => remove::run(&name),
         Command::Uninstall { all } => uninstall::run(all),
         Command::Status { json } => status::run(json),
