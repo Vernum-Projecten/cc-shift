@@ -1,8 +1,8 @@
 # Reliability and safety hard rules
 
-`cc-shift` starts Claude Code signed in to an account and decides which account to
-use. A wrong decision is quiet: the wrong profile starts, a profile with no
-usage left is picked, or a stale reset time keeps a usable account out of the
+`cc-shift` decides which account every Claude Code window uses and moves its
+login into `~/.claude`. A wrong decision is quiet: the wrong login is moved, a
+profile with no usage left is picked, or a stale reset time keeps a usable account out of the
 rotation. Silent wrong answers are worse than loud failures. The principles
 below are the standing bar for hand-written code, and each names the lint or
 check that enforces it. **A rule without a failing check is a wish**, so every
@@ -17,9 +17,11 @@ Rust Book's error-handling and overflow chapters, and the Clippy book.
 2. **Lint at `deny`/`forbid`:** fails every `cargo clippy`, local and CI
    (`Cargo.toml` `[lints]`). `forbid` cannot be relaxed by any attribute;
    escaping it is an owner decision, not an `#[allow]`.
-3. **Warn plus CI `-D warnings`:** `clippy::all` and `clippy::pedantic` both
-   live here, so every pedantic lint is effectively a hard rule (including
-   `missing_errors_doc` and `missing_panics_doc`).
+3. **Warn plus CI `-D warnings`:** the few lints set to `warn` in `[lints]`
+   (such as `allow_attributes` and `integer_division`) fail CI too.
+   `clippy::all` and `clippy::pedantic` are at `deny` (tier 2), so every
+   pedantic lint is a hard rule (including `missing_errors_doc` and
+   `missing_panics_doc`).
 4. **A committed check script or CI job:** `scripts/checks/comment-style.sh`
    (per edit through a hook), `scripts/checks/file-length.sh`, and the
    workflow lanes in `ci-cd.md`.
@@ -44,8 +46,8 @@ Rust Book's error-handling and overflow chapters, and the Clippy book.
 - **No `unwrap`/`expect`/`panic!`/`unreachable!`/`unimplemented!`/`todo!` in
   application code** (deny-tier lints). Tests keep the `clippy.toml`
   `allow-*-in-tests` scoping; a panicking assertion is how a test fails.
-  Recoverable failures return typed errors (`thiserror` in the library half,
-  `anyhow` only in `main.rs`), the Book ch9 split: panic is for states that
+  Recoverable failures return typed errors (`thiserror`; `main.rs` only turns
+  the result of `cc_shift::run` into an exit code), the Book ch9 split: panic is for states that
   cannot happen, `Result` for everything that can.
 - **The ONE sanctioned escape for a logically-impossible `Err`/`None`** (Book
   ch9): a narrowly-scoped `#[expect(clippy::expect_used, reason = "…")]` on the
@@ -72,8 +74,9 @@ Rust Book's error-handling and overflow chapters, and the Clippy book.
 - **An unknown is never flattened into a default.** Usage that could not be
   read, a reset time that could not be parsed, or a profile whose login state
   is unclear is a typed error or an explicit "unknown" state, never `0`, never
-  "full", and never "logged in". Automatic selection skips an unknown profile
-  and says so; it never ranks a guess. (Review-enforced; the selection tests
+  "full", and never "logged in". Automatic selection ranks only known usage;
+  an account with unknown usage is shown as such and chosen last, by name,
+  only when no known account is available. (Review-enforced; the selection tests
   pin it.)
 - **`Result → Option` inside a chain is a DECISION** (review-enforced; no lint
   can make the distinction). `.filter_map(|x| f(x).ok())` and `f(x).ok()?` turn
@@ -86,7 +89,8 @@ Rust Book's error-handling and overflow chapters, and the Clippy book.
 - **Determinism is lint-backed** (deny tier: `iter_over_hash_type`): HashMap
   and HashSet iteration order is undefined; anything that feeds output or a
   ranking iterates ordered structures (`BTreeMap`, sorted vectors), so
-  `cc-shift list` and a tie in `cc-shift auto` resolve the same way every run.
+  `cc-shift list` and a tie in the selection rule resolve the same way every
+  run.
 - **Output goes through one place.** `print_stdout` and `print_stderr` are
   denied outside the module that owns terminal output, which relaxes them with
   a scoped `#[expect]` and a reason; `dbg_macro` is denied everywhere. Nothing

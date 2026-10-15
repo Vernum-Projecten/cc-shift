@@ -15,8 +15,10 @@ carries what CI runs and the rules every workflow keeps.
 - `.github/workflows/ci.yml`: the two-tier gate. Tier 1 needs no Rust:
   `zizmor`, `actionlint`, `shellcheck`, the comment-style guard
   (`scripts/checks/comment-style.sh`), the file-length guard
-  (`scripts/checks/file-length.sh`) and the self-tests of the `scripts/gh/`
-  helpers. Tier 2 is the Rust set below, gated on the root `Cargo.toml`
+  (`scripts/checks/file-length.sh`), the bash 3.2 guard
+  (`scripts/checks/bash-compat.sh`), the file-mode guard
+  (`scripts/checks/script-modes.sh`), and the self-tests of
+  `scripts/checks/api-prices.sh` and the `scripts/gh/` helpers. Tier 2 is the Rust set below, gated on the root `Cargo.toml`
   existing. The `conclusion` job is the single required status check on
   `main`.
 - `.github/workflows/release.yml`: the release lane, run by a `v*` tag. It checks the tag against the version and `CHANGELOG.md`, creates the GitHub release as a draft, builds and attests the two macOS binaries, publishes to crates.io through Trusted Publishing (OIDC, no stored token) in the `crates-io` environment, and publishes the draft once every asset is attached. No release job restores a cache.
@@ -81,7 +83,7 @@ The local commands mirror the CI flags verbatim:
 ```sh
 cargo fmt --all --check
 cargo clippy --locked --all-targets --all-features -- -D warnings
-cargo nextest run --locked --all-features
+cargo nextest run --profile ci --locked --all-features --no-tests=pass
 cargo test --doc --locked --all-features
 RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps --all-features --document-private-items
 cargo deny check
@@ -96,9 +98,10 @@ CI fails on lockfile drift rather than on registry drift. Commit `Cargo.lock`.
 
 A release is a `vX.Y.Z` tag on `main`, cut from the session
 (`.claude/memory/release-tag-is-mine.md`). The fix for a bad cut is a new
-patch version, never a retag. A release lane, when one is added, builds in a
-reusable workflow with no cache, assembles the release as a draft, attaches
-every asset with its checksum and build provenance, and publishes last.
+patch version, never a retag. The release lane (`release.yml`, above) builds
+with no cache, assembles the release as a draft, attaches every asset with
+its checksum and build provenance, and publishes last; `CONTRIBUTING.md` has
+the steps.
 
 ## Never
 

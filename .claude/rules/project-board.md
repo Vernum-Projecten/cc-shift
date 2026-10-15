@@ -138,7 +138,7 @@ Built-in workflows: Auto-add to project (`is:issue is:open` → Todo), Item
 reopened → Todo, Item closed → Done, Pull request linked to issue → In Progress.
 Keep **Auto-close issue OFF** (the board is a view and must never mutate the
 tracker; closing happens only via the PR's `Closes #N`) and **Auto-archive
-OFF** (closed items stay visible as the shipped record). Visibility: private, matching the repository.
+OFF** (closed items stay visible as the shipped record). Visibility: private; the repository itself is public.
 
 ## Interaction with the rest of the workflow
 

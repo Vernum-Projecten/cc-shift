@@ -12,9 +12,12 @@ documentation states is verified by hand and recorded on the issue.
 
 ## Build idiomatic, compiling, tested code
 
-- **Use proper crates; do not hand-roll** what the ecosystem provides
-  (argument parsing, JSON, time). Keep the dependency set small: `cc-shift` is a thin
-  launcher, and every dependency has to earn its place in the PR that adds it.
+- **Use proper crates; do not hand-roll** what the ecosystem provides (JSON,
+  time, hashing). Keep the dependency set small: `cc-shift` is a small tool,
+  and every dependency has to earn its place in the PR that adds it. The one
+  deliberate exception is the command line: `src/command/parse.rs` is a small
+  hand-written parser with its own tests, because a parser crate would cost
+  more than the few flags it saves.
   Verify each version against crates.io or docs.rs at the moment it is added,
   never from memory.
 - **The crate compiles, is clippy-clean, and is tested before you move on.**
@@ -112,7 +115,8 @@ table.
 ## Type and error conventions
 
 - `thiserror` error enums inside the library half (`lib.rs` and its modules);
-  `anyhow` only in `main.rs`. No `unwrap`/`expect` outside `#[cfg(test)]`;
+  `main.rs` only turns the result of `cc_shift::run` into an exit code. No
+  `unwrap`/`expect` outside `#[cfg(test)]`;
   `todo!()` and `unimplemented!()` are banned: an unready dependency gets a
   typed error or real code, never a panic placeholder.
 - Model closed sets as Rust `enum`s (a command, a profile state); trait
@@ -150,8 +154,9 @@ table.
 - **`Future` and `IntoFuture` are in the prelude:** a collision with a local
   trait method is resolved with fully-qualified syntax, never an import rename.
 - **`std::env::set_var` and `remove_var` are `unsafe` in edition 2024.** `cc-shift`
-  never calls them: it sets `CLAUDE_CONFIG_DIR` on the child with
-  `Command::env`, which is safe, and then `exec`s.
+  never calls them: it sets `CLAUDE_CONFIG_DIR` on a child `claude` with
+  `Command::env`, which is safe (`cc-shift add` then `exec`s it, the early
+  start waits for it).
 - The other `unsafe_*` 2024 items are moot under `unsafe_code = "forbid"`.
 
 ## Naming
@@ -181,6 +186,8 @@ wrong line). Reach for:
 
 - Do not special-case one profile by name in the code. Every profile is
   handled the same way; a difference between accounts is data, never a branch.
-- Do not grow `cc-shift` into a wrapper process that stays running around `claude`.
-  The launcher `exec`s; anything that must watch a session is designed in
-  `ARCHITECTURE.md` first.
+- Do not grow `cc-shift` into a wrapper process that stays running around `claude`
+  or a resident daemon. Its work runs in short-lived processes (a command,
+  the status line, the hook, a detached refresh, the early start run);
+  anything new that must watch a session is designed in `ARCHITECTURE.md`
+  first.

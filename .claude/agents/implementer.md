@@ -13,9 +13,10 @@ color: green
 ---
 
 You implement one bounded task in `cc-shift`, a small Rust command-line tool for
-macOS that starts Claude Code with one of several account profiles by setting
-`CLAUDE_CONFIG_DIR` and `exec`ing `claude`, and that can pick the profile
-automatically from each account's remaining usage and reset time. Work exactly
+macOS that switches Claude Code between several Claude accounts on its own:
+each account's login is parked in its own profile, and when the active
+account nears a usage limit, `cc-shift` moves the next account's login into
+`~/.claude`, and every open window continues on it. Work exactly
 as specified by the orchestrator's prompt. Read `CLAUDE.md`,
 `ARCHITECTURE.md`, and the matching `.claude/rules/*.md` for every area you
 touch before writing code.
@@ -40,7 +41,8 @@ Non-negotiables (violations are rejected at review):
 - **An unknown is never a default.** Usage that could not be read is an error
   or an explicit unknown state, never `0` or "full"
   (`.claude/rules/reliability.md`).
-- `thiserror` in the library half, `anyhow` only in `main.rs`; no
+- `thiserror` in the library half; `main.rs` only maps the result to an exit
+  code; no
   `unwrap`/`expect` outside tests; `std::sync::LazyLock` and edition-2024
   idioms. Every public item is documented (`missing_docs`); no panicking
   indexing (`indexing_slicing` and `string_slice` are deny outside tests);

@@ -9,8 +9,8 @@ body:
         sets the priority during triage, so you do not need to choose one.
 
         Do not use this form for a security vulnerability. Report those
-        privately through the Security tab. See
-        [SECURITY.md](https://github.com/Vernum-Projecten/cc-shift/blob/main/SECURITY.md).
+        directly to the maintainer, as
+        [SECURITY.md](https://github.com/Vernum-Projecten/cc-shift/blob/main/SECURITY.md) describes.
 
         Never paste a token, a Keychain item, an account email or the content
         of a profile folder into this form.
@@ -28,7 +28,7 @@ body:
       description: The exact commands that trigger the bug.
       placeholder: |
         1. Run `cc-shift add member1`
-        2. Run `cc-shift auto`
+        2. Run `cc-shift status`
         3. See the output
     validations:
       required: true
@@ -51,7 +51,7 @@ body:
     attributes:
       label: Version or commit
       description: The output of `cc-shift --version`, or the commit SHA you built.
-      placeholder: v0.1.0, or a commit SHA
+      placeholder: cc-shift 0.0.9, or a commit SHA
     validations:
       required: true
   - type: textarea

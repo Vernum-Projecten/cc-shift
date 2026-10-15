@@ -24,8 +24,8 @@ records, and it does not decide the work is done on your behalf.
    labels).
 2. **Verify every `## Acceptance criteria` checkbox is ticked.** If any remain
    `- [ ]`, stop and list them. Do not tick a criterion yourself to proceed; a
-   tick must reflect real, verified state ("`cc-shift auto` picks the profile with
-   the most usage" means a test or a hand run showed it). Tick verified boxes
+   tick must reflect real, verified state ("the switch picks the account that
+   expires first" means a test or a hand run showed it). Tick verified boxes
    in the issue body via `gh issue edit <n> --body-file`.
 3. **Relationships check** (`scripts/gh/rel.sh tree <n>`;
    `.claude/rules/issue-relationships.md`): if the issue is a **parent** with
