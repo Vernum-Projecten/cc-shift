@@ -102,6 +102,20 @@ pub enum Event {
         /// How long all accounts were full, in seconds.
         after_seconds: i64,
     },
+    /// The early start ran.
+    EarlyStart {
+        /// The accounts whose 5-hour window it started.
+        started: Vec<String>,
+        /// How many it was set to start.
+        wanted: u8,
+    },
+    /// The early start could not start an account's window.
+    EarlyStartFailed {
+        /// The account.
+        account: String,
+        /// Why.
+        reason: String,
+    },
     /// A status line reading that did not go to the active account.
     Reading {
         /// The account it was recorded under, if any.

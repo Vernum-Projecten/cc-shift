@@ -42,12 +42,16 @@ A refresh token works once: after a refresh the old one is dead, and presenting 
 | `cc-shift uninstall [--all]` | Undoes `cc-shift setup`; with `--all` also deletes every profile and its login. |
 | `cc-shift completion zsh` | Prints the zsh completion script. |
 | `cc-shift version` | Prints the version; also `--version` and `-V`. |
+| `cc-shift early` | Shows the early start: off, or the time, the count and the next run. |
+| `cc-shift early on [--at 06:00] [--accounts 2]` | Starts that many accounts' 5-hour windows at that time, Monday to Friday, so they reset during the workday. Off until turned on. |
+| `cc-shift early off` | Stops the early start and removes its `launchd` agent. |
 | `cc-shift statusline` | Called by Claude Code after every reply. Not run by hand. |
 | `cc-shift hook rate-limit` | Called by Claude Code when a turn hits a usage limit. Not run by hand. |
+| `cc-shift early run` | Called by `launchd` at the early start time. Not run by hand. |
 
 After `cc-shift add` for each account and one `cc-shift setup`, `cc-shift` tracks every account and switches on its own.
 
-A profile name uses ASCII letters, digits, `-` and `_`, starts with a letter or digit, and is not a command word (`add`, `setup`, `status`, `use`, `list`, `statusline`, `hook`, `help`, `remove`, `refresh`, `doctor`, `uninstall`, `completion`, `log`, `version`, `stats`).
+A profile name uses ASCII letters, digits, `-` and `_`, starts with a letter or digit, and is not a command word (`add`, `setup`, `status`, `use`, `list`, `statusline`, `hook`, `help`, `remove`, `refresh`, `doctor`, `uninstall`, `completion`, `log`, `version`, `stats`, `early`).
 
 ## 4. Automatic switching
 
@@ -92,6 +96,14 @@ The status line prints at once. Slow work (refreshing a parked login, reading an
 
 All windows share the active account, so a switch moves all of them, as `/login` does. Every switch and every write of the state takes one lock, and the five-minute pause after a switch keeps a second window from starting another.
 
+### Early start
+
+A 5-hour window starts with an account's first message, so a window started at 06:00 resets at 11:00, inside the workday, and gives an extra window that day. `cc-shift early on` turns this on (off by default, #35). A `launchd` agent in `~/Library/LaunchAgents` runs `cc-shift early run` Monday to Friday at the set time (06:00 by default). A Mac that is asleep then runs it on waking; a Mac that is off skips the day, and a run on a Saturday or Sunday does nothing.
+
+The run refreshes the parked logins, then holds the refresh lock and starts the first accounts (2 by default) in the order of section 4 whose 5-hour window is not running. Full, out-of-week and logged-out accounts are not in that order, so they are never started. The other accounts stay untouched for later in the day: every extra window spends the week sooner.
+
+Claude Code sends the message itself, in the account's profile folder (or `~/.claude` for the active account), so `cc-shift` touches no token: `claude -p` with a one-word prompt on Haiku, no tools, no MCP servers, no saved session, and `--setting-sources project` from an empty folder so no hook of the user's runs. The cost is one short Haiku message per account. Each start, and each account that could not be started with the reason, goes to the history.
+
 ## 5. Logins and tokens
 
 ### A switch: `cc-shift use member2`
@@ -122,6 +134,8 @@ A parked login has no Claude Code process to refresh it, so `cc-shift` does. Whe
 | The lock | `~/.claude-profiles/.lock` | cc-shift |
 | Token counts read from the transcripts, per file | `~/.claude-profiles/stats-cache.json` | cc-shift stats |
 | Status line and hook | `~/.claude/settings.json` | cc-shift setup |
+| The early start agent, while it is on | `~/Library/LaunchAgents/io.github.vernum-projecten.cc-shift.early-start.plist` | cc-shift early on |
+| The empty working folder of the early start | `~/Library/Caches/cc-shift/early-start/` | cc-shift early run |
 
 `cc-shift list` treats every folder in `~/.claude-profiles/` as a profile, so the state and lock are files there. A profile's item is `Claude Code-credentials-` followed by the first 8 hex characters of the SHA-256 of its folder's absolute path, with the macOS user name as the account (observed on Claude Code 2.1.300, #6).
 
@@ -134,7 +148,7 @@ src/
 ├── main.rs, lib.rs, error.rs
 ├── command/      the command line: parse, and one file per command
 │                 (add, list, activate for cc-shift use, setup, status, stats,
-│                 refresh, statusline, hook); mod.rs dispatches and holds the
+│                 log, early, refresh, statusline, hook); mod.rs dispatches and holds the
 │                 helpers
 ├── store/        the files cc-shift owns: profile (names, the profiles folder),
 │                 state (state.json behind the lock, written in one rename),
@@ -144,6 +158,8 @@ src/
 │                 every account's state in the order of use
 ├── render/       the status table, the status line and the stats tables
 │                 and JSON, with bars and colour (NO_COLOR is honoured)
+├── early/        mod.rs: the setting, the next run and which accounts to
+│                 start; launchd: the agent; start: the claude -p run
 ├── stats/        transcript: finding the session transcripts and reading
 │                 only the usage fields; cache: stats-cache.json per file
 │                 by size and modification time; summary: one count per

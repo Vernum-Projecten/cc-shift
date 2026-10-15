@@ -2,6 +2,7 @@
 
 use std::fmt::Write;
 
+use crate::early::EarlyStart;
 use crate::render::{Paint, bar, pad};
 use crate::usage::overview::{Overview, Row, Status};
 use crate::usage::{Window, time_left};
@@ -52,6 +53,19 @@ pub fn table(view: &Overview, now: i64, paint: Paint) -> String {
         );
     }
     out
+}
+
+/// The line under the table while the early start is on.
+#[must_use]
+pub fn early_line(setting: EarlyStart, paint: Paint) -> String {
+    format!(
+        "\n{}\n",
+        paint.dim(&format!(
+            "  early start {} · {}",
+            setting.at(),
+            setting.count()
+        ))
+    )
 }
 
 /// The line above the table.
@@ -195,6 +209,19 @@ mod tests {
                 .starts_with("cc-shift · 0 accounts · 0 free now · not set up"),
             "{}",
             table(&view, NOW, Paint::new(false))
+        );
+    }
+
+    #[test]
+    fn the_early_start_line_names_the_time_and_count() {
+        let setting = crate::early::EarlyStart {
+            hour: 5,
+            minute: 30,
+            accounts: 1,
+        };
+        assert_eq!(
+            super::early_line(setting, Paint::new(false)),
+            "\n  early start 05:30 · 1 account\n"
         );
     }
 }

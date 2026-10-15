@@ -12,6 +12,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
+use crate::early::EarlyStart;
 use crate::error::Error;
 use crate::store::profile::ProfilesRoot;
 use crate::usage::{Thresholds, Window};
@@ -38,6 +39,9 @@ pub struct State {
     pub logged_out: BTreeSet<String>,
     /// The percentages at which the windows count as full.
     pub thresholds: Thresholds,
+    /// When the early start runs and how many accounts it starts; `None`
+    /// while it is off.
+    pub early_start: Option<EarlyStart>,
 }
 
 /// The usage of one account as last read.

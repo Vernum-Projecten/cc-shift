@@ -8,6 +8,7 @@ pub mod activate;
 pub mod add;
 pub mod completion;
 pub mod doctor;
+pub mod early;
 pub mod help;
 pub mod hook;
 pub mod list;
@@ -66,6 +67,7 @@ where
         Command::Refresh => refresh::run(),
         Command::Doctor => doctor::run(),
         Command::Log(options) => log::run(&options),
+        Command::Early(action) => early::run(action),
         Command::Completion(shell) => completion::run(&shell),
         Command::Remove(name) => remove::run(&name),
         Command::Uninstall { all } => uninstall::run(all),

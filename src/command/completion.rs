@@ -27,6 +27,7 @@ _cc_shift() {
     'list:print the profiles'
     'doctor:check the setup'
     'log:show the history'
+    'early:start windows before the workday'
     'remove:delete a profile and its login'
     'uninstall:undo setup'
     'completion:print the shell completion'
@@ -43,6 +44,7 @@ _cc_shift() {
     stats) compadd -- --since --all --project --cost --per-account --json ;;
     uninstall) compadd -- --all ;;
     log) compadd -- --since --all --verbose --json ;;
+    early) if (( CURRENT == 3 )); then compadd -- on off; else compadd -- --at --accounts; fi ;;
     completion) compadd -- zsh ;;
   esac
 }
@@ -78,6 +80,8 @@ mod tests {
             "refresh",
             "list",
             "doctor",
+            "log",
+            "early",
             "remove",
             "uninstall",
             "completion",
