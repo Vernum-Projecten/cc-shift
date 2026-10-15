@@ -10,6 +10,11 @@
 //! accounts, `anthropic` the calls to Anthropic, and `claude_code` the
 //! places where `cc-shift` plugs into Claude Code.
 
+// NOTE: no specification governs this: our own design. The logins live in
+// the macOS login Keychain, so a build for another system stops here.
+#[cfg(not(target_os = "macos"))]
+compile_error!("cc-shift works on macOS only: it keeps logins in the macOS login Keychain");
+
 pub mod anthropic;
 pub mod claude_code;
 pub mod command;

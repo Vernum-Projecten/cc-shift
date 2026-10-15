@@ -10,6 +10,9 @@
 
 Every Claude Code window (RustRover, a terminal) keeps running as normal. When the account in use gets close to its 5-hour or 7-day limit, `cc-shift` moves every open window to the next account, the same way `/login` does. There is no restart, and the conversation, its history and the working directory stay as they are.
 
+> [!WARNING]
+> Spreading your work over several subscriptions so that one person gets past each account's own usage limit may be against [Anthropic's terms](https://www.anthropic.com/legal/consumer-terms), and Anthropic can suspend accounts that break them. Check the terms that apply to your accounts before you use `cc-shift`; you use it at your own risk.
+
 > [!IMPORTANT]
 > `cc-shift` works on **macOS only**. It keeps logins in the macOS login Keychain through `/usr/bin/security`, the same way Claude Code does on a Mac.
 
