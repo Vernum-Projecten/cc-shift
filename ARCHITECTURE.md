@@ -110,9 +110,11 @@ A small library with a thin binary: `src/main.rs` only calls `cs::run` in `src/l
 - `error`: the messages the user sees.
 - `usage`: the two windows per account and how full each is at a given time.
 - `select`: the selection rule, a pure function of the accounts and the current time.
-- Planned: the Keychain behind a small trait (so tests never touch the real one), the state with its lock, the usage sources, and the status line and hook entry points.
+- `state`: `state.json` behind the lock, written in one rename.
+- `statusline`: records the active account's usage and runs the user's own status line.
+- Planned: the Keychain behind a small trait (so tests never touch the real one), the usage endpoint for parked accounts, and the hook entry point.
 
-The only runtime dependency is `thiserror`; each further dependency is added in the pull request that needs it.
+The runtime dependencies are `thiserror` for the error type and `serde` with `serde_json` for the state and the status line input; each further dependency is added in the pull request that needs it.
 
 ## 8. Errors
 
