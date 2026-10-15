@@ -79,3 +79,29 @@ contribution is licensed under the same terms (section 5 of the licence).
 
 Report a vulnerability privately as described in [`SECURITY.md`](SECURITY.md),
 never in a public issue.
+
+## Releasing
+
+The version-bump pull request changes the version in `Cargo.toml`, turns the
+`Unreleased` section of `CHANGELOG.md` into the new version, and updates
+`version=` in the prebuilt-binary example of `README.md`. After it merges, a
+signed `v*` tag on `main` starts
+[`release.yml`](.github/workflows/release.yml), which does the rest:
+
+1. **plan** checks that the tag names the version in `Cargo.toml`, that
+   `publish` is on, and that [`CHANGELOG.md`](CHANGELOG.md) has a section for
+   the version, which becomes the release notes.
+2. **github release** creates the GitHub release as a draft.
+3. **binary** builds `cc-shift` for Apple Silicon and Intel Macs, attaches
+   each archive with its SHA-256 file to the draft, and attests its build
+   provenance (`gh attestation verify <archive> --repo Vernum-Projecten/cc-shift`).
+4. **crates.io** publishes through
+   [Trusted Publishing](https://crates.io/docs/trusted-publishing): the
+   workflow's GitHub identity is exchanged for a short-lived crates.io token,
+   so no token is stored anywhere. A version already on crates.io is skipped.
+5. **github release (publish)** publishes the draft once every archive is
+   attached.
+
+The crate's Trusted Publisher entry on crates.io names the repository
+`Vernum-Projecten/cc-shift`, the workflow `release.yml` and the environment
+`crates-io`.

@@ -39,10 +39,12 @@ work ▕██████░░░░▏ 60% · 3h33m │ 7d 31% │ next spare
 - [Requirements](#requirements)
 - [Install](#install)
 - [Set up](#set-up)
-- [Commands](#commands)
-- [Token statistics](#token-statistics)
 - [How it works](#how-it-works)
 - [Which account is next](#which-account-is-next)
+- [Switch thresholds](#switch-thresholds)
+- [Commands](#commands)
+- [Token statistics](#token-statistics)
+- [History](#history)
 - [Early start](#early-start)
 - [Security](#security)
 - [Update and uninstall](#update-and-uninstall)
@@ -57,7 +59,7 @@ work ▕██████░░░░▏ 60% · 3h33m │ 7d 31% │ next spare
 | macOS | Apple Silicon or Intel |
 | [Claude Code](https://code.claude.com/docs) | 2.1.300 or later |
 | Claude accounts | Pro, Max or Team, two or more |
-| Rust | 1.98 or later, to build `cc-shift` ([install Rust](https://rustup.rs)) |
+| Rust | 1.98 or later, only to build `cc-shift` yourself ([install Rust](https://rustup.rs)) |
 
 ## Install
 
@@ -70,7 +72,29 @@ cargo install cc-shift
 This builds `cc-shift` and puts it in `~/.cargo/bin`. Check that it is on your `PATH`:
 
 ```sh
-cc-shift help
+cc-shift --version
+```
+
+### Prebuilt binary
+
+Every [release](https://github.com/Vernum-Projecten/cc-shift/releases) has a binary for Apple Silicon (`aarch64-apple-darwin`) and Intel (`x86_64-apple-darwin`) Macs, with a SHA-256 file and a build attestation. Download it with `curl`, so macOS does not quarantine it as it does a browser download:
+
+```sh
+version=0.0.9
+target=aarch64-apple-darwin    # x86_64-apple-darwin on an Intel Mac
+archive=cc-shift-v$version-$target.tar.gz
+
+curl -LO https://github.com/Vernum-Projecten/cc-shift/releases/download/v$version/$archive
+curl -LO https://github.com/Vernum-Projecten/cc-shift/releases/download/v$version/$archive.sha256
+shasum -a 256 -c $archive.sha256
+tar xzf $archive
+mkdir -p ~/.local/bin && mv cc-shift-v$version-$target/cc-shift ~/.local/bin/
+```
+
+`~/.local/bin` must be on your `PATH`. With the [GitHub CLI](https://cli.github.com) you can also check that GitHub built the archive from this repository:
+
+```sh
+gh attestation verify $archive --repo Vernum-Projecten/cc-shift
 ```
 
 ### From source
@@ -127,7 +151,42 @@ cc-shift · 4 accounts · 2 free now · active work · next spare
 
 Accounts are listed in the order `cc-shift` will use them. In a terminal the bars are green, yellow or red by how full they are; set `NO_COLOR` to turn colour off.
 
-From here on you never need to run `cc-shift` while you work.
+From here on you never need to run `cc-shift` while you work. If something looks wrong, `cc-shift doctor` checks the whole setup.
+
+## How it works
+
+```text
+~/.claude-profiles/work      parked login of the account "work"
+~/.claude-profiles/spare     parked login of the account "spare"
+~/.claude                    the active account, used by every window
+```
+
+- Each account is logged in once, in its own profile folder, and its login stays parked there in the Keychain.
+- Every Claude Code window uses the default `~/.claude`, which holds the active account.
+- After every reply, the status line records the active account's usage. When the 5-hour window reaches 95% or the 7-day window 99% (both [configurable](#switch-thresholds)), `cc-shift` moves the next account's login into `~/.claude` and copies its account details into `~/.claude.json`. Open windows pick both up, as they do after `/login`.
+- If a turn hits a limit anyway, the rate-limit hook switches at once.
+- In the background, `cc-shift` refreshes the parked logins and reads their usage, so the next choice is made on current numbers.
+
+The full design is in [ARCHITECTURE.md](https://github.com/Vernum-Projecten/cc-shift/blob/main/ARCHITECTURE.md).
+
+## Which account is next
+
+Usage left in a window when it resets is lost, and a 5-hour window only starts with an account's first message. So `cc-shift` spends what expires first:
+
+1. An account whose 5-hour window is already running, the one that resets soonest first.
+2. Then an untouched account, the one whose week resets soonest first, then the one with the most of its week left.
+
+It stays on the active account until it reaches its threshold, so it never switches back and forth. You use up one account at a time, and by the time you have used the others, the first one has reset.
+
+## Switch thresholds
+
+`cc-shift` switches when the 5-hour window reaches **95%** or the 7-day window **99%**. The week switches later because its last percent is worth more than a whole 5-hour window, and if a turn hits a limit anyway, the rate-limit hook switches at once. Both can be set from 50 to 100 in `~/.claude-profiles/state.json`; these are the defaults:
+
+```json
+"thresholds": { "five_hour": 95, "seven_day": 99 }
+```
+
+A value outside 50 to 100 is ignored and the default is used.
 
 ## Commands
 
@@ -137,20 +196,20 @@ From here on you never need to run `cc-shift` while you work.
 | `cc-shift setup` | Turns on automatic switching. Run once. |
 | `cc-shift status` | Shows every account with its usage and the time until each limit resets, marks the active one, and names the next. |
 | `cc-shift status --json` | The same as JSON, for scripts ([shape](#json-for-scripts)). |
-| `cc-shift stats` | Shows the tokens of all accounts together per project and model ([token statistics](#token-statistics)). |
 | `cc-shift use <name>` | Moves every open window to that account now. Never needed; for steering by hand. |
-| `cc-shift refresh` | Refreshes the logins of the accounts that are not active and reads their usage now. Runs on its own as well. |
 | `cc-shift list` | Prints the profile names. |
-| `cc-shift completion zsh` | Prints the zsh completion script ([how to load it](#shell-completion)). |
-| `cc-shift --version` | Prints the version (also `-V` and `cc-shift version`). |
-| `cc-shift doctor` | Checks the setup (status line and hook, `claude`, every login and account, two profiles on one account, the state) and says how to fix what is wrong. |
-| `cc-shift log` | Shows the history: switches with their reason, refreshes, logged-out accounts and when all were full. |
+| `cc-shift refresh` | Refreshes the logins of the accounts that are not active and reads their usage now. Runs on its own as well. |
+| `cc-shift doctor` | Checks the setup (status line and hook, `claude`, every login and account, two profiles on one account, the state, the early start) and says how to fix what is wrong. |
+| `cc-shift log` | Shows the history: switches with their reason, refreshes, logged-out accounts and when all were full ([history](#history)). |
+| `cc-shift stats` | Shows the tokens of all accounts together per project and model ([token statistics](#token-statistics)). |
 | `cc-shift early on` | Starts some accounts' 5-hour windows before the workday, Monday to Friday ([early start](#early-start)). `cc-shift early off` stops it; `cc-shift early` shows it. |
 | `cc-shift remove <name>` | Deletes a profile and its Keychain login, after you type `yes`. The active account cannot be removed. |
 | `cc-shift uninstall [--all]` | Undoes `cc-shift setup`; with `--all`, also deletes every profile and its Keychain login. |
+| `cc-shift completion zsh` | Prints the zsh completion script ([how to load it](#shell-completion)). |
+| `cc-shift --version` | Prints the version (also `-V` and `cc-shift version`). |
 | `cc-shift help` | Prints the commands. |
 
-Claude Code itself runs `cc-shift statusline` after every reply and `cc-shift hook rate-limit` when a turn hits a limit; you never run those.
+Claude Code itself runs `cc-shift statusline` after every reply and `cc-shift hook rate-limit` when a turn hits a limit, and `launchd` runs `cc-shift early run` while the early start is on; you never run those.
 
 ### JSON for scripts
 
@@ -216,31 +275,15 @@ How it counts:
 
 - It reads the session transcripts Claude Code writes under `~/.claude/projects` and under `projects` in every profile, subagent transcripts included. Of each response it reads the model, the token counts, the time, the session and the working folder, never the content.
 - Each response counts once, by its message id, also when a resumed session repeats earlier ones.
-- A project is its working folder, shown by name. Two folders with the same name get their parent folder added.
+- A project is its working folder, shown by name. Two folders with the same name get their parent folder added, and a Claude Code worktree counts toward its project.
 - Days and "today" are in your local time zone.
 - What it read is kept in `~/.claude-profiles/stats-cache.json` per file, so the next run reads only the files that changed. The cache holds counts, models, times, session ids and folder paths, never content.
 
 The cost is a comparison, not a bill. It is what the same tokens would cost at the Claude API's standard prices from the [pricing page](https://platform.claude.com/docs/en/about-claude/pricing), with cache writes at their 5-minute or 1-hour price as Claude Code recorded them. Your subscription is not billed per token. A model without a known price shows `?`, is left out of the total, and is named under the table. A weekly workflow compares the pricing page with the table in `cc-shift` and opens an issue when a price changes or a model is added.
 
-## How it works
-
-```text
-~/.claude-profiles/work      parked login of the account "work"
-~/.claude-profiles/spare     parked login of the account "spare"
-~/.claude                    the active account, used by every window
-```
-
-- Each account is logged in once, in its own profile folder, and its login stays parked there in the Keychain.
-- Every Claude Code window uses the default `~/.claude`, which holds the active account.
-- After every reply, the status line records the active account's usage. When the 5-hour window reaches 95% or the 7-day window 99% (both [configurable](#switch-thresholds)), `cc-shift` moves the next account's login into `~/.claude` and copies its account details into `~/.claude.json`. Open windows pick both up, as they do after `/login`.
-- If a turn hits a limit anyway, the rate-limit hook switches at once.
-- In the background, `cc-shift` refreshes the parked logins and reads their usage, so the next choice is made on current numbers.
-
-The full design is in [ARCHITECTURE.md](https://github.com/Vernum-Projecten/cc-shift/blob/main/ARCHITECTURE.md).
-
 ## History
 
-`cc-shift log` shows what `cc-shift` did: every switch with its reason, refreshed and logged-out logins, and when all accounts were full.
+`cc-shift log` shows what `cc-shift` did: every switch with its reason, refreshed and logged-out logins, when all accounts were full, and each early start.
 
 ```text
 cc-shift history · last 24 hours
@@ -257,25 +300,6 @@ cc-shift history · last 24 hours
 ```
 
 `--since 2h`, `7d` or `30d` and `--all` choose the period; `--verbose` adds diagnostic events, such as a status line reading that was recorded under another account; `--json` prints one JSON object per line. The history lives in `~/.claude-profiles/history.jsonl`, rotates at about 1 MB and never holds a token or an email address.
-
-## Switch thresholds
-
-`cc-shift` switches when the 5-hour window reaches **95%** or the 7-day window **99%**. The week switches later because its last percent is worth more than a whole 5-hour window, and if a turn hits a limit anyway, the rate-limit hook switches at once. Both can be set from 50 to 100 in `~/.claude-profiles/state.json`:
-
-```json
-"thresholds": { "five_hour": 95, "seven_day": 100 }
-```
-
-A value outside 50 to 100 is ignored and the default is used.
-
-## Which account is next
-
-Usage left in a window when it resets is lost, and a 5-hour window only starts with an account's first message. So `cc-shift` spends what expires first:
-
-1. An account whose 5-hour window is already running, the one that resets soonest first.
-2. Then an untouched account, the one whose week resets soonest first, then the one with the most of its week left.
-
-It stays on the active account until it reaches its threshold, so it never switches back and forth. You use up one account at a time, and by the time you have used the others, the first one has reset.
 
 ## Early start
 
@@ -294,7 +318,7 @@ $ cc-shift early off
 Early start is off.
 ```
 
-- **Which accounts:** each morning, the first ones in the order above whose 5-hour window is not running. Full, out-of-week and logged-out accounts are skipped. Start only as many as your workday needs: every extra window spends the week sooner, and the accounts left alone stay fresh for the evening.
+- **Which accounts:** each morning, the first ones in the [order of use](#which-account-is-next) whose 5-hour window is not running. Full, out-of-week and logged-out accounts are skipped. Start only as many as your workday needs: every extra window spends the week sooner, and the accounts left alone stay fresh for the evening.
 - **How:** a `launchd` agent runs `cc-shift early run` Monday to Friday at the set time. If your Mac is asleep then, it runs when the Mac wakes; if the Mac is off, that day is skipped.
 - **The message:** Claude Code sends it itself, in the account's own profile, on Haiku, with no tools, hooks or MCP servers and no saved session. `cc-shift` touches no token for it.
 - **Where to see it:** `cc-shift log` shows each start and each account that could not be started. `cc-shift status` shows `early start 06:00 · 2 accounts` under the table while it is on.
@@ -311,20 +335,16 @@ Report a vulnerability as described in [SECURITY.md](https://github.com/Vernum-P
 
 ## Update and uninstall
 
-Update to the latest version:
-
-```sh
-cargo install cc-shift
-```
+Update to the latest version with `cargo install cc-shift`, or download the new [prebuilt binary](#prebuilt-binary) over the old one.
 
 To uninstall:
 
 ```sh
-cc-shift uninstall --all   # removes the status line, the hook, every profile and its login
-cargo uninstall cc-shift
+cc-shift uninstall --all   # removes the status line, the hook, the early start, every profile and its login
+cargo uninstall cc-shift   # or delete the binary from ~/.local/bin
 ```
 
-`cc-shift uninstall` without `--all` only removes the status line and the hook (and puts back a status line you had before), and keeps the profiles. `--all` asks you to type `yes` first. The login in `~/.claude` stays, so Claude Code keeps working with the account that was active.
+`cc-shift uninstall` without `--all` only removes the status line, the hook and the early start (and puts back a status line you had before), and keeps the profiles. `--all` asks you to type `yes` first. The login in `~/.claude` stays, so Claude Code keeps working with the account that was active.
 
 ## FAQ
 
@@ -334,36 +354,24 @@ cargo uninstall cc-shift
 
 **An account shows `logged out`.** Its login was revoked or expired. Run `cc-shift add <name>` and `/login` again.
 
-**Something does not work.** Run `cc-shift doctor`: it checks every part of the setup and prints the command that fixes each problem.
-
 **An account shows `unknown`.** Its usage has not been read yet, or the usage request failed. `cc-shift refresh` reads it now.
 
 **What happens when every account is full?** `cc-shift` stays on the current account, and `cc-shift status` shows which account frees up first and when.
 
+**Something does not work.** Run `cc-shift doctor`: it checks every part of the setup and prints the command that fixes each problem.
+
 ## Contributing
 
-Issues and pull requests are welcome on [GitHub](https://github.com/Vernum-Projecten/cc-shift). The rules for working in the repository are in [CONTRIBUTING.md](https://github.com/Vernum-Projecten/cc-shift/blob/main/CONTRIBUTING.md). Before a pull request:
+Issues and pull requests are welcome on [GitHub](https://github.com/Vernum-Projecten/cc-shift). [CONTRIBUTING.md](https://github.com/Vernum-Projecten/cc-shift/blob/main/CONTRIBUTING.md) has the rules for working in the repository and how a release is made. Before a pull request:
 
 ```sh
 cargo fmt --all --check
-cargo clippy --all-targets --all-features -- -D warnings
+cargo clippy --locked --all-targets --all-features -- -D warnings
 cargo nextest run --locked
 cargo deny check
 ```
 
 The tests never touch your real Keychain, profiles or accounts: they run against a temporary `HOME`, a stub `claude`, an in-memory Keychain and a fake HTTP client.
-
-### Releasing
-
-A release is one `v*` tag, and [`release.yml`](https://github.com/Vernum-Projecten/cc-shift/blob/main/.github/workflows/release.yml) does the rest:
-
-1. **plan** checks that the tag names the version in `Cargo.toml`, that `publish` is on, and that [`CHANGELOG.md`](https://github.com/Vernum-Projecten/cc-shift/blob/main/CHANGELOG.md) has a section for the version, which becomes the release notes.
-2. **github release** creates the GitHub release as a draft.
-3. **binary** builds `cc-shift` for Apple silicon and Intel Macs, attaches each archive with its SHA-256 file to the draft, and attests its build provenance (`gh attestation verify <archive> --repo Vernum-Projecten/cc-shift`).
-4. **crates.io** publishes through [Trusted Publishing](https://crates.io/docs/trusted-publishing): the workflow's GitHub identity is exchanged for a short-lived crates.io token, so no token is stored anywhere. A version already on crates.io is skipped.
-5. **github release (publish)** publishes the draft once every archive is attached.
-
-The crate's Trusted Publisher entry on crates.io names the repository `Vernum-Projecten/cc-shift`, the workflow `release.yml` and the environment `crates-io`.
 
 ## License
 
