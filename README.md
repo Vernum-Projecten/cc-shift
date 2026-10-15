@@ -205,7 +205,8 @@ Rows are sorted and shared by output. The four kinds of tokens stand side by sid
 | `--all` | Counts everything in the transcripts, with a section per day. |
 | `--project <name>` | Shows one project, by the name in the table, per model with the four kinds and per day. |
 | `--cost` | Adds `≈ API COST`. |
-| `--json` | Prints one JSON document: the period, sessions, responses, and per project, model and day the four kinds (and the cost with `--cost`). |
+| `--per-account` | Adds a block per account: each response counts for the account that was active at its time, by the switches in `cc-shift log`. Output from before the history began is shown apart, not split. |
+| `--json` | Prints one JSON document: the period, sessions, responses, and per project, model and day the four kinds (and the cost with `--cost`, the accounts with `--per-account`). |
 
 The options combine freely, except `--since` with `--all`.
 

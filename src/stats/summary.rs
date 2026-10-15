@@ -10,6 +10,7 @@ use jiff::{SignedDuration, Span, Timestamp};
 use crate::error::Error;
 use crate::stats::price::{self, Picodollars};
 use crate::stats::{Options, Period, Response, Tokens};
+use crate::store::history::{Entry, Event};
 
 /// The cost of a group of responses at API prices.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -95,13 +96,21 @@ pub struct Summary {
     pub total_cost: Cost,
     /// The models in the period without a known price, sorted.
     pub unpriced: Vec<String>,
+    /// The accounts, most output first, when the split per account was
+    /// asked for.
+    pub accounts: Vec<Row>,
+    /// The counts of responses from before the history began, which no
+    /// account can be named for.
+    pub unsplit: Tokens,
 }
 
 /// Counts `responses` for the period and project of `options`.
 ///
 /// A response repeated in several lines or files (a resumed session repeats
 /// earlier ones) is counted once, by its message id; of the copies, the one
-/// with the most output tokens counts. Days and today are in `zone`.
+/// with the most output tokens counts. Days and today are in `zone`. With
+/// `options.per_account`, each response also counts for the account active
+/// at its time in `timeline` (see [`timeline`]).
 ///
 /// # Errors
 ///
@@ -111,6 +120,7 @@ pub struct Summary {
 pub fn summarize(
     responses: Vec<Response>,
     options: &Options,
+    timeline: &[(i64, String)],
     now: Timestamp,
     zone: &TimeZone,
 ) -> Result<Summary, Error> {
@@ -148,6 +158,11 @@ pub fn summarize(
     let mut sessions = BTreeSet::new();
     let mut total = Tokens::default();
     let mut total_cost = Cost::default();
+    let (accounts, unsplit) = if options.per_account {
+        split(&kept, timeline)
+    } else {
+        (Vec::new(), Tokens::default())
+    };
     for (response, name) in &kept {
         let mut cost = Cost::default();
         cost.add(&response.model, &response.tokens);
@@ -203,7 +218,63 @@ pub fn summarize(
         total,
         total_cost,
         unpriced,
+        accounts,
+        unsplit,
     })
+}
+
+/// Returns the accounts, most output first, with each response counted for
+/// the account active at its time, and the counts of the responses from
+/// before the first entry of `timeline`.
+fn split(kept: &[(&Response, &str)], timeline: &[(i64, String)]) -> (Vec<Row>, Tokens) {
+    let mut accounts: BTreeMap<&str, Row> = BTreeMap::new();
+    let mut unsplit = Tokens::default();
+    for (response, _) in kept {
+        let Some(account) = account_at(timeline, response.at) else {
+            unsplit.add(&response.tokens);
+            continue;
+        };
+        let row = accounts.entry(account).or_insert_with(|| Row {
+            name: account.to_owned(),
+            path: None,
+            tokens: Tokens::default(),
+            cost: Cost::default(),
+        });
+        row.tokens.add(&response.tokens);
+        row.cost.add(&response.model, &response.tokens);
+    }
+    (by_output(accounts.into_values().collect()), unsplit)
+}
+
+/// Returns the times (Unix seconds) at which an account became active, oldest
+/// first: the setup, when it found an active account, and every switch.
+#[must_use]
+pub fn timeline(entries: &[Entry]) -> Vec<(i64, String)> {
+    let mut changes: Vec<(i64, String)> = entries
+        .iter()
+        .filter_map(|entry| {
+            let account = match &entry.event {
+                Event::Setup {
+                    active: Some(account),
+                } => account,
+                Event::Switch { to, .. } => to,
+                _ => return None,
+            };
+            Some((entry.seconds()?, account.clone()))
+        })
+        .collect();
+    changes.sort_by_key(|(at, _)| *at);
+    changes
+}
+
+/// Returns the account that was active at `at`: the last switch or setup at
+/// or before it in `timeline` (sorted by time), or `None` before the first.
+fn account_at(timeline: &[(i64, String)], at: i64) -> Option<&str> {
+    timeline
+        .iter()
+        .take_while(|(when, _)| *when <= at)
+        .last()
+        .map(|(_, name)| name.as_str())
 }
 
 /// Returns the start of `period` in Unix seconds, or `None` for all time.
@@ -291,9 +362,10 @@ fn project_name<'a>(names: &'a Names, response: &Response) -> &'a str {
 
 #[cfg(test)]
 mod tests {
-    use super::summarize;
+    use super::{summarize, timeline};
     use crate::error::Error;
     use crate::stats::{Options, Period, Response, Tokens};
+    use crate::store::history::{Entry, Event, Reason};
     use jiff::Timestamp;
     use jiff::tz::{Offset, TimeZone};
 
@@ -335,7 +407,14 @@ mod tests {
             response("m1", "/w/shop", "claude-opus-5-5", NOW - 60, 30),
             response("m1", "/w/shop", "claude-opus-5-5", NOW - 60, 20),
         ];
-        let s = summarize(responses, &options(Period::Today), now(), &TimeZone::UTC).unwrap();
+        let s = summarize(
+            responses,
+            &options(Period::Today),
+            &[],
+            now(),
+            &TimeZone::UTC,
+        )
+        .unwrap();
         assert_eq!(s.responses, 1, "{s:?}");
         assert_eq!(s.total.output, 30, "the most output counts");
     }
@@ -347,7 +426,14 @@ mod tests {
             response("b", "/w/server/app", "m", NOW, 2),
             response("c", "/w/shop", "m", NOW, 3),
         ];
-        let s = summarize(responses, &options(Period::Today), now(), &TimeZone::UTC).unwrap();
+        let s = summarize(
+            responses,
+            &options(Period::Today),
+            &[],
+            now(),
+            &TimeZone::UTC,
+        )
+        .unwrap();
         let names: Vec<&str> = s.projects.iter().map(|p| p.name.as_str()).collect();
         assert_eq!(names, ["shop", "server/app", "client/app"]);
     }
@@ -360,9 +446,23 @@ mod tests {
             response("a", "/w/shop", "m", NOW - 13 * 3600 - 1800, 5),
             response("b", "/w/shop", "m", NOW - 15 * 3600, 7),
         ];
-        let s = summarize(responses.clone(), &options(Period::Today), now(), &zone).unwrap();
+        let s = summarize(
+            responses.clone(),
+            &options(Period::Today),
+            &[],
+            now(),
+            &zone,
+        )
+        .unwrap();
         assert_eq!(s.total.output, 5, "only the response after local midnight");
-        let utc = summarize(responses, &options(Period::Today), now(), &TimeZone::UTC).unwrap();
+        let utc = summarize(
+            responses,
+            &options(Period::Today),
+            &[],
+            now(),
+            &TimeZone::UTC,
+        )
+        .unwrap();
         assert_eq!(utc.total.output, 0, "both are before midnight UTC");
     }
 
@@ -375,10 +475,16 @@ mod tests {
             response("d", "/w/shop", "m", NOW - 40 * 86_400, 1000),
         ];
         let total = |period| {
-            summarize(responses.clone(), &options(period), now(), &TimeZone::UTC)
-                .unwrap()
-                .total
-                .output
+            summarize(
+                responses.clone(),
+                &options(period),
+                &[],
+                now(),
+                &TimeZone::UTC,
+            )
+            .unwrap()
+            .total
+            .output
         };
         assert_eq!(total(Period::Hours(2)), 1);
         assert_eq!(total(Period::Today), 11);
@@ -392,7 +498,14 @@ mod tests {
             response("a", "/w/shop", "m", NOW, 1),
             response("b", "/w/shop", "m", NOW - 86_400, 10),
         ];
-        let s = summarize(responses, &options(Period::Days(7)), now(), &TimeZone::UTC).unwrap();
+        let s = summarize(
+            responses,
+            &options(Period::Days(7)),
+            &[],
+            now(),
+            &TimeZone::UTC,
+        )
+        .unwrap();
         let days: Vec<(String, bool, u64)> = s
             .days
             .iter()
@@ -415,10 +528,10 @@ mod tests {
         ];
         let mut chosen = options(Period::Today);
         chosen.project = Some("blog".to_owned());
-        let s = summarize(responses.clone(), &chosen, now(), &TimeZone::UTC).unwrap();
+        let s = summarize(responses.clone(), &chosen, &[], now(), &TimeZone::UTC).unwrap();
         assert_eq!(s.total.output, 10);
         chosen.project = Some("nope".to_owned());
-        let missing = summarize(responses, &chosen, now(), &TimeZone::UTC);
+        let missing = summarize(responses, &chosen, &[], now(), &TimeZone::UTC);
         assert!(
             matches!(missing, Err(Error::NoProject { .. })),
             "{missing:?}"
@@ -431,9 +544,93 @@ mod tests {
             response("a", "/w/shop", "claude-opus-5-5", NOW, 1),
             response("b", "/w/shop", "local-model", NOW, 10),
         ];
-        let s = summarize(responses, &options(Period::Today), now(), &TimeZone::UTC).unwrap();
+        let s = summarize(
+            responses,
+            &options(Period::Today),
+            &[],
+            now(),
+            &TimeZone::UTC,
+        )
+        .unwrap();
         assert_eq!(s.unpriced, ["local-model"]);
         assert!(s.total_cost.unpriced && s.total_cost.priced, "{s:?}");
         assert!(s.projects[0].cost.unpriced, "{s:?}");
+    }
+
+    fn changes() -> Vec<(i64, String)> {
+        vec![
+            (NOW - 600, "work".to_owned()),
+            (NOW - 300, "spare".to_owned()),
+        ]
+    }
+
+    #[test]
+    fn each_response_counts_for_the_account_active_at_its_time() {
+        let responses = vec![
+            response("a", "/w/shop", "m", NOW - 900, 1),
+            response("b", "/w/shop", "m", NOW - 600, 10),
+            response("c", "/w/shop", "m", NOW - 301, 20),
+            response("d", "/w/shop", "m", NOW - 300, 40),
+        ];
+        let mut chosen = options(Period::Today);
+        chosen.per_account = true;
+        let s = summarize(responses, &chosen, &changes(), now(), &TimeZone::UTC).unwrap();
+        let split: Vec<(&str, u64)> = s
+            .accounts
+            .iter()
+            .map(|a| (a.name.as_str(), a.tokens.output))
+            .collect();
+        assert_eq!(split, [("spare", 40), ("work", 30)]);
+        assert_eq!(s.unsplit.output, 1, "before the first switch");
+    }
+
+    #[test]
+    fn without_per_account_nothing_is_split() {
+        let responses = vec![response("a", "/w/shop", "m", NOW - 60, 5)];
+        let s = summarize(
+            responses,
+            &options(Period::Today),
+            &changes(),
+            now(),
+            &TimeZone::UTC,
+        )
+        .unwrap();
+        assert!(s.accounts.is_empty(), "{s:?}");
+        assert_eq!(s.unsplit, Tokens::default());
+    }
+
+    #[test]
+    fn the_timeline_holds_setups_with_an_account_and_switches() {
+        let switch = |to: &str| Event::Switch {
+            reason: Reason::Threshold,
+            window: None,
+            from: None,
+            to: to.to_owned(),
+            from_used: None,
+            to_used: None,
+        };
+        let entries = [
+            Entry::new(switch("spare"), NOW - 100),
+            Entry::new(Event::Setup { active: None }, NOW - 400),
+            Entry::new(
+                Event::Setup {
+                    active: Some("work".to_owned()),
+                },
+                NOW - 300,
+            ),
+            Entry::new(
+                Event::Refresh {
+                    account: "extra".to_owned(),
+                },
+                NOW - 200,
+            ),
+        ];
+        assert_eq!(
+            timeline(&entries),
+            [
+                (NOW - 300, "work".to_owned()),
+                (NOW - 100, "spare".to_owned())
+            ]
+        );
     }
 }

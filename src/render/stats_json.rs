@@ -2,7 +2,8 @@
 //!
 //! The shape is part of the public interface: a change to it is a changelog
 //! entry. Times are RFC 3339 in UTC and days are local dates. The cost
-//! fields appear only with `--cost`.
+//! fields appear only with `--cost`, and the
+//! `accounts` and `before_history` fields only with `--per-account`.
 
 use serde_json::{Map, Value, json};
 
@@ -12,7 +13,7 @@ use crate::stats::{Period, Tokens};
 
 /// Renders the summary as pretty-printed JSON with a final newline.
 #[must_use]
-pub fn stats_json(summary: &Summary, cost: bool) -> String {
+pub fn stats_json(summary: &Summary, cost: bool, per_account: bool) -> String {
     let (kind, count) = match summary.period {
         Period::Today => ("today", None),
         Period::Hours(n) => ("hours", Some(n)),
@@ -79,6 +80,19 @@ pub fn stats_json(summary: &Summary, cost: bool) -> String {
             })
             .collect(),
     );
+    if per_account {
+        document.insert(
+            "accounts".to_owned(),
+            summary
+                .accounts
+                .iter()
+                .map(|a| row("account", &a.name, None, &a.tokens, &a.cost))
+                .collect(),
+        );
+        let mut unsplit = Map::new();
+        kinds(&mut unsplit, &summary.unsplit, None);
+        document.insert("before_history".to_owned(), Value::Object(unsplit));
+    }
     if cost {
         document.insert("unpriced_models".to_owned(), json!(summary.unpriced));
     }
@@ -177,12 +191,14 @@ mod tests {
             total: tokens(30),
             total_cost: priced,
             unpriced: vec!["local-model".to_owned()],
+            accounts: Vec::new(),
+            unsplit: Tokens::default(),
         }
     }
 
     #[test]
     fn without_cost_there_are_no_cost_fields() {
-        let value: Value = serde_json::from_str(&stats_json(&summary(), false)).unwrap();
+        let value: Value = serde_json::from_str(&stats_json(&summary(), false, false)).unwrap();
         assert_eq!(
             value,
             json!({
@@ -215,11 +231,34 @@ mod tests {
 
     #[test]
     fn with_cost_each_group_has_its_cost() {
-        let value: Value = serde_json::from_str(&stats_json(&summary(), true)).unwrap();
+        let value: Value = serde_json::from_str(&stats_json(&summary(), true, false)).unwrap();
         assert_eq!(value["total"]["cost_usd"], json!(41.2));
         assert_eq!(value["total"]["cost_complete"], json!(true));
         assert_eq!(value["projects"][0]["cost_complete"], json!(false));
         assert_eq!(value["models"][1]["cost_usd"], Value::Null);
         assert_eq!(value["unpriced_models"], json!(["local-model"]));
+    }
+
+    #[test]
+    fn per_account_adds_the_accounts_and_what_came_before_the_history() {
+        let mut s = summary();
+        s.accounts = vec![Row {
+            name: "work".to_owned(),
+            path: None,
+            tokens: tokens(25),
+            cost: Cost::default(),
+        }];
+        s.unsplit = tokens(5);
+        let value: Value = serde_json::from_str(&stats_json(&s, false, true)).unwrap();
+        assert_eq!(
+            value["accounts"],
+            json!([{"account": "work", "output": 25, "input": 1, "cache_write": 2, "cache_read": 3}])
+        );
+        assert_eq!(
+            value["before_history"],
+            json!({"output": 5, "input": 1, "cache_write": 2, "cache_read": 3})
+        );
+        let without: Value = serde_json::from_str(&stats_json(&s, false, false)).unwrap();
+        assert_eq!(without.get("accounts"), None);
     }
 }

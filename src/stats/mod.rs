@@ -124,6 +124,8 @@ pub struct Options {
     pub cost: bool,
     /// Whether to print JSON.
     pub json: bool,
+    /// Whether to add the split per account.
+    pub per_account: bool,
 }
 
 impl Default for Options {
@@ -133,6 +135,7 @@ impl Default for Options {
             project: None,
             cost: false,
             json: false,
+            per_account: false,
         }
     }
 }

@@ -76,6 +76,9 @@ pub fn stats(summary: &Summary, cost: bool, paint: Paint) -> String {
             sections.push(days_table(summary, paint));
         }
     }
+    if !summary.accounts.is_empty() || summary.unsplit.output > 0 {
+        sections.push(accounts_table(summary, paint));
+    }
     for section in sections {
         out.push('\n');
         out.push_str(&section);
@@ -166,8 +169,31 @@ fn kinds_table(
 
 /// The models with output and share only.
 fn output_table(summary: &Summary, paint: Paint) -> String {
-    let lines = summary
-        .models
+    share_table("MODEL", &summary.models, summary, paint)
+}
+
+/// The accounts with output and share, and the output from before the
+/// history began, which no account can be named for.
+fn accounts_table(summary: &Summary, paint: Paint) -> String {
+    let mut text = String::new();
+    if !summary.accounts.is_empty() {
+        text.push_str(&share_table("ACCOUNT", &summary.accounts, summary, paint));
+    }
+    if summary.unsplit.output > 0 {
+        text.push_str(if summary.accounts.is_empty() {
+            "  per account: "
+        } else {
+            "  "
+        });
+        text.push_str(&small(summary.unsplit.output));
+        text.push_str(" (before the history began: not split)\n");
+    }
+    text
+}
+
+/// The rows with output and share only.
+fn share_table(heading: &'static str, rows: &[Row], summary: &Summary, paint: Paint) -> String {
+    let lines = rows
         .iter()
         .map(|row| Line {
             name: row.name.clone(),
@@ -178,7 +204,7 @@ fn output_table(summary: &Summary, paint: Paint) -> String {
         .collect();
     layout(
         &Table {
-            heading: "MODEL",
+            heading,
             bar: NARROW_BAR,
             extra: Vec::new(),
             lines,
@@ -429,6 +455,8 @@ mod tests {
             total: tokens(910_000, 1_100_000, 6_400_000, 39_800_000),
             total_cost: cost(8870),
             unpriced: Vec::new(),
+            accounts: Vec::new(),
+            unsplit: Tokens::default(),
         }
     }
 
@@ -576,5 +604,50 @@ cc-shift stats · today · project website · all accounts together · 14 sessio
         assert_eq!(bar(45, 15), "███████░░░░░░░░");
         assert_eq!(bar(100, 16), "████████████████");
         assert_eq!(bar(0, 4), "░░░░");
+    }
+
+    #[test]
+    fn per_account_adds_the_accounts_and_what_came_before_the_history() {
+        let mut summary = approved();
+        summary.accounts = vec![
+            row("work", tokens(600_000, 0, 0, 0), cost(0)),
+            row("spare", tokens(250_000, 0, 0, 0), cost(0)),
+        ];
+        summary.unsplit = tokens(60_000, 0, 0, 0);
+        let text = stats(&summary, false, Paint::new(false));
+        assert!(
+            text.ends_with(
+                "\n  ACCOUNT   OUTPUT   SHARE
+  work       600K    ███████████░░░░░  66%
+  spare      250K    ████░░░░░░░░░░░░  27%
+  60K (before the history began: not split)
+"
+            ),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn per_account_after_the_history_began_has_no_extra_line() {
+        let mut summary = approved();
+        summary.accounts = vec![row("work", tokens(910_000, 0, 0, 0), cost(0))];
+        let text = stats(&summary, false, Paint::new(false));
+        assert!(
+            text.ends_with(
+                "\n  ACCOUNT   OUTPUT   SHARE\n  work       910K    ████████████████ 100%\n"
+            ),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn per_account_before_any_switch_says_so_without_a_table() {
+        let mut summary = approved();
+        summary.unsplit = tokens(910_000, 0, 0, 0);
+        let text = stats(&summary, false, Paint::new(false));
+        assert!(
+            text.ends_with("\n  per account: 910K (before the history began: not split)\n"),
+            "{text}"
+        );
     }
 }

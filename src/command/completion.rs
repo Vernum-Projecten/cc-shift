@@ -40,7 +40,7 @@ _cc_shift() {
   case ${words[2]} in
     use|remove) compadd -- ${(f)"$(cc-shift list 2>/dev/null)"} ;;
     status) compadd -- --json ;;
-    stats) compadd -- --since --all --project --cost --json ;;
+    stats) compadd -- --since --all --project --cost --per-account --json ;;
     uninstall) compadd -- --all ;;
     log) compadd -- --since --all --verbose --json ;;
     completion) compadd -- zsh ;;

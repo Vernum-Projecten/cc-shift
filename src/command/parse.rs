@@ -15,8 +15,10 @@ Commands:
   status        Show every account with its usage and reset times
   status --json The same as JSON, for scripts
   stats         Show today's tokens of all accounts per project and model
-  stats [--since 2h|7d|30d | --all] [--project <name>] [--cost] [--json]
-                Pick the period or one project, add the API cost, or print JSON
+  stats [--since 2h|7d|30d | --all] [--project <name>] [--cost]
+        [--per-account] [--json]
+                Pick the period or one project, add the API cost or a split
+                per account, or print JSON
   use <name>    Make an account active in every Claude Code window now
   refresh       Refresh parked logins and read their usage now
   doctor        Check the setup and say what to fix
@@ -159,6 +161,7 @@ fn stats(flags: &[&str]) -> Command {
         match *flag {
             "--cost" => options.cost = true,
             "--json" => options.json = true,
+            "--per-account" => options.per_account = true,
             "--all" if period.is_none() => period = Some(Period::All),
             "--since" if period.is_none() => match rest.next().and_then(|v| since(v)) {
                 Some(p) => period = Some(p),
@@ -314,6 +317,7 @@ mod tests {
                 project: Some("shop".to_owned()),
                 cost: true,
                 json: true,
+                per_account: false,
             })
         );
         assert_eq!(
@@ -327,6 +331,13 @@ mod tests {
             parse(args(&["stats", "--all"])),
             Command::Stats(Options {
                 period: Period::All,
+                ..Options::default()
+            })
+        );
+        assert_eq!(
+            parse(args(&["stats", "--per-account"])),
+            Command::Stats(Options {
+                per_account: true,
                 ..Options::default()
             })
         );

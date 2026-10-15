@@ -14,8 +14,9 @@ use crate::render::stats::stats;
 use crate::render::stats_json::stats_json;
 use crate::stats::Options;
 use crate::stats::cache::StatsCache;
-use crate::stats::summary::summarize;
+use crate::stats::summary::{summarize, timeline};
 use crate::stats::transcript;
+use crate::store::history::History;
 use crate::store::profile::ProfilesRoot;
 
 /// Reads the transcripts of `~/.claude` and of every profile, then prints
@@ -27,8 +28,9 @@ use crate::store::profile::ProfilesRoot;
 /// # Errors
 ///
 /// Returns the error of a missing `HOME`, an unreadable profiles root,
-/// transcript or folder, a cache that cannot be written, or a project with
-/// no response in the period.
+/// transcript or folder, a cache that cannot be written, a history that
+/// cannot be read with `--per-account`, or a project with no response in the
+/// period.
 pub fn run(options: &Options) -> Result<(), Error> {
     let home = home()?;
     let root = ProfilesRoot::from_home(Some(home.clone().into_os_string()))?;
@@ -45,10 +47,20 @@ pub fn run(options: &Options) -> Result<(), Error> {
         files.extend(found);
     }
     let responses = StatsCache::in_root(&root).responses(&files)?;
-    let summary = summarize(responses, options, Timestamp::now(), &TimeZone::system())?;
-    // TODO(#69): add a block per account, from the switch history of #67.
+    let changes = if options.per_account {
+        timeline(&History::in_root(&root).read(None)?)
+    } else {
+        Vec::new()
+    };
+    let summary = summarize(
+        responses,
+        options,
+        &changes,
+        Timestamp::now(),
+        &TimeZone::system(),
+    )?;
     let text = if options.json {
-        stats_json(&summary, options.cost)
+        stats_json(&summary, options.cost, options.per_account)
     } else {
         let paint = Paint::unless_no_color(std::io::stdout().is_terminal());
         stats(&summary, options.cost, paint)

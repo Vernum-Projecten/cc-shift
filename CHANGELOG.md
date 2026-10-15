@@ -19,7 +19,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   from the session transcripts of `~/.claude` and every profile, subagents
   included, each response counted once. `--since 2h|7d|30d` and `--all` pick
   the period and add a section per day, `--project <name>` shows one project
-  per model and day, `--cost` adds the cost at Anthropic's API prices, and
+  per model and day, `--cost` adds the cost at Anthropic's API prices,
+  `--per-account` adds a block per account from the switch history, and
   `--json` prints one document. What it read is cached per file in
   `~/.claude-profiles/stats-cache.json`. `stats` can no longer name a profile.
 - A weekly workflow compares Anthropic's pricing page with the price table

@@ -114,7 +114,7 @@ fn response(line: &str) -> Option<Response> {
         id: message.id?,
         model: message.model?,
         session: parsed.session_id,
-        cwd: parsed.cwd,
+        cwd: parsed.cwd.map(|cwd| project_folder(&cwd)),
         at: at.as_second(),
         tokens,
     })
@@ -152,9 +152,31 @@ pub fn files(projects: &Path) -> io::Result<Vec<PathBuf>> {
     Ok(found)
 }
 
+/// The folder Claude Code keeps agent worktrees in, inside a project.
+const WORKTREES: &str = "/.claude/worktrees/";
+
+/// Returns the project a working folder belongs to: a worktree in the
+/// project's [`WORKTREES`] folder counts as the project, so subagent work
+/// adds up with the project it was done for.
+fn project_folder(cwd: &str) -> String {
+    cwd.find(WORKTREES)
+        .and_then(|at| cwd.get(..at))
+        .unwrap_or(cwd)
+        .to_owned()
+}
+
 #[cfg(test)]
 #[expect(clippy::panic_in_result_fn, reason = "test assertions")]
 mod tests {
+    #[test]
+    fn an_agent_worktree_counts_as_its_project() {
+        assert_eq!(
+            super::project_folder("/work/shop/.claude/worktrees/agent-a1b2"),
+            "/work/shop"
+        );
+        assert_eq!(super::project_folder("/work/shop/sub"), "/work/shop/sub");
+    }
+
     use super::{files, responses};
     use std::fs;
 
