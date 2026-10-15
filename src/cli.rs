@@ -10,6 +10,7 @@ Usage: cs <name> [claude arguments...]
 
 Commands:
   add <name>    Create a profile and start Claude Code in it to run /login
+  list          Print the profiles
   help          Print this help
 
 cs <name> starts Claude Code with that profile; every argument after the
@@ -23,6 +24,8 @@ pub enum Command {
     Help,
     /// Create a profile and start Claude Code in it.
     Add(OsString),
+    /// Print the profiles.
+    List,
     /// Start Claude Code with a profile, passing the rest of the arguments.
     Launch {
         /// The profile name as typed.
@@ -55,6 +58,15 @@ where
             (None, _) => Command::Misuse("add needs a profile name".to_owned()),
             (Some(_), Some(extra)) => Command::Misuse(format!(
                 "add takes one profile name, not '{}'",
+                extra.to_string_lossy()
+            )),
+        };
+    }
+    if first == "list" {
+        return match args.next() {
+            None => Command::List,
+            Some(extra) => Command::Misuse(format!(
+                "list takes no arguments, not '{}'",
                 extra.to_string_lossy()
             )),
         };
@@ -108,6 +120,12 @@ mod tests {
             parse(args(&["add", "a", "b"])),
             Command::Misuse(_)
         ));
+    }
+
+    #[test]
+    fn list_takes_no_arguments() {
+        assert_eq!(parse(args(&["list"])), Command::List);
+        assert!(matches!(parse(args(&["list", "x"])), Command::Misuse(_)));
     }
 
     #[test]

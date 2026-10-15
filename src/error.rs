@@ -29,6 +29,15 @@ pub enum Error {
         #[source]
         source: io::Error,
     },
+    /// The profiles root exists but cannot be read.
+    #[error("cannot read {}: {source}", path.display())]
+    ReadRoot {
+        /// The profiles root.
+        path: PathBuf,
+        /// The underlying I/O error.
+        #[source]
+        source: io::Error,
+    },
     /// No `claude` binary on `PATH`.
     #[error("claude was not found on PATH; install Claude Code first")]
     ClaudeNotFound,
