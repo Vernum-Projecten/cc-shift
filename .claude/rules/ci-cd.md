@@ -19,6 +19,7 @@ carries what CI runs and the rules every workflow keeps.
   helpers. Tier 2 is the Rust set below, gated on the root `Cargo.toml`
   existing. The `conclusion` job is the single required status check on
   `main`.
+- `.github/workflows/release.yml`: the release lane, run by a `v*` tag. It checks the tag against the version and `CHANGELOG.md`, creates the GitHub release as a draft, builds and attests the two macOS binaries, publishes to crates.io through Trusted Publishing (OIDC, no stored token) in the `crates-io` environment, and publishes the draft once every asset is attached. No release job restores a cache.
 - CodeQL and OpenSSF Scorecard are not set up: the repository is private
   and has no GitHub Advanced Security. If either is added later, it stays
   advisory and gates no merge.
