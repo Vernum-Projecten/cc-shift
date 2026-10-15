@@ -112,6 +112,7 @@ A small library with a thin binary: `src/main.rs` only calls `cs::run` in `src/l
 - `select`: the selection rule, a pure function of the accounts and the current time.
 - `state`: `state.json` behind the lock, written in one rename.
 - `statusline`: records the active account's usage and runs the user's own status line.
+- `status`: the `cs status` table, with reset times shown as time left (`2h15m`), so no time zone handling is needed.
 - Planned: the Keychain behind a small trait (so tests never touch the real one), the usage endpoint for parked accounts, and the hook entry point.
 
 The runtime dependencies are `thiserror` for the error type and `serde` with `serde_json` for the state and the status line input; each further dependency is added in the pull request that needs it.
