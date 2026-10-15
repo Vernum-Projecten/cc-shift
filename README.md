@@ -6,7 +6,7 @@
 [![crates.io](https://img.shields.io/crates/v/cc-shift?logo=rust)](https://crates.io/crates/cc-shift)
 [![Downloads](https://img.shields.io/crates/d/cc-shift)](https://crates.io/crates/cc-shift)
 [![CI](https://github.com/Vernum-Projecten/cc-shift/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Vernum-Projecten/cc-shift/actions/workflows/ci.yml)
-[![Platform: macOS | Linux](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey)](#requirements)
+[![Platform: macOS | Linux | Windows](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)](#requirements)
 [![Rust 1.98+](https://img.shields.io/badge/rust-1.98%2B-orange?logo=rust)](https://github.com/Vernum-Projecten/cc-shift/blob/main/rust-toolchain.toml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/Vernum-Projecten/cc-shift/blob/main/LICENSE)
 
@@ -15,7 +15,7 @@
 `cc-shift` watches the usage of the account Claude Code is signed in to. When it gets close to its 5-hour or 7-day limit, `cc-shift` moves every open Claude Code window to your next account, the same way `/login` does. There is no restart: the conversation, its history and the working directory stay as they are.
 
 > [!IMPORTANT]
-> `cc-shift` works on **macOS and Linux**. It keeps logins where Claude Code keeps them: in the login Keychain on macOS, and in a `.credentials.json` file per config folder on Linux. Native Windows support is planned for v0.1.1; in WSL 2, use the Linux build.
+> `cc-shift` works on **macOS, Linux and Windows**. It keeps logins where Claude Code keeps them: in the login Keychain on macOS, and in a `.credentials.json` file per config folder on Linux and Windows. Inside WSL 2, Claude Code is the Linux build, so use the Linux binary there.
 
 > [!WARNING]
 > Spreading your work over several subscriptions so that one person gets past each account's own usage limit may be against [Anthropic's terms](https://www.anthropic.com/legal/consumer-terms), and Anthropic can suspend accounts that break them. Check the terms that apply to your accounts before you use `cc-shift`. You use it at your own risk.
@@ -59,7 +59,7 @@ work ▕██████░░░░▏ 60% · 3h33m │ 7d 31% │ next spare
 
 | What | Version |
 |---|---|
-| System | macOS (Apple Silicon or Intel), or Linux (x86_64 or arm64, any distribution, WSL 2 included) |
+| System | macOS (Apple Silicon or Intel), Linux (x86_64 or arm64, any distribution, WSL 2 included), or Windows 10 1809 or later and Windows 11 (x64 or Arm64) |
 | [Claude Code](https://code.claude.com/docs) | 2.1.300 or later |
 | Claude accounts | Pro, Max or Team, two or more |
 | Rust | 1.98 or later, only to build `cc-shift` yourself ([install Rust](https://rustup.rs)) |
@@ -88,8 +88,10 @@ Every [release](https://github.com/Vernum-Projecten/cc-shift/releases) has a bin
 | macOS, Intel | `x86_64-apple-darwin` |
 | Linux, x86_64 | `x86_64-unknown-linux-musl` |
 | Linux, arm64 | `aarch64-unknown-linux-musl` |
+| Windows, x64 | `x86_64-pc-windows-msvc` (a `.zip`) |
+| Windows, Arm64 | `aarch64-pc-windows-msvc` (a `.zip`) |
 
-The Linux binaries are static, so they run on any distribution. Download with `curl`; on a Mac, a browser download is quarantined by macOS:
+The Linux binaries are static, so they run on any distribution. On macOS and Linux, download with `curl`; on a Mac, a browser download is quarantined by macOS:
 
 ```sh
 version=0.1.0
@@ -103,7 +105,25 @@ tar xzf $archive
 mkdir -p ~/.local/bin && mv cc-shift-v$version-$target/cc-shift ~/.local/bin/
 ```
 
-`~/.local/bin` must be on your `PATH`. With the [GitHub CLI](https://cli.github.com) you can also check that GitHub built the archive from this repository:
+`~/.local/bin` must be on your `PATH`. On Windows, in PowerShell:
+
+```powershell
+$version = '0.1.1'
+$target = 'x86_64-pc-windows-msvc'    # aarch64-pc-windows-msvc on Arm64
+$archive = "cc-shift-v$version-$target.zip"
+$base = "https://github.com/Vernum-Projecten/cc-shift/releases/download/v$version"
+
+Invoke-WebRequest "$base/$archive" -OutFile $archive
+Invoke-WebRequest "$base/$archive.sha256" -OutFile "$archive.sha256"
+(Get-FileHash $archive -Algorithm SHA256).Hash.ToLower() -eq (Get-Content "$archive.sha256").Split(' ')[0]
+Expand-Archive $archive -DestinationPath .
+New-Item -ItemType Directory -Force "$env:USERPROFILE\.local\bin" | Out-Null
+Move-Item "cc-shift-v$version-$target\cc-shift.exe" "$env:USERPROFILE\.local\bin\"
+```
+
+The hash line must print `True`, and `%USERPROFILE%\.local\bin` must be on your `PATH`. Keep `cc-shift.exe` in a folder whose path has no spaces: the status line runs it through Git Bash or PowerShell, and `cc-shift setup` refuses a path neither can run unquoted.
+
+With the [GitHub CLI](https://cli.github.com) you can also check that GitHub built the archive from this repository:
 
 ```sh
 gh attestation verify $archive --repo Vernum-Projecten/cc-shift
@@ -179,7 +199,7 @@ From here on you never need to run `cc-shift` while you work. If something looks
 ~/.claude                    the active account, used by every window
 ```
 
-- Each account is logged in once, in its own profile folder, and its login stays parked there: in the Keychain on macOS, in the profile's `.credentials.json` on Linux.
+- Each account is logged in once, in its own profile folder, and its login stays parked there: in the Keychain on macOS, in the profile's `.credentials.json` on Linux and Windows.
 - Every Claude Code window uses the default `~/.claude`, which holds the active account.
 - After every reply, the status line records the active account's usage. When the 5-hour window reaches 95% or the 7-day window 99% (both [configurable](#switch-thresholds)), `cc-shift` moves the next account's login into `~/.claude` and copies its account details into `~/.claude.json`. Open windows pick both up, as they do after `/login`.
 - If a turn hits a limit anyway, the rate-limit hook switches at once.
@@ -337,15 +357,15 @@ Early start is off.
 ```
 
 - **Which accounts:** each morning, the first ones in the [order of use](#which-account-is-next) whose 5-hour window is not running. Full, out-of-week and logged-out accounts are skipped. Start only as many as your workday needs: every extra window spends the week sooner, and the accounts left alone stay fresh for the evening.
-- **How:** a scheduled job runs `cc-shift early run` Monday to Friday at the set time: a `launchd` agent on macOS, a systemd user timer on Linux. A Mac that is asleep runs it when it wakes, and a Mac that is off skips the day; a Linux machine that was off runs it at the next boot or login. A run more than 3 hours late starts nothing, because the window would reset in the evening. On Linux it needs a systemd user session.
+- **How:** a scheduled job runs `cc-shift early run` Monday to Friday at the set time: a `launchd` agent on macOS, a systemd user timer on Linux, and a Task Scheduler task on Windows. A Mac that is asleep runs it when it wakes, and a Mac that is off skips the day; a Linux or Windows machine that was off runs it as soon as it can. On Windows the task may show a console window for the moment it runs. A run more than 3 hours late starts nothing, because the window would reset in the evening. On Linux it needs a systemd user session.
 - **The message:** Claude Code sends it itself, in the account's own profile, on Haiku, with no tools, hooks or MCP servers and no saved session. `cc-shift` touches no token for it.
 - **Where to see it:** `cc-shift log` shows each start and each account that could not be started. `cc-shift status` shows `early start 06:00 · 2 accounts` under the table while it is on.
 
 ## Security
 
-- Logins stay where Claude Code keeps them: in the login Keychain on macOS, and in `.credentials.json` files with mode 0600 on Linux. `cc-shift` holds a token in memory only while it uses it, and never writes one to a log, the terminal or a file of its own.
+- Logins stay where Claude Code keeps them: in the login Keychain on macOS, in `.credentials.json` files with mode 0600 on Linux, and in `.credentials.json` files under your user folder's access rules on Windows. `cc-shift` holds a token in memory only while it uses it, and never writes one to a log, the terminal or a file of its own.
 - A login is moved, never copied: a refresh token works once, so each login has exactly one live copy at any time.
-- A token is never a command-line argument. Keychain writes and HTTP requests get it on stdin, so `ps` cannot show it. On Linux a login is written to a new 0600 file that replaces the old one in one step.
+- A token is never a command-line argument. Keychain writes and HTTP requests get it on stdin, so `ps` cannot show it. On Linux and Windows a login is written to a new file that replaces the old one in one step.
 - `cc-shift` refreshes only the parked logins. Claude Code refreshes the active one, and a switch holds Claude Code's own refresh lock so the two never overlap.
 - The refresh and usage requests are the ones Claude Code itself makes. Anthropic does not document them, so a Claude Code update can change them; `cc-shift` then shows that account's usage as unknown instead of failing.
 
@@ -370,7 +390,9 @@ cargo uninstall cc-shift   # or delete the binary from ~/.local/bin
 
 **Does it work with Team accounts?** Yes. Team, Pro and Max accounts all report their usage to the status line.
 
-**Does it work on Linux or Windows?** On Linux, yes: the same commands, with logins in `.credentials.json` files and the early start on a systemd timer. Open windows follow a switch with their next message. Native Windows support is planned for v0.1.1; inside WSL 2, Claude Code is the Linux build, so use the Linux binary there.
+**Does it work on Linux or Windows?** Yes, with the same commands. Logins are in `.credentials.json` files, and open windows follow a switch with their next message. The early start uses a systemd timer on Linux and Task Scheduler on Windows. Inside WSL 2, Claude Code is the Linux build, so use the Linux binary there; `where.exe claude` in PowerShell finds a native Windows Claude Code, `command -v claude` in WSL the Linux one.
+
+**Windows says Claude Code keeps logins in Credential Manager.** Anthropic can switch a Windows account to Windows Credential Manager (or `CLAUDE_CODE_FORCE_WINDOWS_CREDMAN=1` does). Claude Code then reads Credential Manager first and would ignore a moved file, so `cc-shift` stops instead of switching, and `cc-shift doctor` names the account.
 
 **An account shows `logged out`.** Its login was revoked or expired. Run `cc-shift add <name>` and `/login` again.
 
