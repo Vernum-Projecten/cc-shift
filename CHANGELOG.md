@@ -13,6 +13,9 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   in to the same account, the state file, an unfinished switch, logged-out
   accounts and the account details in `~/.claude.json`, and prints the
   command that fixes each problem. It exits 1 when a check fails.
+- `cc-shift remove <name>` deletes a profile, its Keychain login and what
+  the state remembers about it, after you type `yes`; the active account
+  cannot be removed.
 - `cc-shift uninstall` removes the status line and the rate-limit hook and
   puts back the status line you had before; `--all` also deletes every
   profile and its Keychain login after you type `yes`.

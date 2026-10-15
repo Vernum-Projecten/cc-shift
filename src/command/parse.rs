@@ -15,6 +15,7 @@ Commands:
   use <name>    Make an account active in every Claude Code window now
   refresh       Refresh parked logins and read their usage now
   doctor        Check the setup and say what to fix
+  remove <name> Delete a profile and its Keychain login
   uninstall [--all]
                 Undo setup; --all also removes every profile and its login
   list          Print the profiles
@@ -46,6 +47,8 @@ pub enum Command {
     Refresh,
     /// Check the setup and say what to fix.
     Doctor,
+    /// Delete a profile and its Keychain login.
+    Remove(OsString),
     /// Undo setup; with `all`, also remove every profile.
     Uninstall {
         /// Whether to remove the profiles and their logins too.
@@ -78,6 +81,7 @@ where
         "help" | "-h" | "--help" => Command::Help,
         "add" => one_name("add", rest).map_or_else(|misuse| misuse, Command::Add),
         "use" => one_name("use", rest).map_or_else(|misuse| misuse, Command::Use),
+        "remove" => one_name("remove", rest).map_or_else(|misuse| misuse, Command::Remove),
         "setup" => bare("setup", &rest, Command::Setup),
         "doctor" => bare("doctor", &rest, Command::Doctor),
         "refresh" => bare("refresh", &rest, Command::Refresh),

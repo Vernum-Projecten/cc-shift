@@ -131,6 +131,7 @@ From here on you never need to run `cc-shift` while you work.
 | `cc-shift refresh` | Refreshes the logins of the accounts that are not active and reads their usage now. Runs on its own as well. |
 | `cc-shift list` | Prints the profile names. |
 | `cc-shift doctor` | Checks the setup (status line and hook, `claude`, every login and account, two profiles on one account, the state) and says how to fix what is wrong. |
+| `cc-shift remove <name>` | Deletes a profile and its Keychain login, after you type `yes`. The active account cannot be removed. |
 | `cc-shift uninstall [--all]` | Undoes `cc-shift setup`; with `--all`, also deletes every profile and its Keychain login. |
 | `cc-shift help` | Prints the commands. |
 

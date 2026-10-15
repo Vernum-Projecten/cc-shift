@@ -11,6 +11,7 @@ pub mod hook;
 pub mod list;
 pub mod parse;
 pub mod refresh;
+pub mod remove;
 pub mod setup;
 pub mod status;
 pub mod statusline;
@@ -59,6 +60,7 @@ where
         Command::Setup => setup::run(),
         Command::Refresh => refresh::run(),
         Command::Doctor => doctor::run(),
+        Command::Remove(name) => remove::run(&name),
         Command::Uninstall { all } => uninstall::run(all),
         Command::Status { json } => status::run(json),
         Command::HookRateLimit => {

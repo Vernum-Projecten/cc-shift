@@ -64,6 +64,14 @@ pub enum Error {
     /// The account to switch to has no parked login.
     #[error("'{0}' has no parked login; run 'cc-shift add {0}' and /login")]
     NoParkedLogin(String),
+    /// No profile folder exists for the name.
+    #[error("there is no profile '{0}'; 'cc-shift list' shows them")]
+    NoProfile(String),
+    /// The profile to remove is the active account.
+    #[error(
+        "'{0}' is the active account; make another one active first with 'cc-shift use <name>'"
+    )]
+    RemoveActive(String),
     /// `cc-shift doctor` found a check that failed.
     #[error("doctor found a problem; the lines above say how to fix it")]
     DoctorFailed,
