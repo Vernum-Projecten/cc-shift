@@ -45,13 +45,19 @@ where
             report(&format!("{reason}\n\n{}", cli::USAGE));
             ExitCode::from(USAGE_ERROR)
         }
-        Command::Add(name) => match add(&name) {
-            Ok(never) => match never {},
-            Err(error) => {
-                report(&error.to_string());
-                ExitCode::from(FAILURE)
-            }
-        },
+        Command::Add(name) => fail(add(&name)),
+        Command::Launch { name, args } => fail(launch(&name, &args)),
+    }
+}
+
+/// Reports the error of a command that would otherwise have replaced `cs`.
+fn fail(result: Result<Infallible, Error>) -> ExitCode {
+    match result {
+        Ok(never) => match never {},
+        Err(error) => {
+            report(&error.to_string());
+            ExitCode::from(FAILURE)
+        }
     }
 }
 
@@ -66,6 +72,17 @@ fn add(raw: &OsStr) -> Result<Infallible, Error> {
         dir.display()
     ));
     launch::exec_claude(&dir, &[])
+}
+
+/// Starts Claude Code with an existing profile.
+fn launch(raw: &OsStr, args: &[OsString]) -> Result<Infallible, Error> {
+    let name = ProfileName::parse(raw)?;
+    let root = ProfilesRoot::from_env()?;
+    let dir = root.profile_dir(&name);
+    if !dir.is_dir() {
+        return Err(Error::NoProfile(name.as_str().to_owned()));
+    }
+    launch::exec_claude(&dir, args)
 }
 
 /// Writes one `cs:` message to stderr.
