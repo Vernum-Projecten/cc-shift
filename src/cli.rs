@@ -9,6 +9,7 @@ Usage: cs <command>
 
 Commands:
   add <name>    Create a profile and start Claude Code in it to run /login
+  setup         Install cs in Claude Code once, so switching is automatic
   status        Show every account with its usage and reset times
   list          Print the profiles
   statusline    Record usage; run by Claude Code as its status line
@@ -24,6 +25,8 @@ pub enum Command {
     Add(OsString),
     /// Print the profiles.
     List,
+    /// Install the status line and the hook in `~/.claude/settings.json`.
+    Setup,
     /// Print every account with its usage.
     Status,
     /// Record usage from the status line input; run by Claude Code.
@@ -53,6 +56,15 @@ where
             (None, _) => Command::Misuse("add needs a profile name".to_owned()),
             (Some(_), Some(extra)) => Command::Misuse(format!(
                 "add takes one profile name, not '{}'",
+                extra.to_string_lossy()
+            )),
+        };
+    }
+    if first == "setup" {
+        return match args.next() {
+            None => Command::Setup,
+            Some(extra) => Command::Misuse(format!(
+                "setup takes no arguments, not '{}'",
                 extra.to_string_lossy()
             )),
         };
