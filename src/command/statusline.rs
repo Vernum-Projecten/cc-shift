@@ -5,15 +5,18 @@ use std::io::{Read, Write};
 
 use crate::anthropic::parked;
 use crate::claude_code::statusline;
-use crate::command::{automatic, refresh, unix_now};
+use crate::command::{automatic, home, refresh, unix_now};
 use crate::error::Error;
+use crate::login::account::AccountFiles;
 use crate::store::profile::ProfilesRoot;
 use crate::store::state::StateFile;
 use crate::switching::auto::Trigger;
 
-/// Records usage from the status line input on stdin, switches when the
-/// active account is full, starts a background refresh when parked numbers
-/// are stale, and prints the status line.
+/// Records usage, switches when needed, and prints the status line.
+///
+/// The reading on stdin is recorded under the account the window really
+/// uses. When it is proven to be the active account's and that account is
+/// full, the switch runs. A background refresh starts when numbers are stale.
 ///
 /// It never fails: a `cc-shift` problem must not break the status line of a
 /// Claude Code window.
@@ -27,22 +30,32 @@ pub fn run() {
         return;
     };
     let file = StateFile::in_root(&root);
-    let chained = statusline::record(&input, &file, now).ok().flatten();
-    let _switched: Result<Option<String>, Error> = automatic(Trigger::Usage);
+    let reading = statusline::record(&input, &file, now).unwrap_or_default();
+    let active = file.read().ok().and_then(|state| state.active);
+    if reading.proven && reading.account.is_some() && reading.account == active {
+        // NOTE: Claude Code 2.1.300 can write a window's old account details
+        // back into ~/.claude.json (#50), so they are put right on each run.
+        if let (Some(name), Ok(home)) = (&active, home()) {
+            let _restored: Result<(), Error> = AccountFiles::new(&home, &root).activate(name);
+        }
+        let _switched: Result<Option<String>, Error> = automatic(Trigger::Usage);
+    }
     if parked::any_stale(&file, &root, now).unwrap_or(false) {
         refresh::start_in_background();
     }
-    let mut line = chained
+    let mut line = reading
+        .chained
         .map(|command| statusline::chained(&command, &input))
         .unwrap_or_default();
     while line.last().is_some_and(u8::is_ascii_whitespace) {
         line.pop();
     }
-    if let Ok(state) = file.read() {
+    if let (Ok(state), Ok(profiles)) = (file.read(), root.list()) {
         if !line.is_empty() {
             line.extend_from_slice(" │ ".as_bytes());
         }
-        line.extend_from_slice(statusline::summary(&state, now).as_bytes());
+        let summary = statusline::summary(&state, &profiles, reading.account.as_deref(), now);
+        line.extend_from_slice(summary.as_bytes());
     }
     let _ignored: std::io::Result<()> = std::io::stdout().write_all(&line);
 }

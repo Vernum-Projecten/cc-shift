@@ -45,6 +45,10 @@ pub struct Recorded {
     pub seven_day: Option<Window>,
     /// When the numbers were read, in Unix seconds.
     pub read_at: Option<i64>,
+    /// Whether the numbers were read with this account's own token, from the
+    /// usage endpoint. Only such a reading proves which account a set of
+    /// reset times belongs to.
+    pub confirmed: bool,
 }
 
 /// A switch in progress, saved before each step so the next run can finish
@@ -226,6 +230,7 @@ mod tests {
             }),
             seven_day: None,
             read_at: Some(900),
+            confirmed: true,
         };
         file.update(|state| {
             state.active = Some("member1".to_owned());
