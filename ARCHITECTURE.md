@@ -108,7 +108,9 @@ A small library with a thin binary: `src/main.rs` only calls `cs::run` in `src/l
 - `profile`: names and the profiles folder.
 - `launch`: execs `claude` with a profile's `CLAUDE_CONFIG_DIR`, for `cs add`.
 - `error`: the messages the user sees.
-- Planned: the Keychain behind a small trait (so tests never touch the real one), the state with its lock, the usage sources, the selection rule as a pure function of the state and the current time, and the status line and hook entry points.
+- `usage`: the two windows per account and how full each is at a given time.
+- `select`: the selection rule, a pure function of the accounts and the current time.
+- Planned: the Keychain behind a small trait (so tests never touch the real one), the state with its lock, the usage sources, and the status line and hook entry points.
 
 The only runtime dependency is `thiserror`; each further dependency is added in the pull request that needs it.
 
