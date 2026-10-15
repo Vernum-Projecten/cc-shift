@@ -4,6 +4,7 @@
 
 mod add;
 mod cli;
+mod hook;
 mod list;
 mod sandbox;
 mod setup;

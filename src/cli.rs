@@ -14,6 +14,8 @@ Commands:
   use <name>    Make an account active in every Claude Code window now
   list          Print the profiles
   statusline    Record usage; run by Claude Code as its status line
+  hook rate-limit
+                Switch after a usage limit; run by Claude Code as a hook
   help          Print this help
 ";
 
@@ -32,6 +34,9 @@ pub enum Command {
     Use(OsString),
     /// Print every account with its usage.
     Status,
+    /// A turn ended on a usage limit; run by Claude Code's `StopFailure`
+    /// hook.
+    HookRateLimit,
     /// Record usage from the status line input; run by Claude Code.
     Statusline,
     /// A command line `cs` does not understand, with the reason.
@@ -89,6 +94,12 @@ where
                 "status takes no arguments, not '{}'",
                 extra.to_string_lossy()
             )),
+        };
+    }
+    if first == "hook" {
+        return match (args.next(), args.next()) {
+            (Some(event), None) if event == "rate-limit" => Command::HookRateLimit,
+            _ => Command::Misuse("hook takes one event: rate-limit".to_owned()),
         };
     }
     if first == "statusline" {
