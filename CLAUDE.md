@@ -1,28 +1,36 @@
 # CLAUDE.md
 
-**cs** is a small Rust command-line tool for macOS that lets one person use
-several Claude accounts with Claude Code without logging in again on every
-switch. Each account lives in its own profile folder under
-`~/.claude-profiles/<name>/`, and `cs <name>` execs `claude` with
-`CLAUDE_CONFIG_DIR` pointing at that folder. Claude Code keeps owning the
-login, the Keychain item and the token refresh. `cs auto` picks the profile
-with the most usage left, knows each profile's reset time, and switches when
-the active profile runs out.
+**cs** is a small Rust command-line tool for macOS that switches Claude Code
+between several Claude accounts on its own. Every Claude Code window runs on
+`~/.claude`; each account's login is parked in its own profile folder under
+`~/.claude-profiles/<name>/`. When the active account nears a usage limit,
+`cs` moves the next account's login into `~/.claude` the way `/login` does,
+and every open window continues on it without a restart. The status line
+records usage and switches at 95%, a rate-limit hook is the fallback, and
+parked logins are refreshed and their usage read in the background.
 
 The design of record is `ARCHITECTURE.md`. Read it before proposing anything
 structural.
 
-## Status: pre-code
+## Status
 
-Only the design exists. There is no `Cargo.toml` and no source yet. The open
-issue list decides what is built next, and nothing is built ahead of an
-issue.
+v0.0.1 to v0.0.3 are built: profiles, usage from the status line and the
+usage endpoint, the selection rule (spend what expires first), moving
+logins with recovery, refreshing parked logins, and automatic switching
+after `cs setup`. The open issue list decides what is built next, and
+nothing is built ahead of an issue.
 
 ## Repo map
 
-Exists today:
-
-- `ARCHITECTURE.md`: the design of record.
+- `ARCHITECTURE.md`: the design of record; section 7 maps the code.
+- `src/`: one folder per domain (`command`, `store`, `usage`, `login`,
+  `switching`, `anthropic`, `claude_code`), each with a `mod.rs`; `lib.rs`
+  is the crate root and `main.rs` only calls `cs::run`.
+- `tests/it/`: integration tests as one test binary, run against a temporary
+  `HOME` and a stub `claude` (`.claude/rules/testing.md`).
+- `Cargo.toml`: one crate, edition 2024, the lint set in `[lints]` and the
+  size-optimised release profile; `deny.toml`, `clippy.toml`, `rustfmt.toml`
+  and `rust-toolchain.toml` beside it.
 - `README.md`, `LICENSE` (Apache License 2.0).
 - `.claude/`: the working discipline (`rules/`, `hooks/`, `skills/`,
   `agents/`, `memory/`, `settings.json`).
@@ -31,16 +39,6 @@ Exists today:
 - `scripts/gh/`: the tracker helpers (`fields.sh`, `rel.sh`, `labels.sh`,
   `project.sh`).
 - `scripts/checks/`: the guards CI runs, each runnable by hand.
-
-Planned:
-
-- `Cargo.toml`: one crate, the `cs` binary, edition 2024, no runtime
-  dependencies beyond the standard library unless an issue decides otherwise.
-  It carries the lint set in `[lints]` and the size-optimised release profile.
-- `src/main.rs` and its modules: command parsing, profile validation, the
-  profiles folder, the exec of `claude`, and the usage tracking behind
-  `cs auto` and `cs status`.
-- `tests/it/`: integration tests as one test binary (`.claude/rules/testing.md`).
 
 ## Issue workflow (the loop)
 

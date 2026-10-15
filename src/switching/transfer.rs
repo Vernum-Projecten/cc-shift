@@ -12,10 +12,10 @@
 //! the meantime are kept. The same step makes `~/.claude.json` name the
 //! next account, which open windows need to follow the switch.
 
-use crate::account::AccountFiles;
 use crate::error::Error;
-use crate::keychain::{Logins, Slot};
-use crate::state::{Locked, Pending, State, StateFile, Step};
+use crate::login::account::AccountFiles;
+use crate::login::{Logins, Slot};
+use crate::store::state::{Locked, Pending, State, StateFile, Step};
 
 /// What a switch did.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -120,11 +120,11 @@ fn advance(locked: &Locked<'_>, state: &mut State, step: Step) -> Result<(), Err
 #[expect(clippy::panic_in_result_fn, reason = "test assertions")]
 mod tests {
     use super::{Outcome, switch_to};
-    use crate::account::AccountFiles;
     use crate::error::Error;
-    use crate::keychain::{Login, Logins, Slot};
-    use crate::profile::ProfilesRoot;
-    use crate::state::StateFile;
+    use crate::login::account::AccountFiles;
+    use crate::login::{Login, Logins, Slot};
+    use crate::store::profile::ProfilesRoot;
+    use crate::store::state::StateFile;
     use std::cell::{Cell, RefCell};
     use std::collections::HashMap;
     use std::fs;

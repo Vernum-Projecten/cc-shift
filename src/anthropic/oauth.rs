@@ -8,10 +8,10 @@
 
 use serde_json::{Value, json};
 
+use crate::anthropic::http::{Request, Response};
 use crate::error::Error;
-use crate::http::{Request, Response};
-use crate::keychain::Login;
-use crate::state::Recorded;
+use crate::login::Login;
+use crate::store::state::Recorded;
 use crate::usage::Window;
 
 /// The token endpoint a refresh goes to.
@@ -247,9 +247,9 @@ fn parse(bytes: &[u8], what: &str) -> Result<Value, Error> {
 #[expect(clippy::panic_in_result_fn, reason = "test assertions")]
 mod tests {
     use super::{Stored, apply_refresh, parse_usage};
+    use crate::anthropic::http::Response;
     use crate::error::Error;
-    use crate::http::Response;
-    use crate::keychain::Login;
+    use crate::login::Login;
     use serde_json::{Value, json};
 
     const NOW: i64 = 1_800_000_000;

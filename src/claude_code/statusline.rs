@@ -13,8 +13,7 @@ use std::process::{Command, Stdio};
 use serde::Deserialize;
 
 use crate::error::Error;
-use crate::state::{Recorded, State, StateFile};
-use crate::status;
+use crate::store::state::{Recorded, State, StateFile};
 use crate::usage::Window;
 
 /// The part of the status line input `cs` reads; every other field is
@@ -91,7 +90,7 @@ pub fn summary(state: &State, now: i64) -> String {
         Some(w) if w.resets_at > now => format!(
             " · {label} {:.0}% ({})",
             w.used_percent,
-            status::duration(w.resets_at - now)
+            crate::usage::time_left(w.resets_at - now)
         ),
         Some(_) => format!(" · {label} 0%"),
         None => String::new(),
@@ -133,9 +132,9 @@ pub fn chained(command: &str, input: &[u8]) -> Vec<u8> {
 mod tests {
     use super::{chained, record, summary};
     use crate::error::Error;
-    use crate::profile::ProfilesRoot;
-    use crate::state::StateFile;
-    use crate::state::{Recorded, State};
+    use crate::store::profile::ProfilesRoot;
+    use crate::store::state::StateFile;
+    use crate::store::state::{Recorded, State};
     use crate::usage::Window;
     use tempfile::TempDir;
 
