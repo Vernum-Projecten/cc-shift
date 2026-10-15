@@ -6,6 +6,14 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `cc-shift doctor` checks the status line and the hook, `claude` and its
+  version, every profile's login and signed-in account, two profiles signed
+  in to the same account, the state file, an unfinished switch, logged-out
+  accounts and the account details in `~/.claude.json`, and prints the
+  command that fixes each problem. It exits 1 when a check fails.
+
 ## [0.0.6] - 2026-10-15
 
 ### Changed

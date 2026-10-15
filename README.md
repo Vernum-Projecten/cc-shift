@@ -130,6 +130,7 @@ From here on you never need to run `cc-shift` while you work.
 | `cc-shift use <name>` | Moves every open window to that account now. Never needed; for steering by hand. |
 | `cc-shift refresh` | Refreshes the logins of the accounts that are not active and reads their usage now. Runs on its own as well. |
 | `cc-shift list` | Prints the profile names. |
+| `cc-shift doctor` | Checks the setup (status line and hook, `claude`, every login and account, two profiles on one account, the state) and says how to fix what is wrong. |
 | `cc-shift help` | Prints the commands. |
 
 Claude Code itself runs `cc-shift statusline` after every reply and `cc-shift hook rate-limit` when a turn hits a limit; you never run those.
@@ -220,6 +221,8 @@ Removing `~/.claude-profiles` leaves the parked logins in the Keychain. Delete t
 **Does it work with Team accounts?** Yes. Team, Pro and Max accounts all report their usage to the status line.
 
 **An account shows `logged out`.** Its login was revoked or expired. Run `cc-shift add <name>` and `/login` again.
+
+**Something does not work.** Run `cc-shift doctor`: it checks every part of the setup and prints the command that fixes each problem.
 
 **An account shows `unknown`.** Its usage has not been read yet, or the usage request failed. `cc-shift refresh` reads it now.
 

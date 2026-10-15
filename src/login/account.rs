@@ -48,6 +48,26 @@ impl AccountFiles {
             .ok_or_else(|| missing(&path))
     }
 
+    /// Returns the account id (`oauthAccount.accountUuid`) `~/.claude.json`
+    /// names, if any.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Account`] when the file cannot be read or parsed.
+    pub fn active_id(&self) -> Result<Option<String>, Error> {
+        Ok(read_json(&self.active)?.and_then(|file| file.get("oauthAccount").and_then(account_id)))
+    }
+
+    /// Returns the account id of profile `name`, if it is signed in.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Account`] when the profile's `.claude.json` cannot be
+    /// read or holds no `oauthAccount`.
+    pub fn profile_id(&self, name: &str) -> Result<Option<String>, Error> {
+        Ok(account_id(&self.of_profile(name)?))
+    }
+
     /// Makes `~/.claude.json` name the account of profile `name`.
     ///
     /// Only `oauthAccount` changes; every other key keeps its value and its
@@ -74,6 +94,14 @@ impl AccountFiles {
         map.insert("oauthAccount".to_owned(), account);
         write_json(&self.active, &file)
     }
+}
+
+/// Returns the `accountUuid` of an `oauthAccount` object.
+fn account_id(account: &Value) -> Option<String> {
+    account
+        .get("accountUuid")
+        .and_then(Value::as_str)
+        .map(str::to_owned)
 }
 
 /// Reads a JSON file; a missing file is `None`.
