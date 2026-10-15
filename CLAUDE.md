@@ -34,7 +34,8 @@ nothing is built ahead of an issue.
   `switching`, `anthropic`, `claude_code`, `render`, `stats`, `early`), each
   with a `mod.rs`; `lib.rs` is the crate root, `error.rs` the error type, and
   `main.rs` only calls `cc_shift::run`. Code that differs per operating
-  system lives in a `macos/` or `linux/` folder inside its module.
+  system lives in a `macos/`, `linux/` or `windows/` folder inside its
+  module; the login files of Linux and Windows share `login/files.rs`.
 - `tests/it/`: integration tests as one test binary, run against a temporary
   `HOME` and a stub `claude` (`.claude/rules/testing.md`).
 - `Cargo.toml`: one crate, edition 2024, the lint set in `[lints]` and the

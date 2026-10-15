@@ -15,6 +15,8 @@ pub mod linux;
 #[cfg(target_os = "macos")]
 pub mod macos;
 pub mod start;
+#[cfg(windows)]
+pub mod windows;
 
 use std::path::{Path, PathBuf};
 
@@ -81,6 +83,13 @@ pub fn install(home: &Path, setting: EarlyStart, binary: &Path, path: &str) -> R
     return macos::launchd::install(home, setting, binary, path);
     #[cfg(target_os = "linux")]
     return linux::systemd::install(home, setting, binary, path);
+    #[cfg(windows)]
+    {
+        // NOTE: no specification governs this: our own design. A task action
+        // carries no environment, so the run finds `claude` on the user's PATH.
+        let _: &str = path;
+        windows::task::install(home, setting, binary)
+    }
 }
 
 /// Removes the system job; returns whether there was one.
@@ -93,16 +102,20 @@ pub fn remove(home: &Path) -> Result<bool, Error> {
     return macos::launchd::remove(home);
     #[cfg(target_os = "linux")]
     return linux::systemd::remove(home);
+    #[cfg(windows)]
+    return windows::task::remove(home);
 }
 
 /// Returns the file of the system job: the `launchd` agent on macOS, the
-/// systemd timer on Linux.
+/// systemd timer on Linux, and the imported task definition on Windows.
 #[must_use]
 pub fn job_path(home: &Path) -> PathBuf {
     #[cfg(target_os = "macos")]
     return macos::launchd::agent_path(home);
     #[cfg(target_os = "linux")]
     return linux::systemd::timer_path(home);
+    #[cfg(windows)]
+    return windows::task::task_path(home);
 }
 
 /// Returns whether the system job is installed.
@@ -123,6 +136,8 @@ pub fn workdir(home: &Path) -> PathBuf {
             .map_or_else(|| home.join(".cache"), PathBuf::from)
             .join("cc-shift/early-start")
     }
+    #[cfg(windows)]
+    return windows::task::data_folder(home).join("early-start");
 }
 
 /// Parses a time of day written as `HH:MM`, from 00:00 to 23:59.

@@ -97,7 +97,11 @@ fn fails_without_home() -> io::Result<()> {
         .args(["add", "member1"])
         .output()?;
     assert_eq!(out.status.code(), Some(1), "exit code");
-    assert!(stderr(&out).contains("HOME is not set"), "{}", stderr(&out));
+    assert!(
+        stderr(&out).contains("the home folder is not set (HOME"),
+        "{}",
+        stderr(&out)
+    );
     Ok(())
 }
 

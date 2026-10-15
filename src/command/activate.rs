@@ -16,10 +16,10 @@ use crate::switching::transfer::{self, Outcome};
 
 /// When open windows pick up a switch: Claude Code caches the Keychain item
 /// for about 30 seconds on macOS, and checks the login file before each
-/// request on Linux.
+/// request on Linux and Windows.
 #[cfg(target_os = "macos")]
 const FOLLOW: &str = "within about 30 seconds";
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 const FOLLOW: &str = "with their next message";
 
 /// Moves an account's parked login into `~/.claude` and says what moved.

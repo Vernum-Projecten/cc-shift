@@ -40,6 +40,9 @@ const UNREADABLE_LOGIN_FIX: &str =
 #[cfg(target_os = "linux")]
 const UNREADABLE_LOGIN_FIX: &str =
     "check that you can read the profile's .credentials.json, or run cc-shift add again";
+/// The fix for a login cc-shift cannot read.
+#[cfg(windows)]
+const UNREADABLE_LOGIN_FIX: &str = "check that you can read the profile's .credentials.json and that Claude Code does not use Credential Manager, or run cc-shift add again";
 
 /// One check and, when it did not pass, the command that fixes it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -113,7 +116,11 @@ pub fn checks<L: Logins>(setup: &Setup<'_, L>) -> Vec<Check> {
         Some(curl) => Check::ok(format!("curl is installed ({})", curl.display())),
         None => Check::fail(
             "curl is not installed",
-            "install curl with the system's package manager",
+            if cfg!(windows) {
+                "curl.exe ships with Windows 10 1803 and later; check %SystemRoot%\\System32\\curl.exe"
+            } else {
+                "install curl with the system's package manager"
+            },
         ),
     });
     out.push(settings_check(setup));
@@ -303,12 +310,14 @@ pub fn run() -> Result<(), Error> {
     let binary = std::env::current_exe()
         .map(|p| p.to_string_lossy().into_owned())
         .unwrap_or_default();
-    let claude = Command::new("claude")
-        .arg("--version")
-        .output()
-        .ok()
-        .filter(|out| out.status.success())
-        .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_owned());
+    let claude = crate::claude_code::launch::without_window(&mut Command::new(
+        crate::claude_code::launch::claude_program(),
+    ))
+    .arg("--version")
+    .output()
+    .ok()
+    .filter(|out| out.status.success())
+    .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_owned());
     let setup = Setup {
         logins: &logins,
         accounts: &accounts,
@@ -318,7 +327,7 @@ pub fn run() -> Result<(), Error> {
         binary: &binary,
         claude,
         curl: crate::anthropic::http::find_curl(
-            Path::new(crate::anthropic::http::SYSTEM_CURL),
+            crate::anthropic::http::system_curl().as_deref(),
             std::env::var_os("PATH").as_deref(),
         ),
     };

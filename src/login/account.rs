@@ -130,15 +130,19 @@ fn read_json(path: &Path) -> Result<Option<Value>, Error> {
 }
 
 /// Replaces a JSON file in one rename, readable and writable by the user
-/// alone, as Claude Code keeps it.
+/// alone, as Claude Code keeps it: mode 0600 on Unix, and on Windows the
+/// access rules the file takes from the user's folder.
 fn write_json(path: &Path, value: &Value) -> Result<(), Error> {
-    use std::os::unix::fs::PermissionsExt;
     let fail =
         |e: &dyn std::fmt::Display| Error::Account(format!("cannot write {}: {e}", path.display()));
     let text = serde_json::to_vec_pretty(value).map_err(|e| fail(&e))?;
     let temporary = path.with_extension("json.cs-tmp");
     fs::write(&temporary, text).map_err(|e| fail(&e))?;
-    fs::set_permissions(&temporary, fs::Permissions::from_mode(0o600)).map_err(|e| fail(&e))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&temporary, fs::Permissions::from_mode(0o600)).map_err(|e| fail(&e))?;
+    }
     fs::rename(&temporary, path).map_err(|e| fail(&e))
 }
 
@@ -156,7 +160,6 @@ mod tests {
     use crate::error::Error;
     use crate::store::profile::ProfilesRoot;
     use std::fs;
-    use std::os::unix::fs::PermissionsExt;
     use tempfile::TempDir;
 
     fn files(home: &TempDir) -> Result<AccountFiles, Error> {
@@ -192,10 +195,14 @@ mod tests {
         let zeta = text.find("zeta").ok_or("zeta")?;
         let alpha = text.find("alpha").ok_or("alpha")?;
         assert!(zeta < alpha, "key order kept: {text}");
-        let mode = fs::metadata(home.path().join(".claude.json"))?
-            .permissions()
-            .mode();
-        assert_eq!(mode & 0o777, 0o600, "user only");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = fs::metadata(home.path().join(".claude.json"))?
+                .permissions()
+                .mode();
+            assert_eq!(mode & 0o777, 0o600, "user only");
+        }
         Ok(())
     }
 

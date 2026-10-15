@@ -10,7 +10,9 @@ use std::path::PathBuf;
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// `HOME` is unset or empty, so the profiles root cannot be found.
-    #[error("HOME is not set, so ~/.claude-profiles cannot be found")]
+    #[error(
+        "the home folder is not set (HOME, or USERPROFILE on Windows), so ~/.claude-profiles cannot be found"
+    )]
     NoHome,
     /// A profile name with a character outside the allowed set.
     #[error(
@@ -136,6 +138,12 @@ pub enum Error {
     /// Claude Code held its refresh lock for longer than a switch waits.
     #[error("Claude Code is refreshing the login in {}; the switch is retried later", .0.display())]
     RefreshLocked(PathBuf),
+    /// Claude Code on Windows keeps this folder's login in Credential Manager.
+    #[error(
+        "Claude Code keeps the login of {} in Windows Credential Manager, which cc-shift cannot switch; nothing was moved",
+        .0.display()
+    )]
+    CredentialManager(PathBuf),
     /// The message that starts a 5-hour window failed.
     #[error("{0}")]
     EarlyStart(String),

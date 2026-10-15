@@ -121,7 +121,12 @@ fn turn_on(
     count: Option<u8>,
 ) -> Result<(), Error> {
     let path = std::env::var("PATH").unwrap_or_default();
-    if find_on(&path, "claude").is_none() {
+    let names: &[&str] = if cfg!(windows) {
+        &["claude.exe", "claude.cmd"]
+    } else {
+        &["claude"]
+    };
+    if crate::claude_code::launch::find_program(path.as_ref(), names).is_none() {
         return Err(Error::ClaudeNotFound);
     }
     let binary = std::env::current_exe()
@@ -223,13 +228,6 @@ pub fn describe(setting: Option<&EarlyStart>, now: Timestamp, zone: &TimeZone) -
     }
     line.push('\n');
     line
-}
-
-/// Returns the first `name` in the folders of `path`.
-fn find_on(path: &str, name: &str) -> Option<PathBuf> {
-    std::env::split_paths(path)
-        .map(|folder| folder.join(name))
-        .find(|candidate| candidate.is_file())
 }
 
 /// Writes `text` to stdout.
