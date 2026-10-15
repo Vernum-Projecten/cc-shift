@@ -20,9 +20,18 @@ carries what CI runs and the rules every workflow keeps.
   existing. The `conclusion` job is the single required status check on
   `main`.
 - `.github/workflows/release.yml`: the release lane, run by a `v*` tag. It checks the tag against the version and `CHANGELOG.md`, creates the GitHub release as a draft, builds and attests the two macOS binaries, publishes to crates.io through Trusted Publishing (OIDC, no stored token) in the `crates-io` environment, and publishes the draft once every asset is attached. No release job restores a cache.
-- CodeQL and OpenSSF Scorecard are not set up: the repository is private
-  and has no GitHub Advanced Security. If either is added later, it stays
-  advisory and gates no merge.
+- `.github/workflows/api-prices.yml`: the price watch, every Monday at 06:17
+  UTC and by hand. It runs `scripts/checks/api-prices.sh`, which compares
+  the model table of Anthropic's pricing page with
+  `scripts/checks/api-prices.txt`, the snapshot the price table of
+  `cc-shift stats --cost` is tested against. A changed price or a new model
+  opens one issue, and a page it cannot read opens another; an open issue
+  with the same title is never opened twice. Its one job reads the
+  repository and writes issues, nothing more, and it gates no merge. The
+  issue it opens has no type, priority or effort, so whoever picks it up
+  sets them first (`issue-workflow.md`).
+- CodeQL and OpenSSF Scorecard are not set up. If either is added later, it
+  stays advisory and gates no merge.
 - Dependabot (`.github/dependabot.yml`) bumps the Cargo dependencies and the
   pinned action digests.
 
