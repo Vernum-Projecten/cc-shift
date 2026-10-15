@@ -29,6 +29,8 @@ pub struct State {
     pub chained_statusline: Option<String>,
     /// A switch that has started and not yet finished.
     pub pending: Option<Pending>,
+    /// When `cs` last switched on its own, in Unix seconds.
+    pub switched_at: Option<i64>,
 }
 
 /// The usage of one account as last read.

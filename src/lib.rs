@@ -5,6 +5,7 @@
 //! whole run path is testable from `tests/`.
 
 pub mod account;
+pub mod auto;
 pub mod cli;
 pub mod error;
 pub mod keychain;
@@ -85,6 +86,14 @@ where
                 ExitCode::from(FAILURE)
             }
         },
+        Command::HookRateLimit => {
+            // NOTE: no specification governs this: our own design. The hook
+            // always exits 0, so a cs problem never blocks a Claude Code turn.
+            let mut input = Vec::new();
+            let _ignored: std::io::Result<usize> = std::io::stdin().read_to_end(&mut input);
+            let _switched: Result<Option<String>, Error> = automatic(auto::Trigger::LimitHit);
+            ExitCode::SUCCESS
+        }
         Command::Statusline => {
             statusline_command();
             ExitCode::SUCCESS
@@ -157,8 +166,38 @@ fn setup_command() -> Result<(), Error> {
     } else {
         report("already set up");
     }
-    // TODO(#13): make the best account active once the Keychain backend exists.
+    if root.list()?.is_empty() {
+        report("no profiles yet; add them with 'cs add <name>', then run 'cs setup' again");
+        return Ok(());
+    }
+    if StateFile::in_root(&root).read()?.active.is_none() {
+        report("the login now in ~/.claude belongs to no profile and is replaced");
+    }
+    match automatic(auto::Trigger::Setup)? {
+        Some(name) => report(&format!(
+            "'{name}' is active; switching is automatic from now on"
+        )),
+        None => report("switching is automatic from now on"),
+    }
     Ok(())
+}
+
+/// Runs an automatic switch against the real Keychain and files.
+fn automatic(trigger: auto::Trigger) -> Result<Option<String>, Error> {
+    let home = std::env::var_os("HOME")
+        .filter(|h| !h.is_empty())
+        .ok_or(Error::NoHome)?;
+    let root = ProfilesRoot::from_home(Some(home.clone()))?;
+    let logins = system_keychain::SystemKeychain::for_user(&root)?;
+    let accounts = account::AccountFiles::new(std::path::Path::new(&home), &root);
+    let file = StateFile::in_root(&root);
+    let context = auto::Context {
+        logins: &logins,
+        accounts: &accounts,
+        file: &file,
+        root: &root,
+    };
+    auto::run(&context, trigger, unix_now())
 }
 
 /// Prints every account with its usage and which account comes next.
@@ -196,6 +235,7 @@ fn statusline_command() {
         .ok()
         .and_then(|root| statusline::record(&input, &StateFile::in_root(&root), now).ok())
         .flatten();
+    let _switched: Result<Option<String>, Error> = automatic(auto::Trigger::Usage);
     if let Some(command) = chained {
         let line = statusline::chained(&command, &input);
         let _ignored: std::io::Result<()> = std::io::stdout().write_all(&line);
