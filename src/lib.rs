@@ -6,15 +6,16 @@
 //!
 //! The modules follow the domain: `command` is the command line, `store`
 //! the files `cc-shift` owns, `usage` what is known about each account, `login`
-//! the Keychain and the account details, `switching` moving between
+//! the logins (the Keychain on macOS, the login files on Linux) and the
+//! account details, `switching` moving between
 //! accounts, `anthropic` the calls to Anthropic, `claude_code` the places
 //! where `cc-shift` plugs into Claude Code, and `stats` the token statistics
-//! read from Claude Code's transcripts.
+//! read from Claude Code's transcripts, and `early` the early start.
 
-// NOTE: no specification governs this: our own design. The logins live in
-// the macOS login Keychain, so a build for another system stops here.
-#[cfg(not(target_os = "macos"))]
-compile_error!("cc-shift works on macOS only: it keeps logins in the macOS login Keychain");
+// NOTE: no specification governs this: our own design. cc-shift knows where
+// Claude Code keeps logins on macOS and Linux only, so other builds stop here.
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
+compile_error!("cc-shift works on macOS and Linux only");
 
 pub mod anthropic;
 pub mod claude_code;

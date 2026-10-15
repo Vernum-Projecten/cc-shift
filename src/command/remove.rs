@@ -6,7 +6,7 @@ use std::io::BufRead;
 
 use crate::command::report;
 use crate::error::Error;
-use crate::login::macos::keychain::SystemKeychain;
+use crate::login::SystemLogins;
 use crate::login::{Logins, Slot};
 use crate::store::profile::{ProfileName, ProfilesRoot};
 use crate::store::state::StateFile;
@@ -75,7 +75,7 @@ pub fn run(raw: &OsStr) -> Result<(), Error> {
         report("nothing removed");
         return Ok(());
     }
-    let logins = SystemKeychain::for_user(&root)?;
+    let logins = SystemLogins::for_user(&root)?;
     let removed = remove_profile(&logins, &StateFile::in_root(&root), &root, &name)?;
     if removed.had_login {
         report(&format!("removed '{}' and its login", name.as_str()));

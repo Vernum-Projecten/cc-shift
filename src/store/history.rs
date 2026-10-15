@@ -109,6 +109,11 @@ pub enum Event {
         /// How many it was set to start.
         wanted: u8,
     },
+    /// The early start ran too long after its set time and started nothing.
+    EarlyStartSkipped {
+        /// Why.
+        reason: String,
+    },
     /// The early start could not start an account's window.
     EarlyStartFailed {
         /// The account.

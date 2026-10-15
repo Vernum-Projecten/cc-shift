@@ -9,7 +9,6 @@ use jiff::tz::TimeZone;
 
 use crate::anthropic::parked;
 use crate::command::{home, refresh, unix_now};
-use crate::early::macos::launchd;
 use crate::early::{self, EarlyStart, MOST_ACCOUNTS, start};
 use crate::error::Error;
 use crate::store::history::{self, Event};
@@ -31,7 +30,7 @@ pub enum Action {
     },
     /// Turn the early start off.
     Off,
-    /// Start the windows now; run by the `launchd` agent.
+    /// Start the windows now; run by the scheduled job.
     Run,
 }
 
@@ -80,12 +79,12 @@ pub fn action(flags: &[&str]) -> Result<Action, String> {
     }
 }
 
-/// Runs the action against the real files, `launchd` and Claude Code.
+/// Runs the action against the real files, the system scheduler and Claude Code.
 ///
 /// # Errors
 ///
 /// Returns the error of a missing `HOME`, the profiles root, the state file,
-/// a missing `claude`, or the `launchd` agent.
+/// a missing `claude`, or the scheduled job.
 pub fn run(action: Action) -> Result<(), Error> {
     let home = home()?;
     let root = ProfilesRoot::from_home(Some(home.clone().into_os_string()))?;
@@ -103,7 +102,7 @@ pub fn run(action: Action) -> Result<(), Error> {
         Action::On { at, accounts } => turn_on(&home, &file, at, accounts),
         Action::Off => {
             file.update(|s| s.early_start = None)?;
-            launchd::remove(&home)?;
+            early::remove(&home)?;
             print("Early start is off.\n");
             Ok(())
         }
@@ -136,7 +135,7 @@ fn turn_on(
         s.early_start = Some(setting);
         setting
     })?;
-    launchd::install(home, setting, &binary, &path)?;
+    early::install(home, setting, &binary, &path)?;
     print(&format!(
         "Early start is on: Monday to Friday at {}, {}.\n\
          cc-shift picks the accounts each morning, the ones it would use first.\n\
@@ -156,6 +155,19 @@ fn start_windows(home: &Path, root: &ProfilesRoot, file: &StateFile) -> Result<(
     if !early::is_workday(today) {
         return Ok(());
     }
+    if early::too_late(setting, Timestamp::now(), &TimeZone::system()) {
+        history::note(
+            root,
+            Event::EarlyStartSkipped {
+                reason: format!(
+                    "more than 3 hours after {}; a window started now would reset in the evening",
+                    setting.at()
+                ),
+            },
+            unix_now(),
+        );
+        return Ok(());
+    }
     // NOTE: no specification governs this: our own design. A failed refresh
     // leaves the last numbers, and picking from them is still sound.
     let _reports: Result<Vec<parked::Report>, Error> = refresh::refresh_parked();
@@ -163,7 +175,7 @@ fn start_windows(home: &Path, root: &ProfilesRoot, file: &StateFile) -> Result<(
     let state = file.read()?;
     let now = unix_now();
     let all = accounts(&root.list()?, &state);
-    let workdir = home.join("Library/Caches/cc-shift/early-start");
+    let workdir = early::workdir(home);
     let mut started = Vec::new();
     for account in early::pick(&all, setting.accounts, now) {
         let config_dir: Option<PathBuf> = (state.active.as_deref() != Some(account.name.as_str()))

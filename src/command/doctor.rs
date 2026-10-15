@@ -10,10 +10,9 @@ use std::process::Command;
 use crate::claude_code::settings;
 use crate::command::home;
 use crate::early::EarlyStart;
-use crate::early::macos::launchd;
 use crate::error::Error;
+use crate::login::SystemLogins;
 use crate::login::account::AccountFiles;
-use crate::login::macos::keychain::SystemKeychain;
 use crate::login::{Logins, Slot};
 use crate::render::Paint;
 use crate::store::profile::ProfilesRoot;
@@ -151,10 +150,10 @@ pub fn checks<L: Logins>(setup: &Setup<'_, L>) -> Vec<Check> {
     out
 }
 
-/// Checks that the `launchd` agent exists exactly while the early start is
+/// Checks that the scheduled job exists exactly while the early start is
 /// on; nothing to say while it is off.
 fn early_check(home: &Path, setting: Option<&EarlyStart>) -> Option<Check> {
-    let installed = launchd::agent_path(home).is_file();
+    let installed = crate::early::installed(home);
     match (setting, installed) {
         (Some(setting), true) => Some(Check::ok(format!(
             "early start is on: {}, {} account(s)",
@@ -162,11 +161,11 @@ fn early_check(home: &Path, setting: Option<&EarlyStart>) -> Option<Check> {
             setting.accounts
         ))),
         (Some(_), false) => Some(Check::warn(
-            "early start is on, but its launchd agent is missing",
+            "early start is on, but its scheduled job is missing",
             "cc-shift early on",
         )),
         (None, true) => Some(Check::warn(
-            "the early start is off, but its launchd agent is still installed",
+            "the early start is off, but its scheduled job is still installed",
             "cc-shift early off",
         )),
         (None, false) => None,
@@ -277,7 +276,7 @@ pub fn render(checks: &[Check], paint: Paint) -> String {
 pub fn run() -> Result<(), Error> {
     let home = home()?;
     let root = ProfilesRoot::from_home(Some(home.clone().into_os_string()))?;
-    let logins = SystemKeychain::for_user(&root)?;
+    let logins = SystemLogins::for_user(&root)?;
     let accounts = AccountFiles::new(&home, &root);
     let file = StateFile::in_root(&root);
     let binary = std::env::current_exe()
@@ -465,7 +464,6 @@ mod tests {
     fn the_early_start_agent_must_match_the_setting() -> Result<(), Box<dyn std::error::Error>> {
         use super::early_check;
         use crate::early::EarlyStart;
-        use crate::early::macos::launchd;
         let home = TempDir::new()?;
         let on = EarlyStart::default();
         assert_eq!(
@@ -478,7 +476,7 @@ mod tests {
             (missing.level, missing.fix.as_deref()),
             (Level::Warn, Some("cc-shift early on"))
         );
-        let agent = launchd::agent_path(home.path());
+        let agent = crate::early::job_path(home.path());
         fs::create_dir_all(agent.parent().ok_or("a folder")?)?;
         fs::write(&agent, "")?;
         let installed = early_check(home.path(), Some(&on)).ok_or("a check")?;
