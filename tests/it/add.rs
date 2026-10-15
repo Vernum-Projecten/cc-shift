@@ -120,6 +120,21 @@ fn fails_when_the_folder_cannot_be_created() -> io::Result<()> {
 }
 
 #[test]
+fn refuses_a_name_that_differs_only_in_case() -> io::Result<()> {
+    let sandbox = Sandbox::new()?;
+    fs::create_dir_all(sandbox.root().join("work"))?;
+    let out = sandbox.run(&["add", "Work"])?;
+    assert_eq!(out.status.code(), Some(1), "exit code");
+    assert!(
+        stderr(&out).contains("'Work' differs from the profile 'work' only in case"),
+        "{}",
+        stderr(&out)
+    );
+    assert_eq!(sandbox.claude_call(), None, "claude not started");
+    Ok(())
+}
+
+#[test]
 fn fails_when_claude_is_not_on_path() -> io::Result<()> {
     let sandbox = Sandbox::without_claude()?;
     let out = sandbox.run(&["add", "member1"])?;

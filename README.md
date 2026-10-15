@@ -119,10 +119,16 @@ cargo install --path . --locked
 
 ### Shell completion
 
-To complete the commands and profile names with Tab in zsh, add this line to `~/.zshrc`, after `compinit`:
+To complete the commands, profile names and flags with Tab in zsh, add this line to `~/.zshrc`, after `compinit`:
 
 ```sh
 source <(cc-shift completion zsh)
+```
+
+In PowerShell (Windows PowerShell 5.1 or PowerShell 7), add this line to your profile, the file `$PROFILE` names:
+
+```powershell
+cc-shift completion powershell | Out-String | Invoke-Expression
 ```
 
 ## Set up
@@ -135,7 +141,7 @@ cc-shift add work
 
 Claude Code opens in that account's own profile. Run `/login`, sign in with that account, then quit Claude Code. To be sure you pick the right account, use a private browser window per account, or sign out of the previous account in the browser first.
 
-Profile names use letters, digits, `-` and `_`, and start with a letter or digit.
+Profile names use letters, digits, `-` and `_`, and start with a letter or digit. A new name may not differ from an existing profile only in case (`Work` beside `work`), and on Windows `con`, `prn`, `aux`, `nul`, `com1` to `com9` and `lpt1` to `lpt9` are not allowed.
 
 **2. Turn on automatic switching:**
 
@@ -217,7 +223,7 @@ A value outside 50 to 100 is ignored and the default is used.
 | `cc-shift early on` | Starts some accounts' 5-hour windows before the workday, Monday to Friday ([early start](#early-start)). `cc-shift early off` stops it; `cc-shift early` shows it. |
 | `cc-shift remove <name>` | Deletes a profile and its stored login, after you type `yes`. The active account cannot be removed. |
 | `cc-shift uninstall [--all]` | Undoes `cc-shift setup`; with `--all`, also deletes every profile and its stored login. |
-| `cc-shift completion zsh` | Prints the zsh completion script ([how to load it](#shell-completion)). |
+| `cc-shift completion zsh` | Prints the zsh completion script; `cc-shift completion powershell` prints the PowerShell one ([how to load them](#shell-completion)). |
 | `cc-shift --version` | Prints the version (also `-V` and `cc-shift version`). |
 | `cc-shift help` | Prints the commands. |
 
