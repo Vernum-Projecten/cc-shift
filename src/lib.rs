@@ -6,12 +6,14 @@
 
 pub mod cli;
 pub mod error;
+pub mod keychain;
 pub mod launch;
 pub mod profile;
 pub mod select;
 pub mod state;
 pub mod status;
 pub mod statusline;
+pub mod switch;
 pub mod usage;
 
 use std::convert::Infallible;
