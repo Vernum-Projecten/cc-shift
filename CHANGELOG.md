@@ -14,6 +14,16 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and logged-out logins, and when all accounts were full and free again,
   from `~/.claude-profiles/history.jsonl`; `--since`, `--all`, `--verbose`
   and `--json`.
+- `cc-shift stats` shows the tokens of all accounts together per project and
+  model: output with its share, input, cache writes and cache reads, read
+  from the session transcripts of `~/.claude` and every profile, subagents
+  included, each response counted once. `--since 2h|7d|30d` and `--all` pick
+  the period and add a section per day, `--project <name>` shows one project
+  per model and day, `--cost` adds the cost at Anthropic's API prices, and
+  `--json` prints one document. What it read is cached per file in
+  `~/.claude-profiles/stats-cache.json`. `stats` can no longer name a profile.
+- A weekly workflow compares Anthropic's pricing page with the price table
+  and opens an issue when a price changes or a model is added.
 
 ### Changed
 

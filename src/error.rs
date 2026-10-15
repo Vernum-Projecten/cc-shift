@@ -94,6 +94,36 @@ pub enum Error {
     /// `~/.claude/settings.json` cannot be read, parsed or written.
     #[error("{0}")]
     Settings(String),
+    /// A transcript or a transcript folder cannot be read.
+    #[error("cannot read {}: {source}", path.display())]
+    StatsRead {
+        /// The file or folder.
+        path: PathBuf,
+        /// The underlying I/O error.
+        #[source]
+        source: io::Error,
+    },
+    /// The statistics cache cannot be written.
+    #[error("cannot write {}: {source}", path.display())]
+    StatsCache {
+        /// The cache file.
+        path: PathBuf,
+        /// The underlying I/O error.
+        #[source]
+        source: io::Error,
+    },
+    /// The start of a statistics period cannot be worked out.
+    #[error("cannot work out the period: {0}")]
+    Period(#[source] jiff::Error),
+    /// `cc-shift stats --project` names a project with no response in the
+    /// period.
+    #[error("no project '{name}' has responses ({period}); 'cc-shift stats' shows the names")]
+    NoProject {
+        /// The name asked for.
+        name: String,
+        /// The period, as the summary line names it.
+        period: String,
+    },
     /// No `claude` binary on `PATH`.
     #[error("claude was not found on PATH; install Claude Code first")]
     ClaudeNotFound,

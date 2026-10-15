@@ -21,6 +21,7 @@ _cc_shift() {
     'add:create a profile and run /login in it'
     'setup:install cc-shift in Claude Code'
     'status:show every account with its usage'
+    'stats:show token totals per project and model'
     'use:make an account active now'
     'refresh:refresh parked logins and read their usage'
     'list:print the profiles'
@@ -39,6 +40,7 @@ _cc_shift() {
   case ${words[2]} in
     use|remove) compadd -- ${(f)"$(cc-shift list 2>/dev/null)"} ;;
     status) compadd -- --json ;;
+    stats) compadd -- --since --all --project --cost --json ;;
     uninstall) compadd -- --all ;;
     log) compadd -- --since --all --verbose --json ;;
     completion) compadd -- zsh ;;
@@ -71,6 +73,7 @@ mod tests {
             "add",
             "setup",
             "status",
+            "stats",
             "use",
             "refresh",
             "list",

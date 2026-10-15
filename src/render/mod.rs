@@ -1,5 +1,5 @@
-//! How `cc-shift` shows usage: the `cc-shift status` table and the status
-//! line, with bars and colour.
+//! How `cc-shift` shows usage: the `cc-shift status` table, the status line
+//! and the `cc-shift stats` tables, with bars and colour.
 //!
 //! Colour follows the `NO_COLOR` convention (<https://no-color.org>): any
 //! non-empty `NO_COLOR` turns it off.
@@ -7,6 +7,8 @@
 pub mod json;
 pub mod line;
 pub mod log;
+pub mod stats;
+pub mod stats_json;
 pub mod table;
 
 /// Paints text with ANSI colours, or leaves it plain.

@@ -146,6 +146,10 @@ jobs:
           set -euo pipefail
           scripts/checks/script-modes.sh --self-test
           scripts/checks/script-modes.sh
+      - name: api-prices parser
+        # The live comparison runs weekly in api-prices.yml; a pull request
+        # proves only the parser, so CI never depends on the page.
+        run: bash scripts/checks/api-prices.sh --self-test
       - name: tracker helpers
         run: |
           set -euo pipefail

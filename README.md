@@ -40,6 +40,7 @@ work ▕██████░░░░▏ 60% · 3h33m │ 7d 31% │ next spare
 - [Install](#install)
 - [Set up](#set-up)
 - [Commands](#commands)
+- [Token statistics](#token-statistics)
 - [How it works](#how-it-works)
 - [Which account is next](#which-account-is-next)
 - [Security](#security)
@@ -135,6 +136,7 @@ From here on you never need to run `cc-shift` while you work.
 | `cc-shift setup` | Turns on automatic switching. Run once. |
 | `cc-shift status` | Shows every account with its usage and the time until each limit resets, marks the active one, and names the next. |
 | `cc-shift status --json` | The same as JSON, for scripts ([shape](#json-for-scripts)). |
+| `cc-shift stats` | Shows the tokens of all accounts together per project and model ([token statistics](#token-statistics)). |
 | `cc-shift use <name>` | Moves every open window to that account now. Never needed; for steering by hand. |
 | `cc-shift refresh` | Refreshes the logins of the accounts that are not active and reads their usage now. Runs on its own as well. |
 | `cc-shift list` | Prints the profile names. |
@@ -174,6 +176,48 @@ Claude Code itself runs `cc-shift statusline` after every reply and `cc-shift ho
 ```
 
 `state` is one of `active`, `next`, `ready`, `full`, `week_full`, `logged_out` and `unknown`; `free_at` is set for `full` and `week_full`, and `reason` for `unknown`. A window that has not started is `null`. A change to this shape is a changelog entry.
+
+## Token statistics
+
+`cc-shift stats` shows how many tokens all your accounts used together, per project and per model. The accounts work as one, so the totals are what count. `cc-shift status` stays about the accounts.
+
+```text
+$ cc-shift stats --cost
+cc-shift stats · today · all accounts together · 14 sessions · 312 responses
+
+  PROJECT       OUTPUT   SHARE                  INPUT   CACHE WRITE  CACHE READ   ≈ API COST
+  backend-api    410K    ███████░░░░░░░░  45%   0.5M    2.9M         17.6M        $41.20
+  website        280K    █████░░░░░░░░░░  31%   0.3M    2.0M         12.4M        $27.90
+  infra          150K    ██░░░░░░░░░░░░░  16%   0.2M    1.1M          7.0M        $14.10
+  scratch         70K    █░░░░░░░░░░░░░░   8%   0.1M    0.4M          2.8M         $5.50
+  total          910K                           1.1M    6.4M         39.8M        $88.70
+
+  MODEL               OUTPUT   SHARE
+  claude-opus-5-5      843K    ███████████████░  93%
+  claude-sonnet-5-5     67K    █░░░░░░░░░░░░░░░   7%
+```
+
+Rows are sorted and shared by output. The four kinds of tokens stand side by side and are never added into one total, because cache reads outnumber everything else.
+
+| Option | What it does |
+|---|---|
+| `--since 2h`, `--since 7d`, `--since 30d` | Counts the last hours, or today and the days before it, instead of today. With days, a section per day follows, today marked. |
+| `--all` | Counts everything in the transcripts, with a section per day. |
+| `--project <name>` | Shows one project, by the name in the table, per model with the four kinds and per day. |
+| `--cost` | Adds `≈ API COST`. |
+| `--json` | Prints one JSON document: the period, sessions, responses, and per project, model and day the four kinds (and the cost with `--cost`). |
+
+The options combine freely, except `--since` with `--all`.
+
+How it counts:
+
+- It reads the session transcripts Claude Code writes under `~/.claude/projects` and under `projects` in every profile, subagent transcripts included. Of each response it reads the model, the token counts, the time, the session and the working folder, never the content.
+- Each response counts once, by its message id, also when a resumed session repeats earlier ones.
+- A project is its working folder, shown by name. Two folders with the same name get their parent folder added.
+- Days and "today" are in your local time zone.
+- What it read is kept in `~/.claude-profiles/stats-cache.json` per file, so the next run reads only the files that changed. The cache holds counts, models, times, session ids and folder paths, never content.
+
+The cost is a comparison, not a bill. It is what the same tokens would cost at the Claude API's standard prices from the [pricing page](https://platform.claude.com/docs/en/about-claude/pricing), with cache writes at their 5-minute or 1-hour price as Claude Code recorded them. Your subscription is not billed per token. A model without a known price shows `?`, is left out of the total, and is named under the table. A weekly workflow compares the pricing page with the table in `cc-shift` and opens an issue when a price changes or a model is added.
 
 ## How it works
 
