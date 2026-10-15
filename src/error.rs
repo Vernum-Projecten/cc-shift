@@ -64,6 +64,9 @@ pub enum Error {
     /// The account to switch to has no parked login.
     #[error("'{0}' has no parked login; run 'cs add {0}' and /login")]
     NoParkedLogin(String),
+    /// `~/.claude/settings.json` cannot be read, parsed or written.
+    #[error("{0}")]
+    Settings(String),
     /// No `claude` binary on `PATH`.
     #[error("claude was not found on PATH; install Claude Code first")]
     ClaudeNotFound,
