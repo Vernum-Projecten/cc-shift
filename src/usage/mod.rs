@@ -84,6 +84,75 @@ pub struct Account {
     pub logged_in: bool,
     /// The account's usage as last read.
     pub usage: Usage,
+    /// The percentages at which its windows count as full.
+    pub thresholds: Thresholds,
+}
+
+impl Account {
+    /// Returns whether either window is full at `now`, by its own threshold;
+    /// `None` when the usage is unknown.
+    #[must_use]
+    pub fn full_at(&self, now: i64) -> Option<bool> {
+        let Usage::Known {
+            five_hour,
+            seven_day,
+        } = &self.usage
+        else {
+            return None;
+        };
+        let over = |w: &Option<Window>, limit: f64| w.is_some_and(|w| w.used_at(now) >= limit);
+        Some(
+            over(five_hour, self.thresholds.five_hour)
+                || over(seven_day, self.thresholds.seven_day),
+        )
+    }
+}
+
+/// The percentages at which a window counts as full and `cc-shift` switches
+/// away: 95% of the 5-hour window and 99% of the 7-day window by default.
+///
+/// The week switches later because its last percent is worth more than a
+/// 5-hour window, and the rate-limit hook switches at once if a turn hits the
+/// limit anyway. Both are set in `state.json` under `thresholds`.
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct Thresholds {
+    /// The 5-hour window, in percent.
+    pub five_hour: f64,
+    /// The 7-day window, in percent.
+    pub seven_day: f64,
+}
+
+impl Default for Thresholds {
+    fn default() -> Self {
+        Self {
+            five_hour: 95.0,
+            seven_day: 99.0,
+        }
+    }
+}
+
+impl Thresholds {
+    /// The lowest and highest threshold that may be set.
+    pub const RANGE: std::ops::RangeInclusive<f64> = 50.0..=100.0;
+
+    /// Returns the thresholds with a value outside [`Thresholds::RANGE`]
+    /// replaced by its default.
+    #[must_use]
+    pub fn checked(self) -> Self {
+        let default = Self::default();
+        let pick = |value: f64, fallback: f64| {
+            if Self::RANGE.contains(&value) {
+                value
+            } else {
+                fallback
+            }
+        };
+        Self {
+            five_hour: pick(self.five_hour, default.five_hour),
+            seven_day: pick(self.seven_day, default.seven_day),
+        }
+    }
 }
 
 /// Builds the selection view of every profile from the recorded state.
@@ -101,6 +170,7 @@ pub fn accounts(profiles: &[String], state: &State) -> Vec<Account> {
                 .usage
                 .get(name)
                 .map_or_else(|| Usage::Unknown("no usage read yet".to_owned()), usage_of),
+            thresholds: state.thresholds.checked(),
         })
         .collect()
 }

@@ -2,8 +2,8 @@
 //! the status line: each account's state, in the order `cc-shift` uses them.
 
 use crate::store::state::State;
-use crate::usage::select::{self, SWITCH_THRESHOLD};
-use crate::usage::{Account, Usage, Window, accounts};
+use crate::usage::select;
+use crate::usage::{Account, Thresholds, Usage, Window, accounts};
 
 /// What an account is right now.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -55,6 +55,8 @@ pub struct Overview {
     /// The account that frees up first and when, when none but the active
     /// one is available.
     pub first_free: Option<(String, i64)>,
+    /// The percentages at which the windows count as full.
+    pub thresholds: Thresholds,
 }
 
 /// Builds the overview of `profiles` from the state at `now`.
@@ -116,6 +118,7 @@ pub fn overview(profiles: &[String], state: &State, now: i64) -> Overview {
         next,
         free,
         first_free,
+        thresholds: state.thresholds.checked(),
     }
 }
 
@@ -134,11 +137,13 @@ fn blocked(account: &Account, now: i64) -> Status {
             Usage::Known { .. } => Status::Ready,
         };
     };
-    let full = |w: &Option<Window>| w.filter(|w| w.used_at(now) >= SWITCH_THRESHOLD);
-    match (full(five_hour), full(seven_day)) {
-        (_, Some(week)) => Status::WeekFull(
-            full(five_hour).map_or(week.resets_at, |f| f.resets_at.max(week.resets_at)),
-        ),
+    let limits = account.thresholds;
+    let full = |w: &Option<Window>, limit: f64| w.filter(|w| w.used_at(now) >= limit);
+    let five = full(five_hour, limits.five_hour);
+    match (five, full(seven_day, limits.seven_day)) {
+        (_, Some(week)) => {
+            Status::WeekFull(five.map_or(week.resets_at, |f| f.resets_at.max(week.resets_at)))
+        }
         (Some(five), None) => Status::Full(five.resets_at),
         (None, None) => select::full_until(account, now).map_or(Status::Ready, Status::Full),
     }

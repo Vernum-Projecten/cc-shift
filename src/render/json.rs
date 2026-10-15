@@ -105,6 +105,7 @@ fn rfc3339(seconds: i64) -> String {
 #[expect(clippy::panic_in_result_fn, reason = "test assertions")]
 mod tests {
     use super::json;
+    use crate::usage::Thresholds;
     use crate::usage::Window;
     use crate::usage::overview::{Overview, Row, Status};
     use serde_json::{Value, json};
@@ -137,6 +138,7 @@ mod tests {
             next: None,
             free: 1,
             first_free: Some(("old".to_owned(), NOW + 7200)),
+            thresholds: Thresholds::default(),
         };
         let value: Value = serde_json::from_str(&json(&view, NOW))?;
         assert_eq!(

@@ -12,7 +12,7 @@ use crate::store::profile::ProfilesRoot;
 use crate::store::state::{Recorded, StateFile};
 use crate::switching::transfer::{self, Outcome};
 use crate::usage::Window;
-use crate::usage::select::{self, Choice, SWITCH_THRESHOLD};
+use crate::usage::select::{self, Choice};
 
 /// How long after a switch no automatic switch follows.
 ///
@@ -88,11 +88,11 @@ pub fn run<L: Logins>(
             }
             let profiles = context.root.list()?;
             let view = crate::usage::accounts(&profiles, &state);
-            let used = view
+            let full = view
                 .iter()
                 .find(|a| &a.name == active)
-                .and_then(|a| a.usage.used_at(now));
-            if used.is_none_or(|used| used < SWITCH_THRESHOLD) {
+                .and_then(|a| a.full_at(now));
+            if full != Some(true) {
                 return Ok(None);
             }
         }

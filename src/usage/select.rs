@@ -4,9 +4,6 @@ use std::cmp::Ordering;
 
 use crate::usage::{Account, Usage};
 
-/// The percentage at which a window counts as full and `cc-shift` switches away.
-pub const SWITCH_THRESHOLD: f64 = 95.0;
-
 /// The outcome of the selection rule.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Choice<'a> {
@@ -19,8 +16,9 @@ pub enum Choice<'a> {
 
 /// Picks the account to make active at `now`, never the one named `leaving`.
 ///
-/// An account is available when it is logged in and both windows are below
-/// [`SWITCH_THRESHOLD`]; a window whose reset time has passed counts as 0%.
+/// An account is available when it is logged in and each window is below its
+/// own threshold ([`crate::usage::Thresholds`]); a window whose reset time
+/// has passed counts as 0%.
 ///
 /// The rule spends what expires first. Usage left in a window when it resets
 /// is lost, and the 5-hour window only starts with an account's first
@@ -44,11 +42,7 @@ pub fn next<'a>(accounts: &'a [Account], leaving: Option<&str>, now: i64) -> Cho
             .filter(move |a| a.logged_in && Some(a.name.as_str()) != leaving)
     };
     let known_best = candidates()
-        .filter(|a| {
-            a.usage
-                .used_at(now)
-                .is_some_and(|used| used < SWITCH_THRESHOLD)
-        })
+        .filter(|a| a.full_at(now) == Some(false))
         .min_by(|a, b| rank(a, b, now));
     if let Some(account) = known_best {
         return Choice::Account(account);
@@ -73,12 +67,7 @@ pub fn next<'a>(accounts: &'a [Account], leaving: Option<&str>, now: i64) -> Cho
 pub fn in_order(accounts: &[Account], now: i64) -> Vec<&Account> {
     let mut known: Vec<&Account> = accounts
         .iter()
-        .filter(|a| {
-            a.logged_in
-                && a.usage
-                    .used_at(now)
-                    .is_some_and(|used| used < SWITCH_THRESHOLD)
-        })
+        .filter(|a| a.logged_in && a.full_at(now) == Some(false))
         .collect();
     known.sort_by(|a, b| rank(a, b, now));
     let mut unknown: Vec<&Account> = accounts
@@ -144,17 +133,18 @@ pub fn full_until(account: &Account, now: i64) -> Option<i64> {
     else {
         return None;
     };
-    [five_hour, seven_day]
+    let limits = account.thresholds;
+    [(five_hour, limits.five_hour), (seven_day, limits.seven_day)]
         .into_iter()
-        .flatten()
-        .filter(|w| w.used_at(now) >= SWITCH_THRESHOLD)
+        .filter_map(|(w, limit)| w.filter(|w| w.used_at(now) >= limit))
         .map(|w| w.resets_at)
         .max()
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Choice, SWITCH_THRESHOLD, next, running_five_hour};
+    use super::{Choice, next, running_five_hour};
+    use crate::usage::Thresholds;
     use crate::usage::{Account, Usage, Window};
     use proptest::prelude::{Strategy, any, prop, prop_assert, prop_assert_eq, proptest};
 
@@ -179,6 +169,7 @@ mod tests {
                 five_hour: five,
                 seven_day: seven,
             },
+            thresholds: Thresholds::default(),
         }
     }
 
@@ -187,6 +178,7 @@ mod tests {
             name: name.to_owned(),
             logged_in: true,
             usage: Usage::Unknown("no source".to_owned()),
+            thresholds: Thresholds::default(),
         }
     }
 
@@ -243,9 +235,53 @@ mod tests {
     }
 
     #[test]
+    fn the_week_switches_at_99_and_the_5_hour_window_at_95() {
+        let accounts = [
+            account("a", window(94.0, 100), window(98.0, 1000)),
+            account("b", window(95.0, 100), None),
+            account("c", None, window(99.0, 1000)),
+        ];
+        let available: Vec<&str> = super::in_order(&accounts, NOW)
+            .iter()
+            .map(|a| a.name.as_str())
+            .collect();
+        assert_eq!(available, vec!["a"]);
+    }
+
+    #[test]
+    fn a_week_threshold_of_100_uses_the_week_to_the_end() {
+        let mut nearly = account("a", None, window(99.5, 1000));
+        nearly.thresholds = Thresholds {
+            five_hour: 95.0,
+            seven_day: 100.0,
+        };
+        assert_eq!(chosen(&next(&[nearly.clone()], None, NOW)), Some("a"));
+        nearly.usage = Usage::Known {
+            five_hour: None,
+            seven_day: window(100.0, 1000),
+        };
+        assert_eq!(chosen(&next(&[nearly], None, NOW)), None);
+    }
+
+    #[test]
+    fn a_threshold_outside_50_to_100_falls_back_to_its_default() {
+        let checked = Thresholds {
+            five_hour: 120.0,
+            seven_day: 10.0,
+        }
+        .checked();
+        assert_eq!(checked, Thresholds::default());
+        let kept = Thresholds {
+            five_hour: 90.0,
+            seven_day: 100.0,
+        };
+        assert_eq!(kept.checked(), kept);
+    }
+
+    #[test]
     fn a_full_window_makes_an_account_unavailable() {
         let accounts = [
-            account("a", window(10.0, 100), window(SWITCH_THRESHOLD, 1000)),
+            account("a", window(10.0, 100), window(99.0, 1000)),
             account("b", window(90.0, 100), None),
         ];
         assert_eq!(chosen(&next(&accounts, None, NOW)), Some("b"));
@@ -328,15 +364,11 @@ mod tests {
         #[test]
         fn the_choice_is_available_and_expires_first(accounts in any_accounts()) {
             if let Choice::Account(pick) = next(&accounts, None, NOW) {
-                let used = pick.usage.used_at(NOW).unwrap_or(f64::MAX);
                 prop_assert!(pick.logged_in, "chose a logged-out account");
-                prop_assert!(used < SWITCH_THRESHOLD, "chose a full account");
+                prop_assert!(pick.full_at(NOW) != Some(true), "chose a full account");
                 let pick_running = running_five_hour(pick, NOW);
                 for other in accounts.iter().filter(|a| a.logged_in) {
-                    let available = other
-                        .usage
-                        .used_at(NOW)
-                        .is_some_and(|u| u < SWITCH_THRESHOLD);
+                    let available = other.full_at(NOW) == Some(false);
                     if let (true, Some(other_reset)) = (available, running_five_hour(other, NOW)) {
                         prop_assert!(
                             pick_running.is_some_and(|at| at <= other_reset),
