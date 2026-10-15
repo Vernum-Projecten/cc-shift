@@ -1,15 +1,14 @@
 # The release lane. One workflow owns the `v*` tag, and every ordering in it is
 # a `needs` edge:
 #
-#   plan ── github-release (draft) ─┬─ build (aarch64, x86_64) ─┬─ finalize-release (publish)
-#                                   └─ crates-io ───────────────┘
+#   plan ── github-release (draft) ─┬─ build (4 targets) ─┬─ finalize-release (publish)
+#                                   └─ crates-io ─────────┘
 #
 # The GitHub release is created as a DRAFT, the binaries with their SHA-256
 # files are attached to it, the crate goes to crates.io, and only once every
 # expected asset is attached is the release PUBLISHED, so a half-assembled
 # release is never visible. Carried from the owner's FerroFED release lane and
-# cut down to one macOS-only crate (no specification governs the policy: our
-# own design).
+# cut down to one crate (no specification governs the policy: our own design).
 #
 # crates.io is reached through Trusted Publishing (OIDC): the
 # rust-lang/crates-io-auth-action step exchanges this workflow's identity for a
@@ -17,9 +16,11 @@
 # crate's Trusted Publisher entry names this file, the
 # Vernum-Projecten/cc-shift repository and the `crates-io` environment.
 #
-# Every job that compiles runs on macOS, because cc-shift builds on macOS only.
-# No job restores a cache: a cache an untrusted run could poison must never
-# feed a release.
+# The binaries are built for Apple Silicon and Intel Macs on macOS, and as
+# static musl binaries for x86_64 and aarch64 Linux, each on a native Ubuntu
+# runner. Every dependency is pure Rust, so the musl link needs only the C
+# compiler the runner image ships. No job restores a cache: a cache an
+# untrusted run could poison must never feed a release.
 #
 # The workflow is dormant until a `v*` tag is pushed. It does not run on a push
 # to main or on a pull request.
@@ -46,7 +47,7 @@ permissions: {}
 jobs:
   plan:
     name: plan
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
@@ -159,12 +160,20 @@ jobs:
   build:
     name: binary (${{ matrix.target }})
     needs: [plan, github-release]
-    runs-on: macos-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        target: [aarch64-apple-darwin, x86_64-apple-darwin]
+        include:
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-24.04-arm
     permissions:
       contents: write # attach the binary to the draft release
       id-token: write # Sigstore, for the provenance attestation
@@ -195,7 +204,13 @@ jobs:
           mkdir -p "dist/$name"
           cp "target/$TARGET/release/cc-shift" README.md LICENSE NOTICE "dist/$name/"
           tar -C dist -czf "dist/$name.tar.gz" "$name"
-          (cd dist && shasum -a 256 "$name.tar.gz" > "$name.tar.gz.sha256")
+          # sha256sum where the runner has it (Ubuntu), shasum otherwise
+          # (macOS); both print the same "<hash>  <file>" line.
+          if command -v sha256sum > /dev/null; then
+            (cd dist && sha256sum "$name.tar.gz" > "$name.tar.gz.sha256")
+          else
+            (cd dist && shasum -a 256 "$name.tar.gz" > "$name.tar.gz.sha256")
+          fi
           echo "archive=dist/$name.tar.gz" >> "$GITHUB_OUTPUT"
       - name: Attest the build provenance
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
@@ -292,7 +307,8 @@ jobs:
           echo "attached assets:"
           printf '%s\n' "$assets"
           missing=""
-          for target in aarch64-apple-darwin x86_64-apple-darwin; do
+          for target in aarch64-apple-darwin x86_64-apple-darwin \
+            x86_64-unknown-linux-musl aarch64-unknown-linux-musl; do
             for suffix in ".tar.gz" ".tar.gz.sha256"; do
               printf '%s\n' "$assets" | grep -Fxq "cc-shift-${TAG}-${target}${suffix}" \
                 || missing="$missing cc-shift-${TAG}-${target}${suffix}"

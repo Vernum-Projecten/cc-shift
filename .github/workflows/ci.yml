@@ -9,8 +9,10 @@
 #      Cargo.toml, so a tree without one skips the cargo lanes cleanly.
 #      hashFiles() cannot gate a job at `if:` time, because the runner
 #      workspace is empty before checkout, so a real detection job is the
-#      correct primitive. cc-shift is a macOS tool, so the lanes that compile run on
-#      macos-latest; fmt and cargo-deny compile nothing and run on Linux.
+#      correct primitive. cc-shift runs on macOS and Linux, so the lanes that
+#      compile (clippy, test, rustdoc) run as a matrix over macos-latest and
+#      ubuntu-latest; fmt and cargo-deny compile nothing and run once on Linux.
+#      A failed leg of a matrix fails its job, so `conclusion` sees it.
 #
 # The `conclusion` job is the single required status check on main; it is what
 # makes a pipeline of gated jobs enforceable.
@@ -200,11 +202,15 @@ jobs:
       - run: cargo fmt --all --check
 
   clippy:
-    name: clippy
+    name: clippy (${{ matrix.os }})
     needs: detect
     if: needs.detect.outputs.cargo == 'true'
-    runs-on: macos-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
     permissions:
       contents: read
     steps:
@@ -217,11 +223,15 @@ jobs:
       - run: cargo clippy --locked --all-targets --all-features -- -D warnings
 
   test:
-    name: test
+    name: test (${{ matrix.os }})
     needs: detect
     if: needs.detect.outputs.cargo == 'true'
-    runs-on: macos-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
     permissions:
       contents: read
     steps:
@@ -237,11 +247,15 @@ jobs:
       - run: cargo test --doc --locked --all-features
 
   doc:
-    name: rustdoc
+    name: rustdoc (${{ matrix.os }})
     needs: detect
     if: needs.detect.outputs.cargo == 'true'
-    runs-on: macos-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
     permissions:
       contents: read
     env:
