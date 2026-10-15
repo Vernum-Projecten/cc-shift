@@ -7,8 +7,10 @@ release, never as a back-port.
 
 ## Reporting a vulnerability
 
-Report a vulnerability directly to the maintainer, @rubentalstra, and do not
-open an issue, pull request or discussion for it.
+Report a vulnerability privately through GitHub: on the repository's
+[Security tab](https://github.com/Vernum-Projecten/cc-shift/security), choose
+**Report a vulnerability**. Do not open an issue, pull request or discussion
+for it.
 
 Include the version or commit, the steps to reproduce, and what an attacker
 gains. Never include a real token, a Keychain item, an account email or the
