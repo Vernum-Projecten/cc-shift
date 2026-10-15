@@ -18,6 +18,12 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   it. `cc-shift log`, `cc-shift status`, `doctor` and `uninstall` know about
   it, and `early` is no longer a valid profile name.
 
+### Changed
+
+- The README is reordered for new users and shows how to install a prebuilt
+  binary with its checksum and build attestation. The release archives now
+  include `NOTICE` next to `LICENSE`.
+
 ### Fixed
 
 - `cc-shift help` prints the version and tagline under the logo, on their
