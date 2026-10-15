@@ -6,6 +6,11 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `cc-shift help` prints the version and tagline under the logo, on their
+  own line, so the help no longer wraps in a narrow terminal.
+
 ## [0.0.8] - 2026-10-15
 
 ### Added
