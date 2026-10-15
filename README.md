@@ -220,4 +220,4 @@ The crate's Trusted Publisher entry on crates.io names the repository `Vernum-Pr
 
 ## License
 
-[Apache License 2.0](https://github.com/Vernum-Projecten/cc-shift/blob/main/LICENSE).
+[Apache License 2.0](https://github.com/Vernum-Projecten/cc-shift/blob/main/LICENSE). Copyright 2026 Vernum Projecten B.V.; see [NOTICE](https://github.com/Vernum-Projecten/cc-shift/blob/main/NOTICE).
