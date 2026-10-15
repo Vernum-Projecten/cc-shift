@@ -1,0 +1,5 @@
+# The pinned toolchain. CI reads the channel from this file.
+[toolchain]
+channel = "1.98.1"
+components = ["rustfmt", "clippy"]
+profile = "minimal"
