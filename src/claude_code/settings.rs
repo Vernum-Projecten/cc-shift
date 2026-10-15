@@ -335,6 +335,17 @@ mod tests {
 
     const CS: &str = "/Users/someone/.cargo/bin/cc-shift";
 
+    /// Returns the rate-limit hook for `cs`: the exec form on Windows, which
+    /// runs a program without a shell, and a shell line elsewhere
+    /// (<https://code.claude.com/docs/en/hooks>).
+    fn rate_limit_hook(cs: &str) -> serde_json::Value {
+        if cfg!(windows) {
+            json!({"type": "command", "command": cs, "args": ["hook", "rate-limit"]})
+        } else {
+            json!({"type": "command", "command": format!("{cs} hook rate-limit")})
+        }
+    }
+
     #[test]
     fn installs_into_empty_settings() -> Result<(), Error> {
         let done = install(json!({}), CS)?;
@@ -344,7 +355,7 @@ mod tests {
                 "statusLine": {"type": "command", "command": "/Users/someone/.cargo/bin/cc-shift statusline"},
                 "hooks": {"StopFailure": [{
                     "matcher": "rate_limit",
-                    "hooks": [{"type": "command", "command": "/Users/someone/.cargo/bin/cc-shift hook rate-limit"}]
+                    "hooks": [rate_limit_hook(CS)]
                 }]}
             })
         );
@@ -422,8 +433,8 @@ mod tests {
             .map_or(0, Vec::len);
         assert_eq!(entries, 1, "one hook: {}", done.settings);
         assert_eq!(
-            done.settings["hooks"]["StopFailure"][0]["hooks"][0]["command"],
-            json!(format!("{CS} hook rate-limit"))
+            done.settings["hooks"]["StopFailure"][0]["hooks"][0],
+            rate_limit_hook(CS)
         );
         Ok(())
     }

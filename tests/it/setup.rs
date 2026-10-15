@@ -24,7 +24,16 @@ fn installs_into_a_fresh_home() -> io::Result<()> {
     assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
     let text = settings(&sandbox)?;
     assert!(text.contains(" statusline\""), "{text}");
-    assert!(text.contains(" hook rate-limit\""), "{text}");
+    // NOTE: Claude Code runs a hook on Windows in the exec form, without a shell
+    // (<https://code.claude.com/docs/en/hooks>), and as a shell line elsewhere.
+    if cfg!(windows) {
+        assert!(
+            text.contains("\"args\"") && text.contains("\"rate-limit\""),
+            "{text}"
+        );
+    } else {
+        assert!(text.contains(" hook rate-limit\""), "{text}");
+    }
     assert!(text.contains("\"rate_limit\""), "{text}");
     Ok(())
 }

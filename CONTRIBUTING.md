@@ -111,7 +111,8 @@ signed `v*` tag on `main` starts
    the version, which becomes the release notes.
 2. **github release** creates the GitHub release as a draft.
 3. **binary** builds `cc-shift` for Apple Silicon and Intel Macs and as
-   static musl binaries for x86_64 and aarch64 Linux, attaches
+   static musl binaries for x86_64 and aarch64 Linux, each in a `.tar.gz`,
+   and `cc-shift.exe` for x64 and Arm64 Windows, each in a `.zip`. It attaches
    each archive with its SHA-256 file to the draft, and attests its build
    provenance (`gh attestation verify <archive> --repo Vernum-Projecten/cc-shift`).
 4. **crates.io** publishes through

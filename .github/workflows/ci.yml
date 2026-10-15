@@ -12,9 +12,10 @@
 #      Cargo.toml, so a tree without one skips the cargo lanes cleanly.
 #      hashFiles() cannot gate a job at `if:` time, because the runner
 #      workspace is empty before checkout, so a real detection job is the
-#      correct primitive. cc-shift runs on macOS and Linux, so the lanes that
-#      compile (clippy, test, rustdoc) run as a matrix over macos-latest and
-#      ubuntu-latest; fmt and cargo-deny compile nothing and run once on Linux.
+#      correct primitive. cc-shift runs on macOS, Linux and Windows, so the
+#      lanes that compile (clippy, test, rustdoc) run as a matrix over
+#      macos-latest, ubuntu-latest and windows-latest; fmt and cargo-deny
+#      compile nothing and run once on Linux.
 #      A failed leg of a matrix fails its job, so `conclusion` sees it.
 #
 # The `conclusion` job is the single required status check on main; it is what
@@ -217,9 +218,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest]
+        os: [macos-latest, ubuntu-latest, windows-latest]
     permissions:
       contents: read
+    defaults:
+      run:
+        # The Windows runner runs bash from Git for Windows, so every leg
+        # runs its steps in the same shell.
+        shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -238,9 +244,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest]
+        os: [macos-latest, ubuntu-latest, windows-latest]
     permissions:
       contents: read
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -262,13 +271,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest]
+        os: [macos-latest, ubuntu-latest, windows-latest]
     permissions:
       contents: read
     env:
       # The [lints.rustdoc] levels apply to every `cargo doc`; -D turns a
       # broken intra-doc link into a failed build.
       RUSTDOCFLAGS: -D warnings
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

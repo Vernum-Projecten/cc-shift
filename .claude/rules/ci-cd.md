@@ -23,9 +23,10 @@ carries what CI runs and the rules every workflow keeps.
   SPDX copyright and licence lines, REUSE 3.3), and the self-tests of
   `scripts/checks/api-prices.sh` and the `scripts/gh/` helpers. Tier 2 is
   the Rust set below, gated on the root `Cargo.toml` existing; clippy, the
-  tests and rustdoc run on both `macos-latest` and `ubuntu-latest`. The
+  tests and rustdoc run on `macos-latest`, `ubuntu-latest` and
+  `windows-latest`. The
   `conclusion` job is the single required status check on `main`.
-- `.github/workflows/release.yml`: the release lane, run by a `v*` tag. It checks the tag against the version and `CHANGELOG.md`, creates the GitHub release as a draft, builds and attests four binaries (Apple Silicon and Intel macOS, static musl x86_64 and aarch64 Linux), publishes to crates.io through Trusted Publishing (OIDC, no stored token) in the `crates-io` environment, and publishes the draft once every asset is attached. No release job restores a cache.
+- `.github/workflows/release.yml`: the release lane, run by a `v*` tag. It checks the tag against the version and `CHANGELOG.md`, creates the GitHub release as a draft, builds and attests six binaries (Apple Silicon and Intel macOS, static musl x86_64 and aarch64 Linux in tarballs, x64 and Arm64 Windows in zips), publishes to crates.io through Trusted Publishing (OIDC, no stored token) in the `crates-io` environment, and publishes the draft once every asset is attached. No release job restores a cache.
 - `.github/workflows/api-prices.yml`: the price watch, every Monday at 06:17
   UTC and by hand. It runs `scripts/checks/api-prices.sh`, which compares
   the model table of Anthropic's pricing page with
@@ -94,10 +95,10 @@ cargo deny check
 ```
 
 `cargo deny check` covers advisories, licences, bans and sources, which
-subsumes `cargo audit`. `cc-shift` runs on macOS and Linux, so the lanes
-that compile (clippy, the tests and rustdoc) run as a matrix over
-`macos-latest` and `ubuntu-latest`, and `conclusion` fails when either leg
-fails. The format and cargo-deny lanes compile nothing and run once, on
+subsumes `cargo audit`. `cc-shift` runs on macOS, Linux and Windows, so the
+lanes that compile (clippy, the tests and rustdoc) run as a matrix over
+`macos-latest`, `ubuntu-latest` and `windows-latest`, each in bash (Git Bash
+on Windows), and `conclusion` fails when any leg fails. The format and cargo-deny lanes compile nothing and run once, on
 Linux. **Always `--locked`**, so CI fails on lockfile drift rather than on
 registry drift. Commit `Cargo.lock`.
 
