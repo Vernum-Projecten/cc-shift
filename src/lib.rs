@@ -45,6 +45,13 @@ where
             report(&format!("{reason}\n\n{}", cli::USAGE));
             ExitCode::from(USAGE_ERROR)
         }
+        Command::List => match list() {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(error) => {
+                report(&error.to_string());
+                ExitCode::from(FAILURE)
+            }
+        },
         Command::Add(name) => fail(add(&name)),
         Command::Launch { name, args } => fail(launch(&name, &args)),
     }
@@ -72,6 +79,24 @@ fn add(raw: &OsStr) -> Result<Infallible, Error> {
         dir.display()
     ));
     launch::exec_claude(&dir, &[])
+}
+
+/// Prints every profile name on its own line, or how to create the first.
+fn list() -> Result<(), Error> {
+    let names = ProfilesRoot::from_env()?.list()?;
+    if names.is_empty() {
+        report("no profiles yet; create one with 'cs add <name>'");
+        return Ok(());
+    }
+    let mut stdout = std::io::stdout().lock();
+    for name in names {
+        // NOTE: no specification governs this: our own design. A closed pipe
+        // (`cs list | head -1`) ends the listing without an error.
+        if writeln!(stdout, "{name}").is_err() {
+            break;
+        }
+    }
+    Ok(())
 }
 
 /// Starts Claude Code with an existing profile.

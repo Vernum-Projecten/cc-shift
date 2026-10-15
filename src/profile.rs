@@ -2,6 +2,7 @@
 
 use std::ffi::{OsStr, OsString};
 use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::error::Error;
@@ -92,6 +93,35 @@ impl ProfilesRoot {
     #[must_use]
     pub fn profile_dir(&self, name: &ProfileName) -> PathBuf {
         self.0.join(name.as_str())
+    }
+
+    /// Returns the names of all profiles, sorted.
+    ///
+    /// Every folder directly inside the root is a profile; files are
+    /// skipped. A missing root means there are no profiles.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::ReadRoot`] when the root exists but cannot be read.
+    pub fn list(&self) -> Result<Vec<String>, Error> {
+        let read_error = |source| Error::ReadRoot {
+            path: self.0.clone(),
+            source,
+        };
+        let entries = match fs::read_dir(&self.0) {
+            Ok(entries) => entries,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
+            Err(error) => return Err(read_error(error)),
+        };
+        let mut names = Vec::new();
+        for entry in entries {
+            let entry = entry.map_err(read_error)?;
+            if entry.path().is_dir() {
+                names.push(entry.file_name().to_string_lossy().into_owned());
+            }
+        }
+        names.sort();
+        Ok(names)
     }
 
     /// Creates a profile's config folder, and the root, when missing.
