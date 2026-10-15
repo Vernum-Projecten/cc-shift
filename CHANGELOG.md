@@ -6,6 +6,25 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.0.4] - 2026-10-15
+
+### Added
+
+- Releases are built by one workflow on a `v*` tag: a GitHub release with
+  `cc-shift` for Apple silicon and Intel Macs, each with a SHA-256 file and
+  build provenance, and the crate published to crates.io through Trusted
+  Publishing.
+- A `NOTICE` file naming Vernum Projecten B.V. as the copyright holder,
+  shipped with the crate.
+
+### Changed
+
+- The README is written for crates.io: `cargo install cc-shift` first, a
+  quick start, update and uninstall steps and a FAQ.
+- docs.rs builds the documentation for the two macOS targets.
+- The crate package no longer includes `ARCHITECTURE.md`; the README links
+  to it on GitHub.
+
 ## [0.0.3] - 2026-10-15
 
 The first published version. `cc-shift` switches Claude Code between several
@@ -41,5 +60,6 @@ Claude accounts on macOS on its own, before a usage limit is hit.
 - A token is never a command-line argument: Keychain writes and HTTP
   requests receive it on stdin.
 
-[Unreleased]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.0.3...HEAD
+[Unreleased]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.0.4...HEAD
+[0.0.4]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.0.3...v0.0.4
 [0.0.3]: https://github.com/Vernum-Projecten/cc-shift/releases/tag/v0.0.3
