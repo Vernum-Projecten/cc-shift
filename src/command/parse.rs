@@ -11,6 +11,7 @@ Commands:
   add <name>    Create a profile and start Claude Code in it to run /login
   setup         Install cc-shift in Claude Code once, so switching is automatic
   status        Show every account with its usage and reset times
+  status --json The same as JSON, for scripts
   use <name>    Make an account active in every Claude Code window now
   refresh       Refresh parked logins and read their usage now
   list          Print the profiles
@@ -33,8 +34,11 @@ pub enum Command {
     Setup,
     /// Make an account the active account of `~/.claude`.
     Use(OsString),
-    /// Print every account with its usage.
-    Status,
+    /// Print every account with its usage, as JSON when `json` is set.
+    Status {
+        /// Whether to print JSON instead of the table.
+        json: bool,
+    },
     /// Refresh parked logins and read parked accounts' usage.
     Refresh,
     /// A turn ended on a usage limit; run by Claude Code's `StopFailure`
@@ -101,7 +105,10 @@ where
     }
     if first == "status" {
         return match args.next() {
-            None => Command::Status,
+            None => Command::Status { json: false },
+            Some(flag) if flag == "--json" && args.next().is_none() => {
+                Command::Status { json: true }
+            }
             Some(extra) => Command::Misuse(format!(
                 "status takes no arguments, not '{}'",
                 extra.to_string_lossy()
@@ -191,6 +198,19 @@ mod tests {
         assert!(matches!(parse(args(&["use"])), Command::Misuse(_)));
         assert!(matches!(
             parse(args(&["use", "a", "b"])),
+            Command::Misuse(_)
+        ));
+    }
+
+    #[test]
+    fn status_takes_an_optional_json_flag() {
+        assert_eq!(parse(args(&["status"])), Command::Status { json: false });
+        assert_eq!(
+            parse(args(&["status", "--json"])),
+            Command::Status { json: true }
+        );
+        assert!(matches!(
+            parse(args(&["status", "--yaml"])),
             Command::Misuse(_)
         ));
     }

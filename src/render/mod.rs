@@ -4,6 +4,7 @@
 //! Colour follows the `NO_COLOR` convention (<https://no-color.org>): any
 //! non-empty `NO_COLOR` turns it off.
 
+pub mod json;
 pub mod line;
 pub mod table;
 

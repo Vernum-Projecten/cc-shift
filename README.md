@@ -126,12 +126,40 @@ From here on you never need to run `cc-shift` while you work.
 | `cc-shift add <name>` | Creates a profile and opens Claude Code in it to run `/login` once. |
 | `cc-shift setup` | Turns on automatic switching. Run once. |
 | `cc-shift status` | Shows every account with its usage and the time until each limit resets, marks the active one, and names the next. |
+| `cc-shift status --json` | The same as JSON, for scripts ([shape](#json-for-scripts)). |
 | `cc-shift use <name>` | Moves every open window to that account now. Never needed; for steering by hand. |
 | `cc-shift refresh` | Refreshes the logins of the accounts that are not active and reads their usage now. Runs on its own as well. |
 | `cc-shift list` | Prints the profile names. |
 | `cc-shift help` | Prints the commands. |
 
 Claude Code itself runs `cc-shift statusline` after every reply and `cc-shift hook rate-limit` when a turn hits a limit; you never run those.
+
+### JSON for scripts
+
+`cc-shift status --json` prints the same overview as JSON, for scripts, widgets and menu bar apps. Times are RFC 3339 in UTC; no token or email address is included.
+
+```json
+{
+  "active": "work",
+  "next": "spare",
+  "free": 2,
+  "total": 4,
+  "first_free": null,
+  "accounts": [
+    {
+      "name": "work",
+      "state": "active",
+      "free_at": null,
+      "reason": null,
+      "five_hour": { "used_percent": 23.0, "resets_at": "2026-10-15T18:00:00Z", "seconds_left": 15720 },
+      "seven_day": { "used_percent": 67.0, "resets_at": "2026-10-19T16:00:00Z", "seconds_left": 352800 },
+      "confirmed": true
+    }
+  ]
+}
+```
+
+`state` is one of `active`, `next`, `ready`, `full`, `week_full`, `logged_out` and `unknown`; `free_at` is set for `full` and `week_full`, and `reason` for `unknown`. A window that has not started is `null`. A change to this shape is a changelog entry.
 
 ## How it works
 

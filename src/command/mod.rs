@@ -56,7 +56,7 @@ where
         Command::Use(name) => activate::run(&name),
         Command::Setup => setup::run(),
         Command::Refresh => refresh::run(),
-        Command::Status => status::run(),
+        Command::Status { json } => status::run(json),
         Command::HookRateLimit => {
             hook::run();
             Ok(())
