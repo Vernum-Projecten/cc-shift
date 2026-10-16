@@ -9,6 +9,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-16
+
 ### Changed
 
 - The next account is the one with the most of its week left, an untouched
@@ -244,7 +246,8 @@ Claude accounts on macOS on its own, before a usage limit is hit.
 - A token is never a command-line argument: Keychain writes and HTTP
   requests receive it on stdin.
 
-[Unreleased]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.0.9...v0.1.0
 [0.0.9]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.0.8...v0.0.9
