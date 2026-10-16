@@ -5,7 +5,7 @@
 
 use std::cmp::Ordering;
 
-use crate::usage::{Account, Usage};
+use crate::usage::{Account, FIVE_HOURS, Usage};
 
 /// The outcome of the selection rule.
 #[derive(Debug, Clone, PartialEq)]
@@ -23,17 +23,18 @@ pub enum Choice<'a> {
 /// own threshold ([`crate::usage::Thresholds`]); a window whose reset time
 /// has passed counts as 0%.
 ///
-/// The rule spends what expires first. Usage left in a window when it resets
-/// is lost, and the 5-hour window only starts with an account's first
-/// message, so an untouched account loses nothing by waiting. Among
-/// available accounts with known usage:
+/// The rule spreads the 7-day windows. The week is what runs out: usage left
+/// in a 5-hour window that resets costs nothing, and every account that
+/// still has week left is one more account to switch to when a 5-hour
+/// window fills. Among available accounts with known usage:
 ///
-/// 1. an account whose 5-hour window is running goes first, the one that
-///    resets soonest first;
-/// 2. then an account with no running 5-hour window, the one whose 7-day
-///    window resets soonest first, then the one with the most 7-day usage
-///    left;
-/// 3. then the name, so the choice is the same every run.
+/// 1. an account whose 7-day window resets within 5 hours goes first, the
+///    one that resets soonest first, because what is left of its week is
+///    lost at the reset;
+/// 2. then the account with the most 7-day usage left, an untouched one
+///    first;
+/// 3. then the one whose 7-day window resets soonest;
+/// 4. then the name, so the choice is the same every run.
 ///
 /// Accounts with unknown usage are chosen, by name, only when no account
 /// with known usage is available.
@@ -82,35 +83,30 @@ pub fn in_order(accounts: &[Account], now: i64) -> Vec<&Account> {
     known
 }
 
-/// Orders two available accounts: the one whose usage expires first first.
+/// Orders two available accounts: a week about to end first, then the one
+/// with the most week left.
 fn rank(a: &Account, b: &Account, now: i64) -> Ordering {
-    let running = |x: &Account| running_five_hour(x, now);
-    match (running(a), running(b)) {
+    let ending = |x: &Account| week_ending(x, now);
+    match (ending(a), ending(b)) {
         (Some(at_a), Some(at_b)) => at_a.cmp(&at_b),
         (Some(_), None) => Ordering::Less,
         (None, Some(_)) => Ordering::Greater,
         (None, None) => {
-            let week = |x: &Account| seven_day(x, now);
-            let (reset_a, used_a) = week(a);
-            let (reset_b, used_b) = week(b);
-            reset_a
-                .cmp(&reset_b)
-                .then_with(|| used_a.total_cmp(&used_b))
+            let (reset_a, used_a) = seven_day(a, now);
+            let (reset_b, used_b) = seven_day(b, now);
+            used_a
+                .total_cmp(&used_b)
+                .then_with(|| reset_a.cmp(&reset_b))
         }
     }
     .then_with(|| a.name.cmp(&b.name))
 }
 
-/// Returns when the account's running 5-hour window resets, or `None` when
-/// no 5-hour window is running.
-fn running_five_hour(account: &Account, now: i64) -> Option<i64> {
-    match &account.usage {
-        Usage::Known {
-            five_hour: Some(window),
-            ..
-        } if window.resets_at > now => Some(window.resets_at),
-        _ => None,
-    }
+/// Returns when the account's 7-day window resets if that is within one
+/// 5-hour window of `now`, or `None` otherwise.
+fn week_ending(account: &Account, now: i64) -> Option<i64> {
+    let (resets_at, _) = seven_day(account, now);
+    (resets_at.saturating_sub(now) <= FIVE_HOURS).then_some(resets_at)
 }
 
 /// Returns when the account's 7-day window resets (the far future when none
@@ -146,7 +142,7 @@ pub fn full_until(account: &Account, now: i64) -> Option<i64> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Choice, next, running_five_hour};
+    use super::{Choice, next, seven_day, week_ending};
     use crate::usage::Thresholds;
     use crate::usage::{Account, Usage, Window};
     use proptest::prelude::{Strategy, any, prop, prop_assert, prop_assert_eq, proptest};
@@ -192,29 +188,68 @@ mod tests {
         }
     }
 
+    const HOUR: i64 = 3600;
+    const DAY: i64 = 24 * HOUR;
+
     #[test]
-    fn a_running_window_goes_before_a_fresh_account() {
+    fn an_untouched_account_goes_before_a_week_already_started() {
         let accounts = [
-            account("a", None, window(10.0, 400_000)),
-            account("b", window(60.0, 3600), window(40.0, 500_000)),
+            account("claude5", None, window(37.0, 4 * DAY + 9 * HOUR)),
+            account("claude2", None, None),
+        ];
+        assert_eq!(chosen(&next(&accounts, None, NOW)), Some("claude2"));
+    }
+
+    #[test]
+    fn the_account_with_the_most_week_left_goes_first() {
+        let accounts = [
+            account("a", None, window(70.0, DAY)),
+            account("b", None, window(10.0, 5 * DAY)),
         ];
         assert_eq!(chosen(&next(&accounts, None, NOW)), Some("b"));
     }
 
     #[test]
-    fn the_running_window_that_resets_soonest_goes_first() {
+    fn a_running_five_hour_window_does_not_go_first() {
         let accounts = [
-            account("a", window(10.0, 7200), None),
-            account("b", window(80.0, 600), None),
+            account("a", window(60.0, HOUR), window(40.0, 3 * DAY)),
+            account("b", None, window(10.0, 3 * DAY)),
         ];
         assert_eq!(chosen(&next(&accounts, None, NOW)), Some("b"));
     }
 
     #[test]
-    fn a_fresh_account_whose_week_resets_soonest_goes_first() {
+    fn a_week_that_ends_within_five_hours_goes_first() {
         let accounts = [
-            account("a", None, window(10.0, 500_000)),
-            account("b", None, window(70.0, 100_000)),
+            account("a", None, window(60.0, 2 * HOUR)),
+            account("b", None, None),
+        ];
+        assert_eq!(chosen(&next(&accounts, None, NOW)), Some("a"));
+    }
+
+    #[test]
+    fn a_week_that_ends_after_five_hours_waits_its_turn() {
+        let accounts = [
+            account("a", None, window(60.0, 5 * HOUR + 1)),
+            account("b", None, None),
+        ];
+        assert_eq!(chosen(&next(&accounts, None, NOW)), Some("b"));
+    }
+
+    #[test]
+    fn of_two_weeks_about_to_end_the_soonest_goes_first() {
+        let accounts = [
+            account("a", None, window(10.0, 3 * HOUR)),
+            account("b", None, window(90.0, HOUR)),
+        ];
+        assert_eq!(chosen(&next(&accounts, None, NOW)), Some("b"));
+    }
+
+    #[test]
+    fn between_equal_week_left_the_soonest_reset_goes_first() {
+        let accounts = [
+            account("a", None, window(30.0, 5 * DAY)),
+            account("b", None, window(30.0, 2 * DAY)),
         ];
         assert_eq!(chosen(&next(&accounts, None, NOW)), Some("b"));
     }
@@ -344,7 +379,7 @@ mod tests {
 
     fn any_window() -> impl Strategy<Value = Option<Window>> {
         prop::option::of(
-            (0.0..=100.0_f64, -1000_i64..10_000).prop_map(|(used, resets_in)| Window {
+            (0.0..=100.0_f64, -1000_i64..8 * 86_400).prop_map(|(used, resets_in)| Window {
                 used_percent: used,
                 resets_at: NOW + resets_in,
             }),
@@ -365,22 +400,31 @@ mod tests {
 
     proptest! {
         #[test]
-        fn the_choice_is_available_and_expires_first(accounts in any_accounts()) {
+        fn the_choice_is_available_and_spreads_the_week(accounts in any_accounts()) {
             if let Choice::Account(pick) = next(&accounts, None, NOW) {
                 prop_assert!(pick.logged_in, "chose a logged-out account");
                 prop_assert!(pick.full_at(NOW) != Some(true), "chose a full account");
-                let pick_running = running_five_hour(pick, NOW);
-                for other in accounts.iter().filter(|a| a.logged_in) {
-                    let available = other.full_at(NOW) == Some(false);
-                    if let (true, Some(other_reset)) = (available, running_five_hour(other, NOW)) {
-                        prop_assert!(
-                            pick_running.is_some_and(|at| at <= other_reset),
-                            "{} expires before {}", other.name, pick.name
-                        );
+                let pick_ending = week_ending(pick, NOW);
+                let (_, pick_used) = seven_day(pick, NOW);
+                let available = accounts
+                    .iter()
+                    .filter(|a| a.logged_in && a.full_at(NOW) == Some(false));
+                for other in available {
+                    match (week_ending(other, NOW), pick_ending) {
+                        (Some(other_end), pick_end) => prop_assert!(
+                            pick_end.is_some_and(|at| at <= other_end),
+                            "the week of {} ends before {}", other.name, pick.name
+                        ),
+                        (None, None) => prop_assert!(
+                            pick_used <= seven_day(other, NOW).1,
+                            "{} has more week left than {}", other.name, pick.name
+                        ),
+                        (None, Some(_)) => {}
                     }
                 }
             }
         }
+
 
         #[test]
         fn the_choice_is_the_same_every_run(accounts in any_accounts()) {

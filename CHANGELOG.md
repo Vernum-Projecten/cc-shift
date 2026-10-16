@@ -9,6 +9,14 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- The next account is the one with the most of its week left, an untouched
+  account first, so the weeks drain together and several accounts keep some
+  week to switch to when a 5-hour window fills. An account whose week resets
+  within 5 hours still goes first, so what is left of it is not lost. A
+  running 5-hour window no longer goes first (#120).
+
 ## [0.1.1] - 2026-10-15
 
 ### Added

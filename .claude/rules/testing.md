@@ -27,8 +27,8 @@ Test discipline is non-negotiable (a standing hard rule; see `CLAUDE.md`).
   line, error messages) is pinned with `assert_eq!` against the exact text of
   the approved screen, rendered at a fixed "now" and without colour. A
   changed screen is a reviewed diff of that expected text.
-- **Properties:** `proptest` for the selection invariants (the rule spends what
-  expires first, an exhausted account is never chosen before its reset
+- **Properties:** `proptest` for the selection invariants (the rule spreads the
+  weeks, an exhausted account is never chosen before its reset
   time, ties resolve the same way every run) and for profile-name validation.
 - **A fake home and a fake `claude`.** Integration tests never touch the real
   `~/.claude-profiles/`, the real Keychain, or a real account. Each test runs
