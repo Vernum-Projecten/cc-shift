@@ -209,12 +209,13 @@ The full design is in [ARCHITECTURE.md](https://github.com/Vernum-Projecten/cc-s
 
 ## Which account is next
 
-Usage left in a window when it resets is lost, and a 5-hour window only starts with an account's first message. So `cc-shift` spends what expires first:
+The week is what runs out: usage left in a 5-hour window when it resets still counts against the week, and only a week that resets with usage left loses it. So `cc-shift` spreads the weeks, keeping as many accounts as it can with some week left to switch to:
 
-1. An account whose 5-hour window is already running, the one that resets soonest first.
-2. Then an untouched account, the one whose week resets soonest first, then the one with the most of its week left.
+1. An account whose week resets within 5 hours, the one that resets soonest first, so what is left of that week is not lost.
+2. Then the account with the most of its week left, an untouched account first.
+3. Then the one whose week resets soonest.
 
-It stays on the active account until it reaches its threshold, so it never switches back and forth. You use up one account at a time, and by the time you have used the others, the first one has reset.
+It stays on the active account until it reaches its threshold, so it never switches back and forth. Each time a 5-hour window fills, the account with the most week left takes over.
 
 ## Switch thresholds
 

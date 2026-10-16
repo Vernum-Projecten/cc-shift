@@ -16,7 +16,7 @@ use crate::store::profile::ProfilesRoot;
 use crate::store::state::{Recorded, StateFile};
 use crate::switching::transfer::{self, Outcome};
 use crate::usage::select::{self, Choice};
-use crate::usage::{Account, Usage, Window};
+use crate::usage::{Account, FIVE_HOURS, Usage, Window};
 
 /// How long after a switch no automatic switch follows.
 ///
@@ -24,10 +24,6 @@ use crate::usage::{Account, Usage, Window};
 /// switch, and a second window's rate-limit hook may belong to the account
 /// just left.
 pub const SETTLE_SECONDS: i64 = 5 * 60;
-
-/// The length of the 5-hour window, used when a limit is hit before any
-/// reset time was read.
-const FIVE_HOURS: i64 = 5 * 60 * 60;
 
 /// Why `cc-shift` considers a switch.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -345,7 +341,7 @@ mod tests {
         assert_eq!(
             run(&world.context(), Trigger::Usage, NOW)?.as_deref(),
             Some("b"),
-            "b has a running window; c has none read yet"
+            "b has known usage; c has none read yet"
         );
         assert_eq!(world.active()?.as_deref(), Some("b"));
         assert!(

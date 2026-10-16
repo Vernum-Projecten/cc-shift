@@ -12,6 +12,9 @@ pub mod select;
 
 use crate::store::state::{Recorded, State};
 
+/// The length of the 5-hour window, in seconds.
+pub const FIVE_HOURS: i64 = 5 * 60 * 60;
+
 /// One usage window: how much of it is used, and when it resets.
 #[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Window {

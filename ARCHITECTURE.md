@@ -76,13 +76,13 @@ A source that fails or returns an unknown shape makes that account "unknown". It
 
 ### Which account is next
 
-`cc-shift` spends what expires first (owner decision, #36). Usage left in a window when it resets is lost, and the 5-hour window only starts with an account's first message, so an untouched account loses nothing by waiting. Among the available accounts:
+`cc-shift` spreads the weeks (owner decision, #120, amending #36). The week is what runs out. Usage left in a 5-hour window when it resets still counts against the week, so nothing is lost; only a week that resets with usage left loses it. Every account with week left is one more account to switch to when a 5-hour window fills. Among the available accounts:
 
-1. An account whose 5-hour window is running goes first, the one that resets soonest first. Its remaining usage is the next to be lost.
-2. Then an account with no running 5-hour window, the one whose 7-day window resets soonest first, then the one with the most 7-day usage left. This spreads the weekly limits, so no account runs out of its week early.
-3. Then the name, so the choice is the same every run.
+1. An account whose 7-day window resets within 5 hours goes first, the one that resets soonest first. What is left of its week is lost at the reset, and one 5-hour window is the time there is to spend it.
+2. Then the account with the most 7-day usage left; an untouched account has all of it.
+3. Then the one whose 7-day window resets soonest, then the name, so the choice is the same every run.
 
-`cc-shift` stays on the active account until it reaches the threshold, so it never switches back and forth. The effect is that one account is drained at a time and a new 5-hour clock starts only when it is needed; by the time the others are used, the first has reset. If none is available, `cc-shift` stays on the current account and `cc-shift status` shows when the first one resets.
+`cc-shift` stays on the active account until it reaches the threshold, so it never switches back and forth. Each time a 5-hour window fills, the account with the most week left takes over, so the weeks drain together and several accounts keep some week for as long as possible. If none is available, `cc-shift` stays on the current account and `cc-shift status` shows when the first one resets.
 
 ### When it switches
 

@@ -223,14 +223,14 @@ mod tests {
             order,
             vec![
                 ("c", &Status::Active),
-                ("a", &Status::Next),
-                ("e", &Status::Ready),
+                ("e", &Status::Next),
+                ("a", &Status::Ready),
                 ("d", &Status::Full(NOW + 600)),
                 ("b", &Status::WeekFull(NOW + 50_000)),
                 ("f", &Status::LoggedOut),
             ]
         );
-        assert_eq!(view.next.as_deref(), Some("a"));
+        assert_eq!(view.next.as_deref(), Some("e"));
         assert_eq!(view.free, 3);
         assert_eq!(view.first_free, Some(("d".to_owned(), NOW + 600)));
     }
