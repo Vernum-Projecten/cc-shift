@@ -50,16 +50,12 @@ A refresh token works once: after a refresh the old one is dead, and presenting 
 | `cc-shift completion zsh\|powershell` | Prints the zsh or PowerShell completion script. |
 | `cc-shift version` | Prints the version; also `--version` and `-V`. |
 | `cc-shift help` | Prints the commands; also `-h` and `--help`. On a terminal it opens with the logo. |
-| `cc-shift early` | Shows the early start: off, or the time, the count and the next run. |
-| `cc-shift early on [--at 06:00] [--accounts 2]` | Starts that many accounts' 5-hour windows at that time, Monday to Friday, so they reset during the workday. Off until turned on. |
-| `cc-shift early off` | Stops the early start and removes its `launchd` agent. |
 | `cc-shift statusline` | Called by Claude Code after every reply. Not run by hand. |
 | `cc-shift hook rate-limit` | Called by Claude Code when a turn hits a usage limit. Not run by hand. |
-| `cc-shift early run` | Called by `launchd` at the early start time. Not run by hand. |
 
 After `cc-shift add` for each account and one `cc-shift setup`, `cc-shift` tracks every account and switches on its own.
 
-A profile name uses ASCII letters, digits, `-` and `_`, starts with a letter or digit, and is not a command word (`add`, `setup`, `status`, `use`, `list`, `statusline`, `hook`, `help`, `remove`, `refresh`, `doctor`, `uninstall`, `completion`, `log`, `version`, `stats`, `early`). A new profile may not differ from an existing one only in case, and on Windows a name is not a device name (`con`, `prn`, `aux`, `nul`, `com1` to `com9`, `lpt1` to `lpt9`, in any case; <https://learn.microsoft.com/windows/win32/fileio/naming-a-file>).
+A profile name uses ASCII letters, digits, `-` and `_`, starts with a letter or digit, and is not a command word (`add`, `setup`, `status`, `use`, `list`, `statusline`, `hook`, `help`, `remove`, `refresh`, `doctor`, `uninstall`, `completion`, `log`, `version`, `stats`), nor `early`, a command of older versions. A new profile may not differ from an existing one only in case, and on Windows a name is not a device name (`con`, `prn`, `aux`, `nul`, `com1` to `com9`, `lpt1` to `lpt9`, in any case; <https://learn.microsoft.com/windows/win32/fileio/naming-a-file>).
 
 ## 4. Automatic switching
 
@@ -105,14 +101,6 @@ The status line prints at once. Slow work (refreshing a parked login, reading an
 
 All windows share the active account, so a switch moves all of them, as `/login` does. Every switch and every write of the state takes one lock, and the five-minute pause after a switch keeps a second window from starting another.
 
-### Early start
-
-A 5-hour window starts with an account's first message, so a window started at 06:00 resets at 11:00, inside the workday, and gives an extra window that day. `cc-shift early on` turns this on (off by default, #35). A scheduled job runs `cc-shift early run` Monday to Friday at the set time (06:00 by default): a `launchd` agent in `~/Library/LaunchAgents` on macOS, and a systemd user timer with `Persistent=true` on Linux (#86), and a Task Scheduler task with `StartWhenAvailable` on Windows (#108), which runs as the logged-on user and may show a console window for the moment it runs. A Mac that is asleep runs it on waking and a Mac that is off skips the day; a Linux machine that was off runs it at the next boot or login, and one without a systemd user session cannot turn it on. A run on a Saturday or Sunday does nothing, and a run more than 3 hours after the set time starts nothing and says so in the history, because a window started then would reset in the evening.
-
-The run refreshes the parked logins, then holds the refresh lock and starts the first accounts (2 by default) in the order of section 4 whose 5-hour window is not running. Full, out-of-week and logged-out accounts are not in that order, so they are never started. The other accounts stay untouched for later in the day: every extra window spends the week sooner.
-
-Claude Code sends the message itself, in the account's profile folder (or `~/.claude` for the active account), so `cc-shift` touches no token: `claude -p` with a one-word prompt on Haiku, no tools, no MCP servers, no saved session, and `--setting-sources project` from an empty folder so no hook of the user's runs. The cost is one short Haiku message per account. Each start, and each account that could not be started with the reason, goes to the history.
-
 ## 5. Logins and tokens
 
 ### A switch: `cc-shift use member2`
@@ -142,13 +130,13 @@ A parked login has no Claude Code process to refresh it, so `cc-shift` does. Whe
 | One folder per profile, used for its `/login` | `~/.claude-profiles/<name>/` | cc-shift, Claude Code |
 | Parked logins | macOS: Keychain, the item of each profile folder. Linux: `~/.claude-profiles/<name>/.credentials.json`, the same on Windows | Claude Code at `/login`; cc-shift on a switch or refresh |
 | The active login | macOS: Keychain, `Claude Code-credentials` (the item of `~/.claude`). Linux: `~/.claude/.credentials.json`, on Windows `%USERPROFILE%\.claude\.credentials.json` | Claude Code; cc-shift on a switch |
-| Active account, usage per account, unfinished switch, thresholds, early start setting | `~/.claude-profiles/state.json` | cc-shift |
+| Active account, usage per account, unfinished switch, thresholds | `~/.claude-profiles/state.json` | cc-shift |
 | The history | `~/.claude-profiles/history.jsonl`, and `history.1.jsonl` after it rotates at about 1 MB | cc-shift |
 | The locks | `~/.claude-profiles/.lock` (state and switches), `.refresh-lock` (one refresh at a time), `.history-lock` | cc-shift |
 | Token counts read from the transcripts, per file | `~/.claude-profiles/stats-cache.json` | cc-shift stats |
 | Status line and hook | `~/.claude/settings.json` | cc-shift setup |
-| The early start job, while it is on | macOS: `~/Library/LaunchAgents/io.github.vernum-projecten.cc-shift.early-start.plist`. Linux: `cc-shift-early-start.service` and `.timer` in `~/.config/systemd/user/` (or `$XDG_CONFIG_HOME`). Windows: the Task Scheduler task `cc-shift early start`, imported from `%LOCALAPPDATA%\cc-shift\early-start.xml` | cc-shift early on |
-| The empty working folder of the early start | macOS: `~/Library/Caches/cc-shift/early-start/`. Linux: `~/.cache/cc-shift/early-start/` (or `$XDG_CACHE_HOME`). Windows: `%LOCALAPPDATA%\cc-shift\early-start\` | cc-shift early run |
+
+Versions up to 0.1.3 had an early start (#35), a scheduled job that started some accounts' 5-hour windows before the workday. It is removed (#126). `cc-shift setup` and `cc-shift uninstall` delete what it left: on macOS the agent `~/Library/LaunchAgents/io.github.vernum-projecten.cc-shift.early-start.plist`, on Linux `cc-shift-early-start.service` and `.timer` in `~/.config/systemd/user/` (or `$XDG_CONFIG_HOME`), on Windows the Task Scheduler task `cc-shift early start` with `%LOCALAPPDATA%\cc-shift\early-start.xml`, and its empty working folder `early-start` in the user's cache folder. A state file that still holds `early_start` loads, and the field is dropped on the next write.
 
 `cc-shift list` treats every folder in `~/.claude-profiles/` as a profile, so the state, the history, the stats cache and the locks are files there. A profile's item is `Claude Code-credentials-` followed by the first 8 hex characters of the SHA-256 of its folder's absolute path, with the macOS user name as the account (observed on Claude Code 2.1.300, #6).
 
@@ -161,7 +149,7 @@ src/
 ├── main.rs, lib.rs, error.rs
 ├── command/      the command line: parse, and one file per command
 │                 (add, list, activate for cc-shift use, setup, status, stats,
-│                 log, early, refresh, doctor, remove, uninstall, completion,
+│                 log, refresh, doctor, remove, uninstall, completion,
 │                 help, statusline, hook); mod.rs dispatches and holds the
 │                 helpers
 ├── store/        the files cc-shift owns: profile (names, the profiles folder),
@@ -173,8 +161,7 @@ src/
 ├── render/       table and json: cc-shift status; line: the status line;
 │                 log: the history; stats and stats_json: cc-shift stats;
 │                 bars and colour (NO_COLOR is honoured)
-├── early/        mod.rs: the setting, the next run, which accounts to start
-│                 and the scheduled job; start: the claude -p run;
+├── early/        removing the early start job older versions installed:
 │                 macos/launchd: the agent; linux/systemd: the timer;
 │                 windows/task: the Task Scheduler task
 ├── stats/        transcript: finding the session transcripts and reading
@@ -196,7 +183,7 @@ src/
                   launch (exec claude for cc-shift add)
 ```
 
-Code that differs per operating system lives in a `macos/`, `linux/` or `windows/` folder inside its own module, compiled only on that system; the login files are one module (`login/files.rs`) shared by Linux and Windows, which differ only in small details (`#[cfg(target_os = "...")]`); everything else is shared. `login::SystemLogins` and the scheduled-job functions in `early` pick the backend, so the commands name no system. Every import names the module that defines the item; there are no re-exports. A login never appears in debug output, and the Keychain and HTTP are behind traits, so tests use memory and fakes.
+Code that differs per operating system lives in a `macos/`, `linux/` or `windows/` folder inside its own module, compiled only on that system; the login files are one module (`login/files.rs`) shared by Linux and Windows, which differ only in small details (`#[cfg(target_os = "...")]`); everything else is shared. `login::SystemLogins` and the removal in `early` pick the backend, so the commands name no system. Every import names the module that defines the item; there are no re-exports. A login never appears in debug output, and the Keychain and HTTP are behind traits, so tests use memory and fakes.
 
 The runtime dependencies are `thiserror` for the error type, `serde` with `serde_json` (key order kept) for the JSON files, `sha2` for the Keychain service names, and `jiff` for the reset times and, with its system time zone support, the local days of `cc-shift stats`; each further dependency is added in the pull request that needs it.
 
@@ -211,8 +198,8 @@ These need real accounts, so they are done once by the owner and recorded on the
 - After `cc-shift add` for two accounts, Keychain Access shows one "Claude Code" item per profile (#6).
 - With two windows open on `~/.claude`, `cc-shift use` to the other account, then `/status` in both windows shows the new account.
 - The status line of the work accounts receives `rate_limits`.
-- On Linux, still to be done with real accounts: `cc-shift add` and `/login` write the profile's `.credentials.json` with mode 0600; two open windows follow `cc-shift use` and an automatic switch with their next message; a window refreshing during a switch loses no login; the early start timer runs, catches up after a power-off and is gone after `cc-shift early off`.
-- On Windows (#112), still to be done with real accounts: two open windows follow `cc-shift use` and an automatic switch; the status line and the hook run with and without Git for Windows; a parked refresh and a window refreshing during a switch lose no login; the early start task runs, catches up and is gone after `cc-shift early off`; and whether each account uses the login file or Credential Manager.
+- On Linux, still to be done with real accounts: `cc-shift add` and `/login` write the profile's `.credentials.json` with mode 0600; two open windows follow `cc-shift use` and an automatic switch with their next message; a window refreshing during a switch loses no login.
+- On Windows (#112), still to be done with real accounts: two open windows follow `cc-shift use` and an automatic switch; the status line and the hook run with and without Git for Windows; a parked refresh and a window refreshing during a switch lose no login; and whether each account uses the login file or Credential Manager.
 
 ## 10. Security
 

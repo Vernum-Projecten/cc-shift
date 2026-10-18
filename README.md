@@ -48,7 +48,6 @@ work ▕██████░░░░▏ 60% · 3h33m │ 7d 31% │ next spare
 - [Commands](#commands)
 - [Token statistics](#token-statistics)
 - [History](#history)
-- [Early start](#early-start)
 - [Security](#security)
 - [Update and uninstall](#update-and-uninstall)
 - [FAQ](#faq)
@@ -238,17 +237,16 @@ A value outside 50 to 100 is ignored and the default is used.
 | `cc-shift use <name>` | Moves every open window to that account now. Never needed; for steering by hand. |
 | `cc-shift list` | Prints the profile names. |
 | `cc-shift refresh` | Refreshes the logins of the accounts that are not active and reads their usage now. Runs on its own as well. |
-| `cc-shift doctor` | Checks the setup (status line and hook, `claude`, every login and account, two profiles on one account, the state, the early start) and says how to fix what is wrong. |
+| `cc-shift doctor` | Checks the setup (status line and hook, `claude`, every login and account, two profiles on one account, the state, a left-over early start job) and says how to fix what is wrong. |
 | `cc-shift log` | Shows the history: switches with their reason, refreshes, logged-out accounts and when all were full ([history](#history)). |
 | `cc-shift stats` | Shows the tokens of all accounts together per project and model ([token statistics](#token-statistics)). |
-| `cc-shift early on` | Starts some accounts' 5-hour windows before the workday, Monday to Friday ([early start](#early-start)). `cc-shift early off` stops it; `cc-shift early` shows it. |
 | `cc-shift remove <name>` | Deletes a profile and its stored login, after you type `yes`. The active account cannot be removed. |
 | `cc-shift uninstall [--all]` | Undoes `cc-shift setup`; with `--all`, also deletes every profile and its stored login. |
 | `cc-shift completion zsh` | Prints the zsh completion script; `cc-shift completion powershell` prints the PowerShell one ([how to load them](#shell-completion)). |
 | `cc-shift --version` | Prints the version (also `-V` and `cc-shift version`). |
 | `cc-shift help` | Prints the commands. |
 
-Claude Code itself runs `cc-shift statusline` after every reply and `cc-shift hook rate-limit` when a turn hits a limit, and the scheduled job runs `cc-shift early run` while the early start is on; you never run those.
+Claude Code itself runs `cc-shift statusline` after every reply and `cc-shift hook rate-limit` when a turn hits a limit; you never run those.
 
 ### JSON for scripts
 
@@ -322,7 +320,7 @@ The cost is a comparison, not a bill. It is what the same tokens would cost at t
 
 ## History
 
-`cc-shift log` shows what `cc-shift` did: every switch with its reason, refreshed and logged-out logins, when all accounts were full, and each early start.
+`cc-shift log` shows what `cc-shift` did: every switch with its reason, refreshed and logged-out logins, and when all accounts were full. Early starts from versions up to 0.1.3 stay in it.
 
 ```text
 cc-shift history · last 24 hours
@@ -340,28 +338,6 @@ cc-shift history · last 24 hours
 
 `--since 2h`, `7d` or `30d` and `--all` choose the period; `--verbose` adds diagnostic events, such as a status line reading that was recorded under another account; `--json` prints one JSON object per line. The history lives in `~/.claude-profiles/history.jsonl`, rotates at about 1 MB and never holds a token or an email address.
 
-## Early start
-
-A 5-hour window starts with an account's first message and resets five hours later. If a window starts at 06:00, it resets at 11:00, during your workday, and you get an extra window that day. `cc-shift` can start a few windows for you each morning. It is off until you turn it on:
-
-```console
-$ cc-shift early on --at 06:00 --accounts 2
-Early start is on: Monday to Friday at 06:00, 2 accounts.
-cc-shift picks the accounts each morning, the ones it would use first.
-Each costs one short Haiku message.
-
-$ cc-shift early
-Early start: on · Monday to Friday at 06:00 · 2 accounts · next Fri 06:00
-
-$ cc-shift early off
-Early start is off.
-```
-
-- **Which accounts:** each morning, the first ones in the [order of use](#which-account-is-next) whose 5-hour window is not running. Full, out-of-week and logged-out accounts are skipped. Start only as many as your workday needs: every extra window spends the week sooner, and the accounts left alone stay fresh for the evening.
-- **How:** a scheduled job runs `cc-shift early run` Monday to Friday at the set time: a `launchd` agent on macOS, a systemd user timer on Linux, and a Task Scheduler task on Windows. A Mac that is asleep runs it when it wakes, and a Mac that is off skips the day; a Linux or Windows machine that was off runs it as soon as it can. On Windows the task may show a console window for the moment it runs. A run more than 3 hours late starts nothing, because the window would reset in the evening. On Linux it needs a systemd user session.
-- **The message:** Claude Code sends it itself, in the account's own profile, on Haiku, with no tools, hooks or MCP servers and no saved session. `cc-shift` touches no token for it.
-- **Where to see it:** `cc-shift log` shows each start and each account that could not be started. `cc-shift status` shows `early start 06:00 · 2 accounts` under the table while it is on.
-
 ## Security
 
 - Logins stay where Claude Code keeps them: in the login Keychain on macOS, in `.credentials.json` files with mode 0600 on Linux, and in `.credentials.json` files under your user folder's access rules on Windows. `cc-shift` holds a token in memory only while it uses it, and never writes one to a log, the terminal or a file of its own.
@@ -374,16 +350,16 @@ Report a vulnerability as described in [SECURITY.md](https://github.com/Vernum-P
 
 ## Update and uninstall
 
-Update to the latest version with `cargo install cc-shift`, or download the new [prebuilt binary](#prebuilt-binary) over the old one.
+Update to the latest version with `cargo install cc-shift`, or download the new [prebuilt binary](#prebuilt-binary) over the old one. Then run `cc-shift setup` again: it brings the settings up to date and removes the scheduled early start job of versions up to 0.1.3.
 
 To uninstall:
 
 ```sh
-cc-shift uninstall --all   # removes the status line, the hook, the early start, every profile and its login
+cc-shift uninstall --all   # removes the status line, the hook, every profile and its login
 cargo uninstall cc-shift   # or delete the binary from ~/.local/bin
 ```
 
-`cc-shift uninstall` without `--all` only removes the status line, the hook and the early start (and puts back a status line you had before), and keeps the profiles. `--all` asks you to type `yes` first. The login in `~/.claude` stays, so Claude Code keeps working with the account that was active.
+`cc-shift uninstall` without `--all` only removes the status line and the hook (and puts back a status line you had before), and keeps the profiles. `--all` asks you to type `yes` first. The login in `~/.claude` stays, so Claude Code keeps working with the account that was active.
 
 ## FAQ
 
@@ -391,7 +367,7 @@ cargo uninstall cc-shift   # or delete the binary from ~/.local/bin
 
 **Does it work with Team accounts?** Yes. Team, Pro and Max accounts all report their usage to the status line.
 
-**Does it work on Linux or Windows?** Yes, with the same commands. Logins are in `.credentials.json` files, and open windows follow a switch with their next message. The early start uses a systemd timer on Linux and Task Scheduler on Windows. Inside WSL 2, Claude Code is the Linux build, so use the Linux binary there; `where.exe claude` in PowerShell finds a native Windows Claude Code, `command -v claude` in WSL the Linux one.
+**Does it work on Linux or Windows?** Yes, with the same commands. Logins are in `.credentials.json` files, and open windows follow a switch with their next message. Inside WSL 2, Claude Code is the Linux build, so use the Linux binary there; `where.exe claude` in PowerShell finds a native Windows Claude Code, `command -v claude` in WSL the Linux one.
 
 **Windows says Claude Code keeps logins in Credential Manager.** Anthropic can switch a Windows account to Windows Credential Manager (or `CLAUDE_CODE_FORCE_WINDOWS_CREDMAN=1` does). Claude Code then reads Credential Manager first and would ignore a moved file, so `cc-shift` stops instead of switching, and `cc-shift doctor` names the account.
 

@@ -10,7 +10,8 @@ use std::path::{Path, PathBuf};
 
 use crate::error::Error;
 
-/// The words `cc-shift` uses as commands, which can never name a profile.
+/// The words `cc-shift` uses as commands, and `early`, a command of older
+/// versions; none of them can name a profile.
 pub const RESERVED: [&str; 17] = [
     "add",
     "setup",

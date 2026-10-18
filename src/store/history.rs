@@ -105,19 +105,21 @@ pub enum Event {
         /// How long all accounts were full, in seconds.
         after_seconds: i64,
     },
-    /// The early start ran.
+    /// The early start ran; only older versions wrote it.
     EarlyStart {
         /// The accounts whose 5-hour window it started.
         started: Vec<String>,
         /// How many it was set to start.
         wanted: u8,
     },
-    /// The early start ran too long after its set time and started nothing.
+    /// The early start ran too long after its set time and started nothing;
+    /// only older versions wrote it.
     EarlyStartSkipped {
         /// Why.
         reason: String,
     },
-    /// The early start could not start an account's window.
+    /// The early start could not start an account's window; only older
+    /// versions wrote it.
     EarlyStartFailed {
         /// The account.
         account: String,

@@ -13,7 +13,8 @@
 //! account details, `switching` moving between
 //! accounts, `anthropic` the calls to Anthropic, `claude_code` the places
 //! where `cc-shift` plugs into Claude Code, and `stats` the token statistics
-//! read from Claude Code's transcripts, and `early` the early start.
+//! read from Claude Code's transcripts, and `early` the removal of the early
+//! start job that older versions installed.
 
 // NOTE: no specification governs this: our own design. cc-shift knows where
 // Claude Code keeps logins on macOS, Linux and Windows, so other builds stop here.

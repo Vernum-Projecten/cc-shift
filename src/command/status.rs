@@ -39,12 +39,11 @@ pub fn run(json: bool) -> Result<(), Error> {
     let text = if json {
         render::json::json(&view, now)
     } else {
-        let paint = Paint::unless_no_color(std::io::stdout().is_terminal());
-        let mut text = table::table(&view, now, paint);
-        if let Some(setting) = &state.early_start {
-            text.push_str(&table::early_line(*setting, paint));
-        }
-        text
+        table::table(
+            &view,
+            now,
+            Paint::unless_no_color(std::io::stdout().is_terminal()),
+        )
     };
     let _ignored: std::io::Result<()> = std::io::stdout().write_all(text.as_bytes());
     Ok(())

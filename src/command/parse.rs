@@ -27,10 +27,6 @@ Commands:
   doctor        Check the setup and say what to fix
   log           Show what cc-shift did: switches, refreshes, full accounts
                 (--since 2h|7d|30d, --all, --verbose, --json)
-  early         Show the early start: windows started before the workday
-  early on [--at 06:00] [--accounts 2]
-                Start that many windows at that time, Monday to Friday
-  early off     Stop the early start
   remove <name> Delete a profile and its stored login
   completion zsh|powershell
                 Print the zsh or PowerShell completion script
@@ -38,7 +34,6 @@ Commands:
                 Undo setup; --all also removes every profile and its login
   list          Print the profiles
   statusline    Record usage; run by Claude Code as its status line
-  early run     Start the windows now; run by the scheduled job
   hook rate-limit
                 Switch after a usage limit; run by Claude Code as a hook
   version       Print the version (also --version, -V)
@@ -73,8 +68,6 @@ pub enum Command {
     Doctor,
     /// Show the history.
     Log(crate::command::log::Options),
-    /// Show, turn on or off, or run the early start.
-    Early(crate::command::early::Action),
     /// Delete a profile and its stored login.
     Remove(OsString),
     /// Print the completion script for a shell.
@@ -134,9 +127,6 @@ where
             _ => Command::Misuse("completion takes one shell: zsh or powershell".to_owned()),
         },
         "log" => crate::command::log::options(&flags).map_or_else(Command::Misuse, Command::Log),
-        "early" => {
-            crate::command::early::action(&flags).map_or_else(Command::Misuse, Command::Early)
-        }
         "hook" => match flags.as_slice() {
             ["rate-limit"] => Command::HookRateLimit,
             _ => Command::Misuse("hook takes one event: rate-limit".to_owned()),
@@ -402,20 +392,13 @@ mod tests {
     }
 
     #[test]
-    fn early_takes_on_off_run_or_nothing() {
-        use crate::command::early::Action;
-        assert_eq!(parse(args(&["early"])), Command::Early(Action::Show));
-        assert_eq!(
-            parse(args(&["early", "on", "--at", "07:15"])),
-            Command::Early(Action::On {
-                at: Some((7, 15)),
-                accounts: None
-            })
-        );
-        assert!(matches!(
-            parse(args(&["early", "on", "--at", "7"])),
-            Command::Misuse(_)
-        ));
+    fn early_is_an_unknown_command() {
+        for words in [&["early"][..], &["early", "on"], &["early", "run"]] {
+            assert!(
+                matches!(parse(args(words)), Command::Misuse(_)),
+                "{words:?}"
+            );
+        }
     }
 
     #[test]

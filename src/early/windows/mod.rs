@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Vernum Projecten B.V.
 // SPDX-License-Identifier: Apache-2.0
 
-//! The Windows scheduler of the early start: a Task Scheduler task.
+//! The Windows job of the early start that older versions installed: a
+//! Task Scheduler task.
 
 pub mod task;

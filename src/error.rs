@@ -157,7 +157,4 @@ pub enum Error {
         .0.display()
     )]
     CredentialManager(PathBuf),
-    /// The message that starts a 5-hour window failed.
-    #[error("{0}")]
-    EarlyStart(String),
 }

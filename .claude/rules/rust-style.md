@@ -157,8 +157,7 @@ table.
   trait method is resolved with fully-qualified syntax, never an import rename.
 - **`std::env::set_var` and `remove_var` are `unsafe` in edition 2024.** `cc-shift`
   never calls them: it sets `CLAUDE_CONFIG_DIR` on a child `claude` with
-  `Command::env`, which is safe (`cc-shift add` then `exec`s it, the early
-  start waits for it).
+  `Command::env`, which is safe (`cc-shift add` then `exec`s it).
 - The other `unsafe_*` 2024 items are moot under `unsafe_code = "forbid"`.
 
 ## Naming
@@ -190,6 +189,6 @@ wrong line). Reach for:
   handled the same way; a difference between accounts is data, never a branch.
 - Do not grow `cc-shift` into a wrapper process that stays running around `claude`
   or a resident daemon. Its work runs in short-lived processes (a command,
-  the status line, the hook, a detached refresh, the early start run);
+  the status line, the hook, a detached refresh);
   anything new that must watch a session is designed in `ARCHITECTURE.md`
   first.

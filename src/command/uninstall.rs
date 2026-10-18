@@ -51,10 +51,7 @@ pub fn run(all: bool) -> Result<(), Error> {
         report("the status line and the hook were not installed");
     }
     if early::remove(&home)? {
-        if root.path().is_dir() {
-            file.update(|s| s.early_start = None)?;
-        }
-        report("removed the early start");
+        report("removed the scheduled early start job an older version installed");
     }
     if !all {
         report(
