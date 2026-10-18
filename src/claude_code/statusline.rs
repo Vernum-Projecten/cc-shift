@@ -83,7 +83,11 @@ pub struct Reading {
 /// confirmed reading yet, and is dropped otherwise.
 ///
 /// Input that does not parse, or carries no `rate_limits`, records nothing.
-/// A window missing from the input keeps its last known value.
+/// A window missing from the input keeps its last known value, and a lower
+/// reading of a window with the same reset time keeps the higher one. The
+/// reading time moves only when the numbers change: a timed run while the
+/// main session waits on subagents repeats the last response's numbers, and
+/// must not hide that they are getting old.
 ///
 /// # Errors
 ///
@@ -109,13 +113,16 @@ pub fn record(input: &[u8], state_file: &StateFile, now: i64) -> Result<Reading,
         let proven = found.as_ref().is_some_and(|(_, proven)| *proven);
         if let Some((name, proven)) = found {
             let recorded = state.usage.entry(name).or_insert_with(Recorded::default);
-            if five.is_some() {
-                recorded.five_hour = five;
+            let five_hour = rising(recorded.five_hour, five);
+            let seven_day = rising(recorded.seven_day, seven);
+            if five_hour != recorded.five_hour
+                || seven_day != recorded.seven_day
+                || recorded.read_at.is_none()
+            {
+                recorded.read_at = Some(now);
             }
-            if seven.is_some() {
-                recorded.seven_day = seven;
-            }
-            recorded.read_at = Some(now);
+            recorded.five_hour = five_hour;
+            recorded.seven_day = seven_day;
             recorded.confirmed = proven;
         }
         Reading {
@@ -125,6 +132,24 @@ pub fn record(input: &[u8], state_file: &StateFile, now: i64) -> Result<Reading,
             proven,
         }
     })
+}
+
+/// Returns the window to keep after a `reported` reading of a `known` one.
+///
+/// Usage in one window only rises until it resets, so a lower reading of the
+/// same window is an old one and the known window stays. A window missing
+/// from the reading keeps its last known value.
+fn rising(known: Option<Window>, reported: Option<Window>) -> Option<Window> {
+    match (known, reported) {
+        (Some(k), Some(r))
+            if (k.resets_at - r.resets_at).abs() <= SAME_RESET_SECONDS
+                && r.used_percent < k.used_percent =>
+        {
+            Some(k)
+        }
+        (k, None) => k,
+        (_, r) => r,
+    }
 }
 
 /// Returns the account a reading with these windows belongs to, and whether
@@ -305,6 +330,68 @@ mod tests {
         let recorded = state.usage.get("member1").ok_or("nothing recorded")?;
         assert_eq!(recorded.five_hour.map(|w| w.used_percent), Some(30.0));
         assert_eq!(recorded.seven_day.map(|w| w.used_percent), Some(41.2));
+        Ok(())
+    }
+
+    #[test]
+    fn a_lower_reading_of_the_same_window_keeps_the_higher_one()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let home = TempDir::new()?;
+        let file = with_active(&home)?;
+        record(INPUT.as_bytes(), &file, 1500)?;
+        let older =
+            r#"{"rate_limits": {"five_hour": {"used_percentage": 20.0, "resets_at": 2030}}}"#;
+        record(older.as_bytes(), &file, 1600)?;
+        let state = file.read()?;
+        let recorded = state.usage.get("member1").ok_or("nothing recorded")?;
+        assert_eq!(recorded.five_hour.map(|w| w.used_percent), Some(23.5));
+        Ok(())
+    }
+
+    #[test]
+    fn a_lower_reading_of_a_new_window_replaces_the_old_one()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let home = TempDir::new()?;
+        let file = with_active(&home)?;
+        record(INPUT.as_bytes(), &file, 1500)?;
+        let next =
+            r#"{"rate_limits": {"five_hour": {"used_percentage": 2.0, "resets_at": 20000}}}"#;
+        record(next.as_bytes(), &file, 2100)?;
+        let state = file.read()?;
+        let recorded = state.usage.get("member1").ok_or("nothing recorded")?;
+        assert_eq!(
+            recorded.five_hour,
+            Some(Window {
+                used_percent: 2.0,
+                resets_at: 20000
+            })
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn an_unchanged_reading_keeps_its_reading_time() -> Result<(), Box<dyn std::error::Error>> {
+        let home = TempDir::new()?;
+        let file = with_active(&home)?;
+        record(INPUT.as_bytes(), &file, 1500)?;
+        record(INPUT.as_bytes(), &file, 1800)?;
+        let state = file.read()?;
+        let recorded = state.usage.get("member1").ok_or("nothing recorded")?;
+        assert_eq!(recorded.read_at, Some(1500), "the numbers are from 1500");
+        Ok(())
+    }
+
+    #[test]
+    fn a_changed_reading_moves_its_reading_time() -> Result<(), Box<dyn std::error::Error>> {
+        let home = TempDir::new()?;
+        let file = with_active(&home)?;
+        record(INPUT.as_bytes(), &file, 1500)?;
+        let later =
+            r#"{"rate_limits": {"five_hour": {"used_percentage": 30.0, "resets_at": 2000}}}"#;
+        record(later.as_bytes(), &file, 1800)?;
+        let state = file.read()?;
+        let recorded = state.usage.get("member1").ok_or("nothing recorded")?;
+        assert_eq!(recorded.read_at, Some(1800));
         Ok(())
     }
 

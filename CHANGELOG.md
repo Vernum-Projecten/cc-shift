@@ -9,6 +9,21 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `cc-shift` switches before the limit while the main session waits on
+  background subagents. The status line now also runs every 30 seconds, the
+  active account's usage is read from the usage endpoint when the status line
+  has reported no new numbers for a minute, and `cc-shift refresh` switches
+  when that reading is at or past a threshold. Run `cc-shift setup` again to
+  add the 30-second status line to an existing setup; `cc-shift doctor` says
+  when it is missing (#123).
+- A status line reading that repeats an older, lower number for the same
+  window no longer lowers the recorded usage (#123).
+- A turn that hits the 5-hour limit while the week shows a higher percentage
+  marks the 5-hour window full, no longer the week, and the history names the
+  5-hour window (#123).
+
 ## [0.1.2] - 2026-10-16
 
 ### Changed

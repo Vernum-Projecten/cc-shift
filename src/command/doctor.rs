@@ -267,7 +267,7 @@ fn settings_check<L: Logins>(setup: &Setup<'_, L>) -> Check {
             Check::ok("the status line and the rate-limit hook are installed")
         }
         Ok(_) => Check::fail(
-            "the status line or the rate-limit hook is missing or points elsewhere",
+            "the status line or the rate-limit hook is missing, out of date or points elsewhere",
             "cc-shift setup",
         ),
         Err(error) => Check::fail(error.to_string(), "fix ~/.claude/settings.json"),

@@ -4,8 +4,10 @@
 //! `cc-shift setup`: installs the status line and the rate-limit hook in
 //! `~/.claude/settings.json`.
 //!
-//! The status line is a `statusLine` entry of type `command`
-//! (<https://code.claude.com/docs/en/statusline>), and the hook a
+//! The status line is a `statusLine` entry of type `command` with a
+//! `refreshInterval`, so it also runs while the main session waits on
+//! background subagents (<https://code.claude.com/docs/en/statusline>), and
+//! the hook a
 //! `StopFailure` entry with matcher `rate_limit`
 //! (<https://code.claude.com/docs/en/hooks>). Every other setting is kept.
 
@@ -21,6 +23,10 @@ use crate::error::Error;
 const HOOK_EVENT: &str = "StopFailure";
 const HOOK_MATCHER: &str = "rate_limit";
 
+/// How often, in seconds, Claude Code runs the status line when nothing else
+/// runs it, such as while the main session waits on background subagents.
+const REFRESH_SECONDS: u64 = 30;
+
 /// What [`install`] changed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Installed {
@@ -34,7 +40,8 @@ pub struct Installed {
 
 /// Puts `cc-shift statusline` and `cc-shift hook rate-limit` into `settings`.
 ///
-/// `cc-shift` names its own binary by the absolute path `cs_path`, so the
+/// The status line gets a `refreshInterval` of 30 seconds, unless
+/// it already runs at least that often. `cc-shift` names its own binary by the absolute path `cs_path`, so the
 /// commands work whatever `PATH` Claude Code runs them with. A status line
 /// the user had is returned to be chained; one that is already `cc-shift` is
 /// left as it is. Running it on its own output changes nothing.
@@ -66,6 +73,12 @@ pub fn install(settings: Value, cs_path: &str) -> Result<Installed, Error> {
             "statusLine".to_owned(),
             json!({ "type": "command", "command": statusline }),
         );
+    }
+    if let Some(line) = root.get_mut("statusLine").and_then(Value::as_object_mut) {
+        let every = line.get("refreshInterval").and_then(Value::as_u64);
+        if every.is_none_or(|seconds| seconds == 0 || seconds > REFRESH_SECONDS) {
+            line.insert("refreshInterval".to_owned(), json!(REFRESH_SECONDS));
+        }
     }
 
     let hooks = root
@@ -352,7 +365,11 @@ mod tests {
         assert_eq!(
             done.settings,
             json!({
-                "statusLine": {"type": "command", "command": "/Users/someone/.cargo/bin/cc-shift statusline"},
+                "statusLine": {
+                    "type": "command",
+                    "command": "/Users/someone/.cargo/bin/cc-shift statusline",
+                    "refreshInterval": 30
+                },
                 "hooks": {"StopFailure": [{
                     "matcher": "rate_limit",
                     "hooks": [rate_limit_hook(CS)]
@@ -399,6 +416,38 @@ mod tests {
             done.settings["statusLine"]["command"],
             json!("/Users/someone/.cargo/bin/cc-shift statusline")
         );
+        Ok(())
+    }
+
+    #[test]
+    fn an_install_without_a_refresh_interval_gains_one() -> Result<(), Error> {
+        let first = install(json!({}), CS)?;
+        let mut older = first.settings.clone();
+        if let Some(line) = older["statusLine"].as_object_mut() {
+            line.remove("refreshInterval");
+        }
+        let done = install(older, CS)?;
+        assert!(done.changed, "changed");
+        assert_eq!(done.settings["statusLine"]["refreshInterval"], json!(30));
+        Ok(())
+    }
+
+    #[test]
+    fn a_refresh_interval_that_is_too_long_is_shortened() -> Result<(), Error> {
+        let mut settings = install(json!({}), CS)?.settings;
+        settings["statusLine"]["refreshInterval"] = json!(300);
+        let done = install(settings, CS)?;
+        assert_eq!(done.settings["statusLine"]["refreshInterval"], json!(30));
+        Ok(())
+    }
+
+    #[test]
+    fn a_shorter_refresh_interval_is_kept() -> Result<(), Error> {
+        let mut settings = install(json!({}), CS)?.settings;
+        settings["statusLine"]["refreshInterval"] = json!(5);
+        let done = install(settings, CS)?;
+        assert!(!done.changed, "changed {:?}", done.settings);
+        assert_eq!(done.settings["statusLine"]["refreshInterval"], json!(5));
         Ok(())
     }
 

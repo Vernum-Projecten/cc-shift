@@ -39,6 +39,24 @@ fn installs_into_a_fresh_home() -> io::Result<()> {
 }
 
 #[test]
+fn an_earlier_setup_gains_the_refresh_interval() -> io::Result<()> {
+    let sandbox = Sandbox::new()?;
+    sandbox.run(&["setup"])?;
+    let full = settings(&sandbox)?;
+    let older = full.replace(",\n    \"refreshInterval\": 30", "");
+    assert_ne!(older, full, "the interval was written: {full}");
+    fs::write(sandbox.home().join(".claude/settings.json"), older)?;
+    let out = sandbox.run(&["setup"])?;
+    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    assert!(
+        settings(&sandbox)?.contains("\"refreshInterval\": 30"),
+        "{}",
+        settings(&sandbox)?
+    );
+    Ok(())
+}
+
+#[test]
 fn keeps_settings_and_chains_the_status_line() -> io::Result<()> {
     let sandbox = Sandbox::new()?;
     fs::create_dir_all(sandbox.home().join(".claude"))?;

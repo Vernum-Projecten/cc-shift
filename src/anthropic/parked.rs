@@ -8,8 +8,9 @@
 //! under the lock for the whole request: a refresh token works once, and a
 //! switch must never move a login whose refresh is under way. A usage read
 //! only needs the access token, so it holds the lock just to read the token
-//! and to record the result. The active login is never touched here;
-//! Claude Code refreshes it and the status line reports its usage.
+//! and to record the result. The active login is never refreshed here:
+//! Claude Code does that. Its usage is read with its access token when the
+//! status line has not reported new numbers for [`ACTIVE_STALE_SECONDS`].
 
 use std::fs::File;
 
@@ -19,10 +20,17 @@ use crate::error::Error;
 use crate::login::{Logins, Slot};
 use crate::store::history::{self, Event};
 use crate::store::profile::ProfilesRoot;
-use crate::store::state::StateFile;
+use crate::store::state::{State, StateFile};
 
 /// A parked account's usage is read again when it is older than this.
 pub const STALE_SECONDS: i64 = 5 * 60;
+
+/// The active account's usage is read again when it is older than this.
+///
+/// The status line reports new numbers only with the main session's own
+/// replies, so while it waits on background subagents only this read sees
+/// the account fill up.
+pub const ACTIVE_STALE_SECONDS: i64 = 60;
 
 /// What happened to one parked account.
 #[derive(Debug)]
@@ -88,15 +96,26 @@ pub fn refresh_all(
 /// Returns the error of the profiles root or the state file.
 pub fn any_stale(file: &StateFile, root: &ProfilesRoot, now: i64) -> Result<bool, Error> {
     let state = file.read()?;
-    Ok(root.list()?.iter().any(|name| {
-        !state.logged_out.contains(name)
-            && state
-                .usage
-                .get(name)
-                .filter(|r| r.confirmed)
-                .and_then(|r| r.read_at)
-                .is_none_or(|at| now - at >= STALE_SECONDS)
-    }))
+    Ok(root
+        .list()?
+        .iter()
+        .any(|name| !state.logged_out.contains(name) && !fresh(&state, name, now)))
+}
+
+/// Returns whether `name` has a confirmed reading young enough to skip
+/// reading again.
+fn fresh(state: &State, name: &str, now: i64) -> bool {
+    let limit = if state.active.as_deref() == Some(name) {
+        ACTIVE_STALE_SECONDS
+    } else {
+        STALE_SECONDS
+    };
+    state
+        .usage
+        .get(name)
+        .filter(|r| r.confirmed)
+        .and_then(|r| r.read_at)
+        .is_some_and(|at| now - at < limit)
 }
 
 /// Refreshes a parked login when its access token is close to expiry, with
@@ -169,13 +188,7 @@ fn read_usage_if_stale(
     let stored = {
         let locked = file.lock()?;
         let state = locked.load()?;
-        let fresh = state
-            .usage
-            .get(name)
-            .filter(|r| r.confirmed)
-            .and_then(|r| r.read_at)
-            .is_some_and(|at| now - at < STALE_SECONDS);
-        if fresh {
+        if fresh(&state, name, now) {
             return Ok(false);
         }
         let active = state.active.as_deref() == Some(name);
@@ -261,7 +274,7 @@ fn state_error(path: &std::path::Path, source: std::io::Error) -> Error {
 #[cfg(test)]
 #[expect(clippy::panic_in_result_fn, reason = "test assertions")]
 mod tests {
-    use super::{STALE_SECONDS, any_stale, refresh_all};
+    use super::{ACTIVE_STALE_SECONDS, STALE_SECONDS, any_stale, refresh_all};
     use crate::anthropic::http::{Http, Request, Response};
     use crate::error::Error;
     use crate::login::{Login, Logins, Slot};
@@ -433,7 +446,7 @@ mod tests {
                 s.usage.insert(
                     name.to_owned(),
                     Recorded {
-                        read_at: Some(NOW - 60),
+                        read_at: Some(NOW - 30),
                         confirmed: true,
                         ..Recorded::default()
                     },
@@ -445,6 +458,35 @@ mod tests {
         assert!(http.asked.borrow().is_empty(), "{:?}", http.asked.borrow());
         assert!(!any_stale(&file, &root, NOW)?, "nothing stale");
         assert!(any_stale(&file, &root, NOW + STALE_SECONDS)?, "stale later");
+        Ok(())
+    }
+
+    #[test]
+    fn the_active_account_is_read_again_sooner() -> Result<(), Box<dyn std::error::Error>> {
+        let (_home, memory, file, root) = world(3600)?;
+        let read_at = NOW - ACTIVE_STALE_SECONDS;
+        file.update(|s| {
+            for name in ["a", "b"] {
+                s.usage.insert(
+                    name.to_owned(),
+                    Recorded {
+                        read_at: Some(read_at),
+                        confirmed: true,
+                        ..Recorded::default()
+                    },
+                );
+            }
+        })?;
+        assert!(any_stale(&file, &root, NOW)?, "the active account is stale");
+        refresh_all(&memory, &fake(), &file, &root, NOW)?;
+        let state = file.read()?;
+        let read = |name: &str| state.usage.get(name).and_then(|r| r.read_at);
+        assert_eq!(read("a"), Some(NOW), "the active account is read");
+        assert_eq!(
+            read("b"),
+            Some(read_at),
+            "the parked account is still fresh"
+        );
         Ok(())
     }
 
