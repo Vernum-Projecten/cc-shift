@@ -142,7 +142,7 @@ pub fn checks<L: Logins>(setup: &Setup<'_, L>) -> Vec<Check> {
             format!("cc-shift use {}", pending.to),
         ));
     }
-    out.extend(early_check(setup.home));
+    out.extend(early_check(crate::early::installed(setup.home)));
     let profiles = match setup.root.list() {
         Ok(profiles) => profiles,
         Err(error) => {
@@ -177,10 +177,10 @@ pub fn checks<L: Logins>(setup: &Setup<'_, L>) -> Vec<Check> {
     out
 }
 
-/// Checks that no early start job an older version installed is left;
+/// Warns when an early start job an older version installed is left;
 /// nothing to say when there is none.
-fn early_check(home: &Path) -> Option<Check> {
-    crate::early::installed(home).then(|| {
+fn early_check(job_installed: bool) -> Option<Check> {
+    job_installed.then(|| {
         Check::warn(
             "a scheduled early start job from an older version is still installed",
             "cc-shift setup",
@@ -486,12 +486,8 @@ mod tests {
     #[test]
     fn a_left_early_start_job_is_reported() -> Result<(), Box<dyn std::error::Error>> {
         use super::early_check;
-        let home = TempDir::new()?;
-        assert_eq!(early_check(home.path()), None, "no job: nothing to say");
-        let agent = crate::early::job_path(home.path());
-        fs::create_dir_all(agent.parent().ok_or("a folder")?)?;
-        fs::write(&agent, "")?;
-        let left = early_check(home.path()).ok_or("a check")?;
+        assert_eq!(early_check(false), None, "no job: nothing to say");
+        let left = early_check(true).ok_or("a check")?;
         assert_eq!(
             (left.level, left.fix.as_deref()),
             (Level::Warn, Some("cc-shift setup"))

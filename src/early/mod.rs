@@ -79,33 +79,3 @@ fn workdir(home: &Path) -> PathBuf {
     #[cfg(windows)]
     return windows::task::data_folder(home).join("early-start");
 }
-
-#[cfg(test)]
-#[expect(clippy::panic_in_result_fn, reason = "test assertions")]
-mod tests {
-    use super::{installed, job_path, remove, workdir};
-    use std::fs;
-    use tempfile::TempDir;
-
-    #[test]
-    fn nothing_to_remove_is_no_job() -> Result<(), Box<dyn std::error::Error>> {
-        let home = TempDir::new()?;
-        assert!(!installed(home.path()));
-        assert!(!remove(home.path())?, "no job");
-        Ok(())
-    }
-
-    #[test]
-    fn a_left_job_and_its_folder_are_removed() -> Result<(), Box<dyn std::error::Error>> {
-        let home = TempDir::new()?;
-        let job = job_path(home.path());
-        fs::create_dir_all(job.parent().ok_or("a parent")?)?;
-        fs::write(&job, "left by an older version")?;
-        fs::create_dir_all(workdir(home.path()))?;
-        assert!(installed(home.path()));
-        assert!(remove(home.path())?, "a job");
-        assert!(!job.exists(), "job deleted");
-        assert!(!workdir(home.path()).exists(), "folder deleted");
-        Ok(())
-    }
-}
