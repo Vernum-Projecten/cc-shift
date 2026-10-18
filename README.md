@@ -93,7 +93,7 @@ Every [release](https://github.com/Vernum-Projecten/cc-shift/releases) has a bin
 The Linux binaries are static, so they run on any distribution. On macOS and Linux, download with `curl`; on a Mac, a browser download is quarantined by macOS:
 
 ```sh
-version=0.1.3
+version=0.1.4
 target=aarch64-apple-darwin    # your target from the table above
 archive=cc-shift-v$version-$target.tar.gz
 
@@ -107,7 +107,7 @@ mkdir -p ~/.local/bin && mv cc-shift-v$version-$target/cc-shift ~/.local/bin/
 `~/.local/bin` must be on your `PATH`. On Windows, in PowerShell:
 
 ```powershell
-$version = '0.1.3'
+$version = '0.1.4'
 $target = 'x86_64-pc-windows-msvc'    # aarch64-pc-windows-msvc on Arm64
 $archive = "cc-shift-v$version-$target.zip"
 $base = "https://github.com/Vernum-Projecten/cc-shift/releases/download/v$version"
