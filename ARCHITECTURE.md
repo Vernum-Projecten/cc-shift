@@ -69,7 +69,7 @@ For both usage windows Claude Code reports, the 5-hour and the 7-day window: the
 
 ### Where the numbers come from
 
-- **The active account:** Claude Code passes `rate_limits` to the status line command after every reply, with `five_hour` and `seven_day`, each a `used_percentage` and a `resets_at` (<https://code.claude.com/docs/en/statusline>). No token is needed. The docs say this is sent for Pro and Max accounts.
+- **The active account:** Claude Code passes `rate_limits` to the status line command after every reply, with `five_hour` and `seven_day`, each a `used_percentage` and a `resets_at` (<https://code.claude.com/docs/en/statusline>). No token is needed. The docs say this is sent for Pro and Max accounts. When the status line has reported no new numbers for a minute, `cc-shift` also reads the active account from the usage endpoint with its access token (#123).
 - **A parked account:** `cc-shift` sends its access token to Anthropic's usage endpoint, `GET https://api.anthropic.com/api/oauth/usage`, which returns the same two windows. The endpoint is not documented and has changed shape before, so `cc-shift` accepts both known shapes.
 
 A source that fails or returns an unknown shape makes that account "unknown". It is shown as such and chosen last, and never stops `cc-shift` as a whole (#8).
@@ -92,13 +92,14 @@ The status line reports the usage of the window's last response. Right after a s
 
 - **Readings are matched to accounts.** Every account's windows reset at their own times, so a status line reading belongs to the account whose confirmed reading (from the usage endpoint, with its own token) has the same reset times. A reading that matches no confirmed account goes to the active account only when that account has no confirmed reading yet, and is dropped otherwise.
 - **Before the limit:** when a reading proven to be the active account's reaches the threshold of either window, the status line switches to the next account, between two replies.
-- **At the limit:** Claude Code runs a `StopFailure` hook with matcher `rate_limit` when a turn ends on a usage limit (<https://code.claude.com/docs/en/hooks>). `cc-shift hook rate-limit` records the active account as full and switches at once.
+- **While the main session waits on subagents:** Claude Code runs the status line only on events in the main session, such as a reply, and "the event-driven triggers can go quiet when the main session is idle, for example while a coordinator waits on background subagents" (<https://code.claude.com/docs/en/statusline#when-the-status-line-updates>). The subagents keep spending the account meanwhile. So `cc-shift setup` gives the status line a `refreshInterval` of 30 seconds, which runs it on a timer as well. A timed run repeats the last reply's numbers, so a reading moves the account's reading time only when its numbers change, and a reading lower than the recorded one for the same window is an old one and is not recorded: usage in one window only rises until it resets. When the active account's numbers are a minute old, the detached `cc-shift refresh` reads it from the usage endpoint and switches when that reading is at or past a threshold (#123).
+- **At the limit:** Claude Code runs a `StopFailure` hook with matcher `rate_limit` when a turn ends on a usage limit (<https://code.claude.com/docs/en/hooks>). `cc-shift hook rate-limit` records the active account as full and switches at once. It records the 5-hour window at 100%, or the week when only the week is at or past its threshold: the 5-hour limit is the one hit far more often, and a week at 85% with a 5-hour window at 80% is a 5-hour limit.
 - **No switch follows another within five minutes,** so a reading or a hook left over from before a switch cannot start a second one.
 - **The account details are put right.** A window can write its old account details back into `~/.claude.json`, so each proven reading of the active account sets them again.
 
 The status line names the account the window really uses. Right after a switch it shows `moving to <account>` until the window's next request runs on the new login.
 
-The status line prints at once. Slow work (refreshing a parked login, reading an account's usage when its numbers are older than five minutes or not yet confirmed, the active account included) runs in a detached `cc-shift refresh`. Only one runs at a time.
+The status line prints at once. Slow work (refreshing a parked login, reading an account's usage when its numbers are not yet confirmed or older than five minutes, or one minute for the active account) runs in a detached `cc-shift refresh`. Only one runs at a time.
 
 ### Several windows
 

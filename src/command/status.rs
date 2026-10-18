@@ -32,7 +32,7 @@ pub fn run(json: bool) -> Result<(), Error> {
     }
     // NOTE: no specification governs this: our own design. A refresh that
     // fails leaves the last numbers, which the table still shows.
-    let _reports: Result<Vec<Report>, Error> = refresh::refresh_parked();
+    let _refreshed: Result<(Vec<Report>, Option<String>), Error> = refresh::refresh_and_switch();
     let state = StateFile::in_root(&root).read()?;
     let now = unix_now();
     let view = overview(&profiles, &state, now);

@@ -169,7 +169,7 @@ Profile names use letters, digits, `-` and `_`, and start with a letter or digit
 cc-shift setup
 ```
 
-This adds a status line and a rate-limit hook to `~/.claude/settings.json` and keeps every other setting. A status line you already had keeps working and is shown first. `cc-shift setup` then makes your best account active. Running it again changes nothing.
+This adds a status line and a rate-limit hook to `~/.claude/settings.json` and keeps every other setting. The status line also runs every 30 seconds, so `cc-shift` keeps switching while your main session waits on subagents. Run `cc-shift setup` again after an upgrade; `cc-shift doctor` tells you when a setup is out of date. A status line you already had keeps working and is shown first. `cc-shift setup` then makes your best account active. Running it again changes nothing.
 
 **3. Check it.** Send a message in any Claude Code window, then:
 
@@ -203,7 +203,7 @@ From here on you never need to run `cc-shift` while you work. If something looks
 - Every Claude Code window uses the default `~/.claude`, which holds the active account.
 - After every reply, the status line records the active account's usage. When the 5-hour window reaches 95% or the 7-day window 99% (both [configurable](#switch-thresholds)), `cc-shift` moves the next account's login into `~/.claude` and copies its account details into `~/.claude.json`. Open windows pick both up, as they do after `/login`.
 - If a turn hits a limit anyway, the rate-limit hook switches at once.
-- In the background, `cc-shift` refreshes the parked logins and reads their usage, so the next choice is made on current numbers.
+- In the background, `cc-shift` refreshes the parked logins and reads their usage, so the next choice is made on current numbers. While subagents work and the main session gets no replies, it reads the active account's usage every minute and switches when it reaches a threshold.
 
 The full design is in [ARCHITECTURE.md](https://github.com/Vernum-Projecten/cc-shift/blob/main/ARCHITECTURE.md).
 

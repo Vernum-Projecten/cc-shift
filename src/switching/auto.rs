@@ -185,20 +185,24 @@ fn full_window(account: &Account, now: i64) -> (Option<WindowKind>, Option<f64>)
     }
 }
 
-/// Records the active account as full: its fuller window at 100%, or a
-/// 5-hour window from now when no reading exists.
+/// Records the active account as full: its 5-hour window at 100%, or its
+/// week when only the week is at or past its threshold. A window with no
+/// reading becomes a 5-hour window from now.
+///
+/// The 5-hour window runs out far more often, and a week at 85% with a
+/// 5-hour window at 80% is a 5-hour limit, so the percentages alone do not
+/// tell which limit was hit.
 fn mark_full(file: &StateFile, active: &str, now: i64) -> Result<(), Error> {
     file.update(|state| {
+        let limits = state.thresholds.checked();
         let recorded = state
             .usage
             .entry(active.to_owned())
             .or_insert_with(Recorded::default);
-        let seven_fuller = match (recorded.five_hour, recorded.seven_day) {
-            (Some(short), Some(long)) => long.used_at(now) > short.used_at(now),
-            (None, Some(_)) => true,
-            _ => false,
-        };
-        let window = if seven_fuller {
+        let used = |w: Option<Window>| w.map_or(0.0, |w| w.used_at(now));
+        let week_only = used(recorded.seven_day) >= limits.seven_day
+            && used(recorded.five_hour) < limits.five_hour;
+        let window = if week_only {
             &mut recorded.seven_day
         } else {
             &mut recorded.five_hour
@@ -364,6 +368,87 @@ mod tests {
         let a = state.usage.get("a").ok_or("a recorded")?;
         assert_eq!(a.five_hour.map(|w| w.used_percent), Some(100.0));
         assert_eq!(a.five_hour.map(|w| w.resets_at), Some(NOW + 3600));
+        Ok(())
+    }
+
+    /// Records `name` with a 5-hour and a 7-day window.
+    fn both(world: &World, name: &str, five: f64, seven: f64) -> Result<(), Error> {
+        world.file.update(|s| {
+            s.usage.insert(
+                name.to_owned(),
+                Recorded {
+                    five_hour: Some(Window {
+                        used_percent: five,
+                        resets_at: NOW + 3600,
+                    }),
+                    seven_day: Some(Window {
+                        used_percent: seven,
+                        resets_at: NOW + 86_400,
+                    }),
+                    read_at: Some(NOW),
+                    confirmed: true,
+                },
+            );
+        })
+    }
+
+    #[test]
+    fn a_hit_with_a_fuller_week_marks_the_five_hour_window()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let world = World::new(Some("a"))?;
+        both(&world, "a", 80.0, 85.0)?;
+        world.usage("b", 10.0)?;
+        run(&world.context(), Trigger::LimitHit, NOW)?;
+        let state = world.file.read()?;
+        let a = state.usage.get("a").ok_or("a recorded")?;
+        assert_eq!(a.five_hour.map(|w| w.used_percent), Some(100.0));
+        assert_eq!(a.seven_day.map(|w| w.used_percent), Some(85.0), "week kept");
+        Ok(())
+    }
+
+    #[test]
+    fn a_hit_with_only_the_week_at_its_threshold_marks_the_week()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let world = World::new(Some("a"))?;
+        both(&world, "a", 30.0, 99.5)?;
+        world.usage("b", 10.0)?;
+        run(&world.context(), Trigger::LimitHit, NOW)?;
+        let state = world.file.read()?;
+        let a = state.usage.get("a").ok_or("a recorded")?;
+        assert_eq!(a.seven_day.map(|w| w.used_percent), Some(100.0));
+        assert_eq!(a.five_hour.map(|w| w.used_percent), Some(30.0), "5h kept");
+        Ok(())
+    }
+
+    #[test]
+    fn a_hit_with_only_a_week_reading_marks_a_five_hour_window()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let world = World::new(Some("a"))?;
+        world.file.update(|s| {
+            s.usage.insert(
+                "a".to_owned(),
+                Recorded {
+                    seven_day: Some(Window {
+                        used_percent: 60.0,
+                        resets_at: NOW + 86_400,
+                    }),
+                    read_at: Some(NOW),
+                    confirmed: true,
+                    ..Recorded::default()
+                },
+            );
+        })?;
+        world.usage("b", 10.0)?;
+        run(&world.context(), Trigger::LimitHit, NOW)?;
+        let state = world.file.read()?;
+        let a = state.usage.get("a").ok_or("a recorded")?;
+        assert_eq!(
+            a.five_hour,
+            Some(Window {
+                used_percent: 100.0,
+                resets_at: NOW + crate::usage::FIVE_HOURS
+            })
+        );
         Ok(())
     }
 
