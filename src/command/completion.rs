@@ -32,7 +32,6 @@ _cc_shift() {
     'list:print the profiles'
     'doctor:check the setup'
     'log:show the history'
-    'early:start windows before the workday'
     'remove:delete a profile and its login'
     'uninstall:undo setup'
     'completion:print the shell completion'
@@ -49,7 +48,6 @@ _cc_shift() {
     stats) compadd -- --since --all --project --cost --per-account --json ;;
     uninstall) compadd -- --all ;;
     log) compadd -- --since --all --verbose --json ;;
-    early) if (( CURRENT == 3 )); then compadd -- on off; else compadd -- --at --accounts; fi ;;
     completion) compadd -- zsh powershell ;;
   esac
 }
@@ -78,7 +76,6 @@ Register-ArgumentCompleter -Native -CommandName 'cc-shift', 'cc-shift.exe' -Scri
     'list' = 'print the profiles'
     'doctor' = 'check the setup'
     'log' = 'show the history'
-    'early' = 'start windows before the workday'
     'remove' = 'delete a profile and its login'
     'uninstall' = 'undo setup'
     'completion' = 'print the shell completion'
@@ -99,9 +96,6 @@ Register-ArgumentCompleter -Native -CommandName 'cc-shift', 'cc-shift.exe' -Scri
       'stats' { $values = @('--since', '--all', '--project', '--cost', '--per-account', '--json') }
       'uninstall' { $values = @('--all') }
       'log' { $values = @('--since', '--all', '--verbose', '--json') }
-      'early' {
-        if ($position -eq 2) { $values = @('on', 'off') } else { $values = @('--at', '--accounts') }
-      }
       'completion' { $values = @('zsh', 'powershell') }
     }
   }
@@ -135,7 +129,7 @@ mod tests {
     use super::{POWERSHELL, ZSH, run};
     use crate::error::Error;
 
-    const COMMANDS: [&str; 15] = [
+    const COMMANDS: [&str; 14] = [
         "add",
         "setup",
         "status",
@@ -145,7 +139,6 @@ mod tests {
         "list",
         "doctor",
         "log",
-        "early",
         "remove",
         "uninstall",
         "completion",
@@ -195,11 +188,17 @@ mod tests {
             "--cost",
             "--per-account",
             "--verbose",
-            "--at",
-            "--accounts",
         ] {
             assert!(ZSH.contains(flag), "{flag} in zsh");
             assert!(POWERSHELL.contains(&format!("'{flag}'")), "{flag}");
+        }
+    }
+
+    #[test]
+    fn neither_script_offers_the_early_start() {
+        for word in ["early", "--at", "--accounts"] {
+            assert!(!ZSH.contains(word), "{word} in zsh");
+            assert!(!POWERSHELL.contains(word), "{word} in PowerShell");
         }
     }
 
@@ -235,7 +234,6 @@ mod tests {
             "list",
             "doctor",
             "log",
-            "early",
             "remove",
             "uninstall",
             "completion",

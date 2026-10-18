@@ -227,18 +227,6 @@ fn read_usage_if_stale(
     Ok(true)
 }
 
-/// Waits for a running refresh to end and holds its lock until the returned
-/// file is dropped, so no refresh starts meanwhile.
-///
-/// # Errors
-///
-/// Returns [`Error::State`] when the lock file cannot be opened or locked.
-pub fn hold_refreshes(root: &ProfilesRoot) -> Result<File, Error> {
-    let (lock, path) = run_lock(root)?;
-    lock.lock().map_err(|e| state_error(&path, e))?;
-    Ok(lock)
-}
-
 /// Takes the lock that keeps runs from overlapping; `None` when another run
 /// holds it.
 fn single_run(root: &ProfilesRoot) -> Result<Option<File>, Error> {

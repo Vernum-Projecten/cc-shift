@@ -137,3 +137,64 @@ fn uninstall_all_removes_nothing_without_yes() -> io::Result<()> {
     assert!(sandbox.root().join("member1").is_dir(), "profile kept");
     Ok(())
 }
+
+/// Writes the early start job an older version installed into the sandbox,
+/// where each system keeps it, and returns its path.
+fn left_early_start_job(sandbox: &Sandbox) -> io::Result<std::path::PathBuf> {
+    let job = if cfg!(target_os = "macos") {
+        sandbox
+            .home()
+            .join("Library/LaunchAgents/io.github.vernum-projecten.cc-shift.early-start.plist")
+    } else if cfg!(windows) {
+        sandbox
+            .home()
+            .join("AppData/Local/cc-shift/early-start.xml")
+    } else {
+        sandbox
+            .home()
+            .join(".config/systemd/user/cc-shift-early-start.timer")
+    };
+    if let Some(folder) = job.parent() {
+        fs::create_dir_all(folder)?;
+    }
+    fs::write(&job, "left by an older version")?;
+    Ok(job)
+}
+
+#[test]
+fn setup_removes_an_early_start_job_an_older_version_left() -> io::Result<()> {
+    let sandbox = Sandbox::new()?;
+    let job = left_early_start_job(&sandbox)?;
+    let out = sandbox.run(&["setup"])?;
+    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    assert!(!job.exists(), "{} deleted", job.display());
+    assert!(
+        stderr(&out).contains("removed the scheduled early start job"),
+        "{}",
+        stderr(&out)
+    );
+    Ok(())
+}
+
+#[test]
+fn uninstall_removes_an_early_start_job_an_older_version_left() -> io::Result<()> {
+    let sandbox = Sandbox::new()?;
+    let job = left_early_start_job(&sandbox)?;
+    let out = sandbox.run(&["uninstall"])?;
+    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    assert!(!job.exists(), "{} deleted", job.display());
+    Ok(())
+}
+
+#[test]
+fn early_is_an_unknown_command() -> io::Result<()> {
+    let sandbox = Sandbox::new()?;
+    let out = sandbox.run(&["early"])?;
+    assert_ne!(out.status.code(), Some(0), "{}", stderr(&out));
+    assert!(
+        stderr(&out).contains("unknown command 'early'"),
+        "{}",
+        stderr(&out)
+    );
+    Ok(())
+}

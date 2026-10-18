@@ -22,8 +22,9 @@ Releases up to 0.0.9 are on crates.io and GitHub: profiles, usage from the
 status line and the usage endpoint, the selection rule (spend what expires
 first), moving logins with recovery, refreshing parked logins, automatic
 switching after `cc-shift setup` (proven in real use), configurable
-thresholds, `doctor`, `remove`, `uninstall`, zsh completion, the history and
-`cc-shift log`, `cc-shift stats`, and the early start (off by default).
+thresholds, `doctor`, `remove`, `uninstall`, zsh completion, the history,
+`cc-shift log`, and `cc-shift stats`. The early start was removed after
+0.1.3; `setup` and `uninstall` delete the job older versions left.
 v0.1.0 adds Linux support. The open issue list decides what is built next, and
 nothing is built ahead of an issue.
 

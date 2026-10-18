@@ -9,6 +9,16 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Removed
+
+- The early start: `cc-shift early`, `early on`, `early off` and `early run`,
+  and the scheduled job that started 5-hour windows before the workday.
+  `cc-shift setup` and `cc-shift uninstall` delete the job and its working
+  folder that an older version installed, and `cc-shift doctor` reports one
+  that is left. A state file that still holds the early start setting loads,
+  and early starts already in the history still show in `cc-shift log`
+  (#126).
+
 ## [0.1.3] - 2026-10-18
 
 ### Fixed

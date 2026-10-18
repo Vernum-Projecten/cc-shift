@@ -15,7 +15,6 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::early::EarlyStart;
 use crate::error::Error;
 use crate::store::profile::ProfilesRoot;
 use crate::usage::{Thresholds, Window};
@@ -42,9 +41,10 @@ pub struct State {
     pub logged_out: BTreeSet<String>,
     /// The percentages at which the windows count as full.
     pub thresholds: Thresholds,
-    /// When the early start runs and how many accounts it starts; `None`
-    /// while it is off.
-    pub early_start: Option<EarlyStart>,
+    /// The setting of the early start, which older versions wrote; it is
+    /// read so their state file still loads, and never written back.
+    #[serde(skip_serializing)]
+    pub early_start: Option<serde::de::IgnoredAny>,
 }
 
 /// The usage of one account as last read.
@@ -251,6 +251,25 @@ mod tests {
         let state = file.read()?;
         assert_eq!(state.active.as_deref(), Some("member1"));
         assert_eq!(state.usage.get("member1"), Some(&recorded));
+        Ok(())
+    }
+
+    #[test]
+    fn an_early_start_from_an_older_version_loads_and_is_dropped()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let home = TempDir::new()?;
+        let file = state_file(&home)?;
+        let path = home.path().join(".claude-profiles/state.json");
+        fs::create_dir_all(home.path().join(".claude-profiles"))?;
+        fs::write(
+            &path,
+            r#"{"active": "member1", "early_start": {"hour": 6, "minute": 0, "accounts": 2}}"#,
+        )?;
+        assert_eq!(file.read()?.active.as_deref(), Some("member1"));
+        file.update(|state| state.active = Some("member2".to_owned()))?;
+        let text = fs::read_to_string(&path)?;
+        assert!(!text.contains("early_start"), "{text}");
+        assert!(text.contains("member2"), "{text}");
         Ok(())
     }
 

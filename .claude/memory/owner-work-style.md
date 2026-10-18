@@ -25,7 +25,8 @@ was stopped because the design was still open.
   evidence; reconcile rather than dismiss.
 - Pure Rust, small, single binary, no resident daemon are standing
   constraints. Short-lived background work the owner approved is fine: the
-  detached `cc-shift refresh` and the early start run by `launchd`.
+  detached `cc-shift refresh`. The owner had the scheduled early start
+  removed (#126): no job of cc-shift's own keeps running on the machine.
 - **Pause when asked.** A pause names a boundary: the work up to it finishes
   (merges, cleanup, the report) and nothing new starts until the owner writes
   again.

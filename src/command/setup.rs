@@ -6,15 +6,18 @@
 
 use crate::claude_code::settings;
 use crate::command::{automatic, home, report, unix_now};
+use crate::early;
 use crate::error::Error;
 use crate::store::history::{self, Event};
 use crate::store::profile::ProfilesRoot;
 use crate::store::state::StateFile;
 use crate::switching::auto::Trigger;
 
-/// Installs the status line and the hook in `~/.claude/settings.json`,
-/// remembers the user's own status line to chain it, and makes the best
-/// account active when none is.
+/// Installs the status line and the hook in `~/.claude/settings.json`, and
+/// makes the best account active when none is.
+///
+/// It remembers the user's own status line to chain it, and removes the
+/// early start job an older version installed.
 ///
 /// # Errors
 ///
@@ -39,6 +42,9 @@ pub fn run() -> Result<(), Error> {
         ));
     } else {
         report("already set up");
+    }
+    if early::remove(&home)? {
+        report("removed the scheduled early start job an older version installed");
     }
     if root.list()?.is_empty() {
         report(
