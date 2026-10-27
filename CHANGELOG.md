@@ -9,6 +9,16 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-10-27
+
+### Fixed
+
+- On macOS a switch no longer fails with `security: unknown command` when
+  the login is longer than one `security -i` line, which happens once Claude
+  Code keeps the OAuth state of several MCP servers in the login. Such a
+  login now goes on the command line of `security`, as Claude Code does
+  (#131).
+
 ## [0.1.4] - 2026-10-18
 
 ### Removed
@@ -275,7 +285,8 @@ Claude accounts on macOS on its own, before a usage limit is hit.
 - A token is never a command-line argument: Keychain writes and HTTP
   requests receive it on stdin.
 
-[Unreleased]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.1.5...HEAD
+[0.1.5]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/Vernum-Projecten/cc-shift/compare/v0.1.1...v0.1.2
