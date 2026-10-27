@@ -342,7 +342,7 @@ cc-shift history · last 24 hours
 
 - Logins stay where Claude Code keeps them: in the login Keychain on macOS, in `.credentials.json` files with mode 0600 on Linux, and in `.credentials.json` files under your user folder's access rules on Windows. `cc-shift` holds a token in memory only while it uses it, and never writes one to a log, the terminal or a file of its own.
 - A login is moved, never copied: a refresh token works once, so each login has exactly one live copy at any time.
-- A token is never a command-line argument. Keychain writes and HTTP requests get it on stdin, so `ps` cannot show it. On Linux and Windows a login is written to a new file that replaces the old one in one step.
+- HTTP requests get a token on stdin, so `ps` cannot show it. A Keychain write passes the login on stdin too, except on macOS when the login is longer than one `security -i` line (about 2,000 bytes); then it goes on the command line of `security`, which is what Claude Code itself does. On Linux and Windows a login is written to a new file that replaces the old one in one step.
 - `cc-shift` refreshes only the parked logins. Claude Code refreshes the active one, and a switch holds Claude Code's own refresh lock so the two never overlap.
 - The refresh and usage requests are the ones Claude Code itself makes. Anthropic does not document them, so a Claude Code update can change them; `cc-shift` then shows that account's usage as unknown instead of failing.
 

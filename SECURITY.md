@@ -26,8 +26,9 @@ is published with credit to you, unless you ask to stay anonymous.
 
 cc-shift handles Claude Code's logins: it moves them between Keychain items on a
 switch, refreshes the parked ones, and reads their access token to fetch
-usage. It keeps a token in memory only, passes it on stdin, and never writes
-one to a file or log. A report is in scope when cc-shift exposes a login,
+usage. It keeps a token in memory only, passes it on stdin (on macOS, a login
+too long for one `security -i` line goes on the command line of `security`,
+as Claude Code does), and never writes one to a file or log. A report is in scope when cc-shift exposes a login,
 session history or usage data to another user or process, leaves two live
 copies of one login or moves the wrong one, or writes outside the places
 ARCHITECTURE.md section 6 lists. A vulnerability in Claude Code itself goes to

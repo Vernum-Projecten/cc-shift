@@ -9,7 +9,8 @@
 //! folder's absolute path, with the macOS user name as the account
 //! (observed on Claude Code 2.1.300, recorded on #6). Going through the same
 //! `security` tool keeps each item's access rules as they are, and a login
-//! is passed on stdin as hex, never as a command-line argument.
+//! is passed as hex: on stdin when it fits one `security -i` line, and as
+//! a command-line argument when it is longer, as Claude Code does.
 
 use std::io::Write;
 use std::path::PathBuf;
@@ -26,6 +27,12 @@ const ACTIVE_SERVICE: &str = "Claude Code-credentials";
 
 /// The exit code of `security` for an item that does not exist.
 const NOT_FOUND: i32 = 44;
+
+/// The longest line, newline included, that `security -i` reads whole.
+///
+/// `security -i` cuts a longer line into pieces and runs each piece as a
+/// command, so a longer write goes on the command line instead.
+const STDIN_LINE_LIMIT: usize = 4000;
 
 /// The login keychain of the current macOS user.
 #[derive(Debug, Clone)]
@@ -99,6 +106,12 @@ pub fn add_command(account: &str, service: &str, login: &Login) -> String {
     )
 }
 
+/// Returns whether `security -i` reads `line` as one command.
+#[must_use]
+pub fn fits_stdin(line: &str) -> bool {
+    line.len() <= STDIN_LINE_LIMIT
+}
+
 /// Returns bytes as lowercase hex.
 fn hex(bytes: &[u8]) -> String {
     use std::fmt::Write as _;
@@ -142,21 +155,40 @@ impl Logins for SystemKeychain {
 
     fn write(&self, slot: &Slot, login: &Login) -> Result<(), Error> {
         let service = self.service(slot);
-        let mut child = Command::new("/usr/bin/security")
-            .arg("-i")
-            .stdin(Stdio::piped())
-            .stdout(Stdio::null())
-            .stderr(Stdio::piped())
-            .spawn()
-            .map_err(|e| Self::fail(slot, format!("cannot run security: {e}")))?;
-        if let Some(mut stdin) = child.stdin.take() {
-            stdin
-                .write_all(add_command(&self.account, &service, login).as_bytes())
-                .map_err(|e| Self::fail(slot, format!("cannot write to security: {e}")))?;
-        }
-        let out = child
-            .wait_with_output()
-            .map_err(|e| Self::fail(slot, format!("security did not finish: {e}")))?;
+        let line = add_command(&self.account, &service, login);
+        let out = if fits_stdin(&line) {
+            let mut child = Command::new("/usr/bin/security")
+                .arg("-i")
+                .stdin(Stdio::piped())
+                .stdout(Stdio::null())
+                .stderr(Stdio::piped())
+                .spawn()
+                .map_err(|e| Self::fail(slot, format!("cannot run security: {e}")))?;
+            if let Some(mut stdin) = child.stdin.take() {
+                stdin
+                    .write_all(line.as_bytes())
+                    .map_err(|e| Self::fail(slot, format!("cannot write to security: {e}")))?;
+            }
+            child
+                .wait_with_output()
+                .map_err(|e| Self::fail(slot, format!("security did not finish: {e}")))?
+        } else {
+            // NOTE: observed in Claude Code 2.1.311, which writes a login over
+            // the `security -i` line limit on the command line the same way.
+            Self::run(
+                slot,
+                &[
+                    "add-generic-password",
+                    "-U",
+                    "-a",
+                    &self.account,
+                    "-s",
+                    &service,
+                    "-X",
+                    &hex(login.as_bytes()),
+                ],
+            )?
+        };
         // NOTE: no specification governs this: our own design. `security -i`
         // can exit 0 after a failed command, so the write is read back.
         if self.read(slot)?.as_ref() == Some(login) {
@@ -196,8 +228,28 @@ impl Logins for SystemKeychain {
 
 #[cfg(test)]
 mod tests {
-    use super::{add_command, service_of};
+    use super::{add_command, fits_stdin, service_of};
     use crate::login::Login;
+
+    #[test]
+    fn a_short_login_goes_through_stdin() {
+        let login = Login::from_bytes(vec![b'a'; 1000]);
+        assert!(fits_stdin(&add_command(
+            "someone",
+            "Claude Code-credentials",
+            &login
+        )));
+    }
+
+    #[test]
+    fn a_login_over_the_line_limit_goes_on_the_command_line() {
+        let login = Login::from_bytes(vec![b'a'; 2100]);
+        assert!(!fits_stdin(&add_command(
+            "someone",
+            "Claude Code-credentials",
+            &login
+        )));
+    }
 
     #[test]
     fn a_folder_service_is_the_short_sha256_of_its_path() {
